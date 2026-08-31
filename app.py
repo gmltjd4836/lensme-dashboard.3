@@ -13,13 +13,14 @@ import urllib.parse
 # ==========================================
 st.set_page_config(page_title="렌즈미 매장 이전 상권 분석기", page_icon="🗺️", layout="wide")
 
-# 🌟 사장님이 찾아주신 카카오 API 키 (검색용)
+# 🚨🚨🚨 사장님이 주신 카카오 API 키가 들어간 부분입니다! 🚨🚨🚨
 KAKAO_REST_API_KEY = "f6eab02e349ec379ba08ebf65a54a1df"
+# 🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨
 
-# 🌟 소상공인 API 키 (주변 안경원 찾기용) - 발급받으시면 여기에 넣어주세요!
+# 소상공인 API 키 (안경원 표시용 - 나중에 발급받으시면 여기에 넣으세요)
 DATA_GO_KR_API_KEY = "여기에_소상공인_인증키를_붙여넣으세요"
 
-# 지도 위치와 상권 이름을 기억해두는 세션 저장소 (화면이 새로고침되어도 유지됨)
+# 지도 위치와 상권 이름을 기억해두는 세션 저장소
 if 'center_lat' not in st.session_state:
     st.session_state.center_lat = 36.81510
 if 'center_lon' not in st.session_state:
@@ -39,7 +40,7 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-st.markdown('<div class="main-title">🗺️ 렌즈미 매장 이전 & 상권 통합 분석기</div>', unsafe_allow_html=True)
+st.markdown('<div class="main-title">🗺️ 렌즈미 매장 이전 & 상권 분석기</div>', unsafe_allow_html=True)
 
 # ==========================================
 # 🚀 API 호출 함수 (카카오 검색 & 소상공인)
@@ -53,7 +54,6 @@ def search_location_by_kakao(query, key):
         if res.status_code == 200:
             docs = res.json().get('documents')
             if docs:
-                # 검색된 첫 번째 결과의 위도, 경도, 장소이름 반환
                 return float(docs[0]['y']), float(docs[0]['x']), docs[0]['place_name']
     except:
         pass
@@ -83,7 +83,7 @@ def get_real_competitors(lat, lon, key):
     return None
 
 # ==========================================
-# 1. 사이드바: 🌟통합 검색창 및 기본 설정🌟
+# 1. 사이드바: 🌟통합 검색창🌟
 # ==========================================
 st.sidebar.title("🔍 상권 위치 검색")
 st.sidebar.markdown("상권 이름이나 건물명을 한글로 검색하세요.")
@@ -92,9 +92,9 @@ st.sidebar.markdown("상권 이름이나 건물명을 한글로 검색하세요.
 search_query = st.sidebar.text_input("📍 검색어 (예: 서면 올리브영, 강남역)")
 if st.sidebar.button("🚀 지도로 이동하기", use_container_width=True):
     if search_query:
+        # 사장님의 카카오 키를 이용해서 위치를 찾는 코드입니다!
         lat, lon, place_name = search_location_by_kakao(search_query, KAKAO_REST_API_KEY)
         if lat and lon:
-            # 검색 결과를 세션에 저장하고 화면 새로고침
             st.session_state.center_lat = lat
             st.session_state.center_lon = lon
             st.session_state.candidate_store = place_name
@@ -122,7 +122,6 @@ tab_map, tab_pop, tab_radar, tab_roi = st.tabs([
 with tab_map:
     st.markdown(f'<div class="sub-title">[{st.session_state.candidate_store}] 핵심 상권 지도 (반경 500m)</div>', unsafe_allow_html=True)
     
-    # 구글 지도 기반 Folium 맵 생성
     m = folium.Map(location=[st.session_state.center_lat, st.session_state.center_lon], zoom_start=16, tiles=None)
     folium.TileLayer(
         tiles='http://mt0.google.com/vt/lyrs=m&hl=ko&x={x}&y={y}&z={z}',
@@ -130,7 +129,6 @@ with tab_map:
     ).add_to(m)
     plugins.Fullscreen(position='topright', title='전체화면').add_to(m)
     
-    # 선택한 상권 마커 (빨간 별)
     folium.Marker(
         [st.session_state.center_lat, st.session_state.center_lon], 
         tooltip="<b style='font-size:14px; color:#e21837;'>선택 지점 🚩</b>",
@@ -138,27 +136,23 @@ with tab_map:
         icon=folium.Icon(color="red", icon="star", prefix='fa')
     ).add_to(m)
     
-    # 반경 500m 상권 영역 원
     folium.Circle(
         radius=500, location=[st.session_state.center_lat, st.session_state.center_lon],
         color="#4f46e5", weight=2, fill=True, fill_color="#4f46e5", fill_opacity=0.15,
         tooltip="도보 7~10분 핵심 상권 영역"
     ).add_to(m)
     
-    # 주변 안경원 경쟁사 데이터 불러오기 (소상공인 API)
     competitors = get_real_competitors(st.session_state.center_lat, st.session_state.center_lon, DATA_GO_KR_API_KEY)
     
     if competitors is None:
-        # 소상공인 키가 없을 경우 보여주는 샘플 데이터
         competitors = [
             {"name": "오렌즈", "lat": st.session_state.center_lat + 0.0015, "lon": st.session_state.center_lon - 0.0019, "color": "orange", "icon": "eye", "desc": "가상 샘플 데이터"},
             {"name": "다비치안경", "lat": st.session_state.center_lat - 0.0011, "lon": st.session_state.center_lon + 0.0016, "color": "blue", "icon": "glasses", "desc": "가상 샘플 데이터"},
         ]
-        st.warning("⚠️ 소상공인 공공데이터 API 키가 입력되지 않아 임시(샘플) 마커를 표시합니다.")
+        st.warning("⚠️ 소상공인 API 키가 입력되지 않아 임시(샘플) 안경원 마커를 표시합니다.")
     else:
         st.success(f"✅ 반경 500m 내에 총 {len(competitors)}개의 진짜 안경원/렌즈샵을 찾았습니다.")
 
-    # 마커 지도에 추가
     for comp in competitors:
         comp_html = f"<div style='width:150px;'><b>{comp['name']}</b><br><span style='font-size:12px; color:gray;'>{comp.get('desc','')}</span></div>"
         folium.Marker(
@@ -168,15 +162,13 @@ with tab_map:
             icon=folium.Icon(color=comp.get("color", "purple"), icon=comp.get("icon", "glasses"), prefix='fa')
         ).add_to(m)
 
-    # 지도 출력
     st_folium(m, width="100%", height=600)
 
 # ---------------------------------------------------------
-# [탭 2] 유동인구 및 타겟 분석 (상담용)
+# [탭 2] 유동인구 및 타겟 분석 
 # ---------------------------------------------------------
 with tab_pop:
     st.markdown(f'<div class="sub-title">👥 [{st.session_state.candidate_store}] 유동인구 분석 보고서</div>', unsafe_allow_html=True)
-    st.info("💡 점주 상담 및 설득용으로 세팅된 이상적인 상권 트래픽 모델 데이터입니다.")
     
     col1, col2, col3, col4 = st.columns(4)
     with col1: st.markdown('<div class="metric-box"><div class="metric-title">일평균 유동인구</div><div class="metric-value">28,450명</div></div>', unsafe_allow_html=True)
@@ -207,8 +199,6 @@ with tab_radar:
         st.markdown("<br><br>", unsafe_allow_html=True)
         st.markdown(f"🏪 **현재 매장:** {current_store}")
         st.markdown(f"🚩 **이전 후보:** {st.session_state.candidate_store}")
-        st.markdown("---")
-        st.markdown("- **1020 유동인구:** 핵심 타겟층 통행량\n- **타겟 밀집도:** 학교, 학원가 비중\n- **경쟁 강도:** 점수가 높을수록 경쟁사 적음\n- **임대료 가성비:** 임대료 대비 예상 매출\n- **상권 활력도:** 전체 성장세 및 공실률")
     with col2:
         categories = ['1020 유동인구', '타겟 밀집도', '경쟁 강도', '임대료 가성비', '상권 활력도']
         fig_radar = go.Figure()
@@ -225,26 +215,23 @@ with tab_roi:
     col_input, col_result = st.columns([1, 1.5])
     
     with col_input:
-        st.markdown("**1. 예상 투자 비용 설정 (만 원)**")
-        deposit = st.number_input("보증금", value=5000, step=1000)
-        premium = st.number_input("권리금", value=3000, step=1000)
-        interior = st.number_input("인테리어/집기", value=6000, step=1000)
+        deposit = st.number_input("보증금 (만 원)", value=5000, step=1000)
+        premium = st.number_input("권리금 (만 원)", value=3000, step=1000)
+        interior = st.number_input("인테리어/집기 (만 원)", value=6000, step=1000)
         total_investment = deposit + premium + interior
         
         st.markdown("---")
-        st.markdown("**2. 예상 매출 및 지출 설정**")
         daily_cust = st.slider("일평균 방문 고객 (명)", min_value=10, max_value=150, value=40, step=5)
         atv = st.slider("객단가 (만 원)", min_value=2.0, max_value=8.0, value=3.5, step=0.1)
         margin_rate = st.slider("마진율 (%)", min_value=30, max_value=70, value=45, step=1)
         monthly_rent = st.number_input("월 임대료 (만 원)", value=300, step=50)
-        monthly_labor = st.number_input("월 인건비/기타 고정비 (만 원)", value=400, step=50)
+        monthly_labor = st.number_input("월 고정비 (만 원)", value=400, step=50)
         
     with col_result:
         monthly_sales = daily_cust * atv * 30
         monthly_gross_profit = monthly_sales * (margin_rate / 100)
         monthly_net_profit = monthly_gross_profit - monthly_rent - monthly_labor
         
-        # 순수 소멸성 비용 기준 회수
         sunk_investment = premium + interior
         payback_months = sunk_investment / monthly_net_profit if monthly_net_profit > 0 else 0
             
@@ -264,4 +251,4 @@ with tab_roi:
             fig_bar.update_layout(xaxis_title="이전 후 개월 수", yaxis_title="누적 수익 (만 원)", showlegend=False)
             st.plotly_chart(fig_bar, use_container_width=True)
         else:
-            st.error("🚨 예상 월 순수익이 적자입니다. 매출 지표를 올리거나 고정비를 낮춰야 합니다.")
+            st.error("🚨 예상 월 순수익이 적자입니다.")
