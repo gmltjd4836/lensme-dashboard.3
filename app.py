@@ -11,17 +11,15 @@ import os
 import glob
 
 # ==========================================
-# 0. 페이지 기본 설정 및 API 키 (비밀금고 연동)
+# 0. 페이지 기본 설정 및 API 키
 # ==========================================
 st.set_page_config(page_title="렌즈미 가맹점 컨설팅 시스템", page_icon="🏢", layout="wide", initial_sidebar_state="expanded")
 
-# 🛡️ 스트림릿 비밀금고(Secrets)에서 API 키 불러오기
-try:
-    DATA_GO_KR_API_KEY = st.secrets["DATA_GO_KR_API_KEY"]
-    KAKAO_REST_API_KEY = st.secrets["KAKAO_REST_API_KEY"]
-except:
-    DATA_GO_KR_API_KEY = ""
-    KAKAO_REST_API_KEY = ""
+# 🌟 소상공인(경쟁사 핀) API 키는 발급받으시면 아래 큰따옴표 안에 넣어주세요!
+DATA_GO_KR_API_KEY = "여기에_소상공인_인증키를_붙여넣으세요"
+
+# 🌟 사장님이 찾아주신 카카오 API 키를 코드에 완벽하게 내장했습니다!
+KAKAO_REST_API_KEY = "f6eab02e349ec379ba08ebf65a54a1df"
 
 # ==========================================
 # 🔐 1. 담당자 계정 관리 (아이디, 비밀번호, 표시할 이름)
@@ -194,11 +192,10 @@ def load_data(file_paths):
         return '기타(미분류)'
     combined_df['Price_Type'] = combined_df.apply(m_pr, axis=1)
     combined_df['Color_Type'] = combined_df.apply(lambda r: '해당없음' if '기타' in r['Custom_Channel'] else ('투명' if r['is_clear_lens'] else '컬러'), axis=1)
-    combined_df['Vision_Type'] = combined_df.apply(lambda r: '난시용' if '난시' in str(r['상품명2']) else '근시용', axis=1)
     
     return combined_df
 
-# (상권분석용 API 함수)
+# (상권분석용 API 함수 - 카카오)
 def search_location_by_kakao(query, key):
     url = "https://dapi.kakao.com/v2/local/search/keyword.json"
     try:
@@ -209,9 +206,10 @@ def search_location_by_kakao(query, key):
     except: pass
     return None, None, None
 
+# (상권분석용 API 함수 - 소상공인)
 @st.cache_data(ttl=3600)
 def get_real_competitors(lat, lon, key):
-    if not key: return None 
+    if not key or "여기에" in key: return None 
     url = "http://apis.data.go.kr/B553077/api/open/sdam/bizesInfoInRadius"
     try:
         res = requests.get(url, params={"ServiceKey": urllib.parse.unquote(key), "type": "json", "cy": lat, "cx": lon, "radius": 500, "numOfRows": 100}, timeout=5)
@@ -312,7 +310,6 @@ if app_mode == "📊 1. 매장 실적 진단 (엑셀)":
                 views.append({"title": f"🏪 {store}", "df": t_df[t_df['거래처(부서)'] == store]})
 
         st.sidebar.markdown("---")
-        # 필터
         s_chan = st.sidebar.multiselect("📦 브랜드", ['OEM', 'PB', '글로벌', '기타'], default=[])
         s_col = st.sidebar.multiselect("👁️ 렌즈 종류", ['컬러', '투명'], default=[])
         
@@ -351,7 +348,7 @@ if app_mode == "📊 1. 매장 실적 진단 (엑셀)":
                         st.plotly_chart(fig, use_container_width=True)
 
         with tab_cust:
-            st.info("고객 재방문율 및 구매 리스트 데이터 공간입니다. (매출 데이터 기반)")
+            st.info("고객 재방문율 및 구매 리스트 데이터 공간입니다.")
 
         with tab_rnw:
             st.markdown("### ✨ 매장 리뉴얼 및 인테리어")
@@ -368,19 +365,17 @@ if app_mode == "📊 1. 매장 실적 진단 (엑셀)":
 # ====================================================================================================
 elif app_mode == "🗺️ 2. 상권 이전 시뮬레이터":
     st.sidebar.title("🔍 상권 통합 검색")
-    search_query = st.sidebar.text_input("📍 위치 검색 (예: 서면 올리브영)")
+    search_query = st.sidebar.text_input("📍 위치 검색 (예: 서면 올리브영, 강남역)")
     
     if st.sidebar.button("🚀 지도로 이동하기", use_container_width=True):
-        if not KAKAO_REST_API_KEY:
-            st.sidebar.error("⚠️ 상호명 검색을 위해 Secrets에 카카오 API 키를 넣어주세요.")
-        elif search_query:
+        if search_query:
             lat, lon, p_name = search_location_by_kakao(search_query, KAKAO_REST_API_KEY)
             if lat and lon:
                 st.session_state.center_lat = lat
                 st.session_state.center_lon = lon
                 st.session_state.candidate_store = p_name
                 st.rerun()
-            else: st.sidebar.error("검색 결과를 찾을 수 없습니다.")
+            else: st.sidebar.error("검색 결과를 찾을 수 없습니다. (띄어쓰기를 다르게 해보시거나 건물명으로 검색해보세요.)")
 
     st.sidebar.markdown("---")
     current_store = st.sidebar.text_input("현재 매장명", value="렌즈미 천안쌍용점")
@@ -405,7 +400,7 @@ elif app_mode == "🗺️ 2. 상권 이전 시뮬레이터":
         
         comps = get_real_competitors(st.session_state.center_lat, st.session_state.center_lon, DATA_GO_KR_API_KEY)
         if comps is None:
-            st.warning("⚠️ 소상공인 API 키 미입력 시 샘플 핀이 표시됩니다.")
+            st.warning("⚠️ 소상공인 API 키 미입력 시 경쟁사(안경원) 마커는 샘플로만 표시됩니다.")
             comps = [{"name": "오렌즈(샘플)", "lat": st.session_state.center_lat+0.001, "lon": st.session_state.center_lon-0.001, "color":"orange"}]
         
         for c in comps:
