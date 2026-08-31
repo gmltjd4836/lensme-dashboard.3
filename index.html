@@ -4,19 +4,21 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>렌즈미 상권 분석 대시보드</title>
-    <!-- 폰트 및 디자인(Tailwind CSS) 불러오기 -->
+    <!-- 폰트, Tailwind CSS, Plotly 차트 라이브러리 불러오기 -->
     <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
     <style>
         body { font-family: 'Pretendard', sans-serif; background-color: #f8fafc; }
-        /* 스크롤바 숨기기 */
         ::-webkit-scrollbar { width: 8px; }
         ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        .tab-btn.active { border-bottom: 4px solid #4f46e5; color: #4f46e5; font-weight: 800; }
+        .tab-btn { color: #64748b; font-weight: 600; border-bottom: 4px solid transparent; }
     </style>
 </head>
 <body class="flex flex-col md:flex-row h-screen">
 
-    <!-- 1. 좌측 사이드바 (검색 및 메뉴) -->
+    <!-- 1. 좌측 사이드바 -->
     <div class="w-full md:w-1/4 bg-white border-r border-gray-200 p-6 flex flex-col shadow-lg z-10">
         <h1 class="text-2xl font-extrabold text-slate-800 border-b-4 border-indigo-500 pb-3 mb-6">
             🗺️ 렌즈미 상권 분석기
@@ -41,50 +43,91 @@
         <p id="statusMessage" class="mt-4 text-sm text-red-500 font-bold hidden"></p>
     </div>
 
-    <!-- 2. 우측 메인 화면 (카카오맵) -->
-    <div class="w-full md:w-3/4 h-full relative">
-        <div id="map" class="w-full h-full"></div>
+    <!-- 2. 우측 메인 화면 (탭 메뉴 + 콘텐츠) -->
+    <div class="w-full md:w-3/4 flex flex-col bg-slate-50">
+        
+        <!-- 탭 메뉴 버튼들 -->
+        <div class="flex bg-white px-6 pt-4 border-b border-gray-200">
+            <button onclick="switchTab('map')" id="btn-map" class="tab-btn active px-4 py-2 mr-4 text-lg hover:text-indigo-500 transition">📍 카카오 상권 지도</button>
+            <button onclick="switchTab('pop')" id="btn-pop" class="tab-btn px-4 py-2 mr-4 text-lg hover:text-indigo-500 transition">👥 유동인구 분석</button>
+            <!-- 나중에 추가할 ROI 탭 등은 일단 숨겨둡니다 -->
+            <button class="tab-btn px-4 py-2 text-lg opacity-50 cursor-not-allowed" disabled>📊 입지 비교 (예정)</button>
+            <button class="tab-btn px-4 py-2 text-lg opacity-50 cursor-not-allowed" disabled>💰 ROI 계산 (예정)</button>
+        </div>
+
+        <!-- 탭 1: 카카오맵 영역 -->
+        <div id="tab-map" class="flex-grow w-full h-full relative">
+            <div id="map" class="w-full h-full"></div>
+        </div>
+
+        <!-- 탭 2: 유동인구 분석 영역 -->
+        <div id="tab-pop" class="hidden flex-grow w-full p-8 overflow-y-auto">
+            <h2 class="text-2xl font-bold text-slate-800 mb-6">👥 <span id="popLocationText">천안 신불당 상권</span> 유동인구 분석 보고서</h2>
+            
+            <!-- 핵심 지표 박스 4개 -->
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+                <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 text-center">
+                    <p class="text-sm text-slate-500 font-bold mb-1">일평균 유동인구</p>
+                    <p class="text-3xl font-extrabold text-slate-800">28,450명</p>
+                </div>
+                <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 text-center">
+                    <p class="text-sm text-slate-500 font-bold mb-1">여성 비율</p>
+                    <p class="text-3xl font-extrabold text-pink-500">58.2%</p>
+                </div>
+                <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 text-center">
+                    <p class="text-sm text-slate-500 font-bold mb-1">1020 타겟 비율</p>
+                    <p class="text-3xl font-extrabold text-indigo-600">42.5%</p>
+                </div>
+                <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 text-center">
+                    <p class="text-sm text-slate-500 font-bold mb-1">최고 혼잡 시간대</p>
+                    <p class="text-3xl font-extrabold text-slate-800">16시 ~ 20시</p>
+                </div>
+            </div>
+
+            <!-- 차트 2개 (원형 차트, 꺾은선 차트) -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 h-96">
+                    <div id="ageChart" class="w-full h-full"></div>
+                </div>
+                <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 h-96">
+                    <div id="timeChart" class="w-full h-full"></div>
+                </div>
+            </div>
+        </div>
+
     </div>
 
-    <!-- 3. 카카오맵 JS API (services 라이브러리 포함) -->
-    <!-- 사장님의 JavaScript 키가 들어갔습니다! -->
+    <!-- 카카오맵 JS API -->
     <script type="text/javascript" src="//dapi.kakao.com/v2/maps/sdk.js?appkey=c045609510f8b75252389123f086be48&libraries=services"></script>
     
-    <!-- 4. 지도 및 검색 동작 스크립트 -->
+    <!-- 기능 스크립트 -->
     <script>
-        // 초기 설정 (천안)
+        // -------------------------
+        // 1. 카카오 지도 세팅
+        // -------------------------
         let mapContainer = document.getElementById('map'); 
         let defaultLat = 36.81510;
         let defaultLon = 127.11390;
         
-        let mapOption = {
-            center: new kakao.maps.LatLng(defaultLat, defaultLon),
-            level: 4 // 확대 레벨
-        };  
-        
-        // 지도 생성
+        let mapOption = { center: new kakao.maps.LatLng(defaultLat, defaultLon), level: 4 };  
         let map = new kakao.maps.Map(mapContainer, mapOption); 
-        // 장소 검색 객체 생성 (카카오 검색 API 내장 기능)
         let ps = new kakao.maps.services.Places(); 
-        
         let centerMarker = null;
         let circle = null;
-        let compMarkers = []; // 주변 상가 마커들
+        let compMarkers = [];
 
-        // 화면 띄울 때 초기 지도 세팅
+        // 첫 시작 시 천안 지점 렌더링 및 차트 그리기
         drawMapElements(defaultLat, defaultLon, "천안 신불당 상권");
+        drawCharts();
 
-        // 📍 검색 버튼 눌렀을 때 실행되는 함수
+        // -------------------------
+        // 2. 검색 및 핀 찍기 기능
+        // -------------------------
         function searchLocation() {
             let keyword = document.getElementById('searchInput').value;
             let statusMsg = document.getElementById('statusMessage');
-            
-            if (!keyword.trim()) {
-                alert('검색어를 입력해주세요!');
-                return;
-            }
+            if (!keyword.trim()) { alert('검색어를 입력해주세요!'); return; }
 
-            // 카카오 장소 검색 실행
             ps.keywordSearch(keyword, function(data, status, pagination) {
                 if (status === kakao.maps.services.Status.OK) {
                     statusMsg.classList.add('hidden');
@@ -92,97 +135,125 @@
                     let lon = data[0].x;
                     let placeName = data[0].place_name;
                     
-                    // 텍스트 업데이트
                     document.getElementById('currentLocationText').innerText = placeName;
+                    document.getElementById('popLocationText').innerText = placeName; // 탭2 제목도 변경
                     
-                    // 지도 이동 및 핀 다시 그리기
                     drawMapElements(lat, lon, placeName);
-                    
                 } else if (status === kakao.maps.services.Status.ZERO_RESULT) {
                     statusMsg.innerText = "🚨 검색 결과가 존재하지 않습니다.";
                     statusMsg.classList.remove('hidden');
                 } else {
-                    statusMsg.innerText = "🚨 카카오 검색 서버 에러가 발생했습니다.";
+                    statusMsg.innerText = "🚨 카카오 검색 에러가 발생했습니다.";
                     statusMsg.classList.remove('hidden');
                 }
             });
         }
 
-        // 🗺️ 지도 위에 핀, 원, 주변 상가 그리는 함수
         function drawMapElements(lat, lon, placeName) {
             let moveLatLon = new kakao.maps.LatLng(lat, lon);
-            
-            // 1. 지도 중심 이동
             map.panTo(moveLatLon);
 
-            // 2. 기존 마커/원 초기화
             if(centerMarker) centerMarker.setMap(null);
             if(circle) circle.setMap(null);
             compMarkers.forEach(m => m.setMap(null));
             compMarkers = [];
 
-            // 3. 중심 마커 생성
-            centerMarker = new kakao.maps.Marker({
-                map: map,
-                position: moveLatLon
-            });
+            centerMarker = new kakao.maps.Marker({ map: map, position: moveLatLon });
 
-            // 4. 반경 500m 원 생성
             circle = new kakao.maps.Circle({
-                center : moveLatLon,
-                radius: 500, 
-                strokeWeight: 2,
-                strokeColor: '#4f46e5',
-                strokeOpacity: 0.8,
-                strokeStyle: 'solid',
-                fillColor: '#4f46e5',
-                fillOpacity: 0.15
+                center : moveLatLon, radius: 500, 
+                strokeWeight: 2, strokeColor: '#4f46e5', strokeOpacity: 0.8, fillOpacity: 0.15, fillColor: '#4f46e5'
             });
             circle.setMap(map);
 
-            // 5. 주변 안경원 불러오기 (소상공인 API 연동)
             fetchCompetitors(lat, lon);
         }
 
-        // 🏪 소상공인 API 호출 함수
         function fetchCompetitors(lat, lon) {
-            // 사장님의 소상공인 API 키
             let apiKey = "aXN6wwYUtb8cmsw%2FKilpDWQn1wUuT6U1igFdsRMJNBT8%2ByFZY6dQe95h9rrcobd4%2Fz7JQG0e14PuzcIZNd%2BcbQ%3D%3D";
             let url = `https://apis.data.go.kr/B553077/api/open/sdam/bizesInfoInRadius?ServiceKey=${apiKey}&type=json&cy=${lat}&cx=${lon}&radius=500&numOfRows=100`;
 
             fetch(url)
-                .then(response => response.json())
+                .then(res => res.json())
                 .then(data => {
                     if(data && data.body && data.body.items) {
                         data.body.items.forEach(item => {
                             let name = item.bizesNm;
-                            // 안경, 렌즈 관련 필터링
                             if(name.includes('안경') || name.includes('렌즈') || name.includes('다비치') || name.includes('오렌즈') || name.includes('글라스')) {
-                                
                                 let compMarker = new kakao.maps.Marker({
-                                    map: map,
-                                    position: new kakao.maps.LatLng(item.lat, item.lon),
-                                    title: name
+                                    map: map, position: new kakao.maps.LatLng(item.lat, item.lon), title: name
                                 });
-
-                                // 마우스 올렸을 때 말풍선
                                 let infowindow = new kakao.maps.InfoWindow({
                                     content: `<div style="padding:5px;font-size:12px;font-weight:bold;">${name}</div>`
                                 });
-
-                                kakao.maps.event.addListener(compMarker, 'mouseover', function() {
-                                    infowindow.open(map, compMarker);
-                                });
-                                kakao.maps.event.addListener(compMarker, 'mouseout', function() {
-                                    infowindow.close();
-                                });
-
+                                kakao.maps.event.addListener(compMarker, 'mouseover', function() { infowindow.open(map, compMarker); });
+                                kakao.maps.event.addListener(compMarker, 'mouseout', function() { infowindow.close(); });
                                 compMarkers.push(compMarker);
                             }
                         });
                     }
                 })
-                .catch(error => console.log("상가 정보 로딩 실패:", error));
+                .catch(err => console.log("상가 정보 로딩 실패", err));
+        }
+
+        // -------------------------
+        // 3. 탭(Tab) 전환 기능
+        // -------------------------
+        function switchTab(tabId) {
+            // 모든 탭 컨텐츠 숨기기
+            document.getElementById('tab-map').classList.add('hidden');
+            document.getElementById('tab-pop').classList.add('hidden');
+            
+            // 모든 버튼 스타일 초기화
+            document.getElementById('btn-map').classList.remove('active');
+            document.getElementById('btn-pop').classList.remove('active');
+
+            // 선택한 탭 보이기 및 스타일 적용
+            document.getElementById('tab-' + tabId).classList.remove('hidden');
+            document.getElementById('btn-' + tabId).classList.add('active');
+
+            // 지도가 숨겨졌다가 다시 나타날 때 깨짐(회색 화면) 방지
+            if(tabId === 'map') {
+                map.relayout();
+                map.setCenter(centerMarker.getPosition());
+            } 
+            // 유동인구 탭 열릴 때 차트 크기 리사이징 (반응형 대응)
+            else if (tabId === 'pop') {
+                Plotly.Plots.resize(document.getElementById('ageChart'));
+                Plotly.Plots.resize(document.getElementById('timeChart'));
+            }
+        }
+
+        // -------------------------
+        // 4. Plotly 차트 그리기
+        // -------------------------
+        function drawCharts() {
+            // 연령대 원형(파이) 차트
+            var ageData = [{
+                values: [4200, 7800, 6500, 5100, 4850],
+                labels: ['10대', '20대', '30대', '40대', '50대 이상'],
+                type: 'pie',
+                hole: 0.4,
+                textinfo: 'label+percent',
+                marker: {colors: ['#a7f3d0', '#fbcfe8', '#fde68a', '#c7d2fe', '#e5e7eb']}
+            }];
+            var ageLayout = { title: {text: '📊 연령대별 유동인구 비중', font: {size: 18, family: 'Pretendard'}} };
+            Plotly.newPlot('ageChart', ageData, ageLayout, {responsive: true, displayModeBar: false});
+
+            // 시간대 꺾은선 차트
+            var timeData = [{
+                x: ['06-09시', '09-12시', '12-15시', '15-18시', '18-21시', '21-24시'],
+                y: [1800, 3500, 5200, 8900, 7100, 1950],
+                type: 'scatter',
+                mode: 'lines+markers',
+                line: {color: '#4f46e5', width: 4, shape: 'spline'},
+                marker: {size: 10, color: '#4f46e5'}
+            }];
+            var timeLayout = { 
+                title: {text: '📈 시간대별 유동인구 흐름', font: {size: 18, family: 'Pretendard'}},
+                yaxis: {rangemode: 'tozero'}
+            };
+            Plotly.newPlot('timeChart', timeData, timeLayout, {responsive: true, displayModeBar: false});
         }
     </script>
 </body>
