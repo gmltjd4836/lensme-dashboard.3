@@ -13,8 +13,6 @@
         ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
         .tab-btn.active { border-bottom: 4px solid #4f46e5; color: #4f46e5; font-weight: 800; }
         .tab-btn { color: #64748b; font-weight: 600; border-bottom: 4px solid transparent; }
-        
-        /* 슬라이더(range) 디자인 커스텀 */
         input[type=range] { accent-color: #4f46e5; }
     </style>
 </head>
@@ -26,9 +24,22 @@
             🗺️ 렌즈미 상권 분석기
         </h1>
         
+        <!-- 🌟 전국 A급 핵심 상권 퀵 버튼 추가 -->
         <div class="mb-6">
-            <label class="block text-sm font-bold text-slate-700 mb-2">🔍 상권 위치 검색</label>
-            <input type="text" id="searchInput" placeholder="예: 강남역, 서면 올리브영" 
+            <label class="block text-sm font-bold text-slate-700 mb-3">🌟 전국 A급 상권 빠르게 보기</label>
+            <div class="flex flex-wrap gap-2">
+                <button onclick="quickSearch('강남역')" class="px-3 py-1 bg-indigo-50 text-indigo-700 text-sm font-bold rounded-full border border-indigo-200 hover:bg-indigo-600 hover:text-white transition">#강남역</button>
+                <button onclick="quickSearch('홍대입구역')" class="px-3 py-1 bg-indigo-50 text-indigo-700 text-sm font-bold rounded-full border border-indigo-200 hover:bg-indigo-600 hover:text-white transition">#홍대입구</button>
+                <button onclick="quickSearch('성수동 카페거리')" class="px-3 py-1 bg-indigo-50 text-indigo-700 text-sm font-bold rounded-full border border-indigo-200 hover:bg-indigo-600 hover:text-white transition">#성수동</button>
+                <button onclick="quickSearch('명동역')" class="px-3 py-1 bg-indigo-50 text-indigo-700 text-sm font-bold rounded-full border border-indigo-200 hover:bg-indigo-600 hover:text-white transition">#명동</button>
+                <button onclick="quickSearch('부산 서면역')" class="px-3 py-1 bg-indigo-50 text-indigo-700 text-sm font-bold rounded-full border border-indigo-200 hover:bg-indigo-600 hover:text-white transition">#서면</button>
+                <button onclick="quickSearch('대구 동성로')" class="px-3 py-1 bg-indigo-50 text-indigo-700 text-sm font-bold rounded-full border border-indigo-200 hover:bg-indigo-600 hover:text-white transition">#동성로</button>
+            </div>
+        </div>
+
+        <div class="mb-6 border-t border-slate-200 pt-5">
+            <label class="block text-sm font-bold text-slate-700 mb-2">🔍 상권 직접 검색</label>
+            <input type="text" id="searchInput" placeholder="예: 신불당 올리브영" 
                    class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 mb-3"
                    onkeypress="if(event.keyCode==13) searchLocation()">
             <button onclick="searchLocation()" 
@@ -40,17 +51,19 @@
 
         <div class="mt-2 bg-slate-50 p-4 rounded-lg border border-slate-200">
             <p class="text-xs text-slate-500 font-bold mb-1">현재 기준 매장명</p>
-            <input type="text" id="currentStoreInput" value="렌즈미 천안쌍용점" class="w-full bg-white border border-gray-300 px-3 py-2 rounded-md font-semibold text-sm mb-3" onchange="updateStoreNames()">
+            <input type="text" id="currentStoreInput" value="렌즈미 천안쌍용점" class="w-full bg-white border border-gray-300 px-3 py-2 rounded-md font-semibold text-sm mb-3" oninput="updateStoreNames()">
             
+            <!-- 🌟 분석 대상 상권 이름 직접 수정 가능하도록 Input으로 변경 -->
             <p class="text-xs text-slate-500 font-bold mb-1">분석 대상 상권 (목적지)</p>
-            <p id="currentLocationText" class="text-lg font-extrabold text-indigo-600">천안 신불당 상권</p>
+            <input type="text" id="targetLocationInput" value="천안 신불당 상권" class="w-full bg-white border border-indigo-300 px-3 py-2 rounded-md font-extrabold text-indigo-600 text-lg focus:outline-none focus:ring-2 focus:ring-indigo-500" oninput="updateStoreNames()">
+            <p class="text-[11px] text-gray-400 mt-1">이름을 자유롭게 수정해 보세요!</p>
         </div>
     </div>
 
     <!-- 2. 우측 메인 화면 -->
     <div class="w-full md:w-3/4 flex flex-col bg-slate-50 overflow-hidden">
         
-        <!-- 탭 메뉴 버튼들 -->
+        <!-- 탭 메뉴 -->
         <div class="flex bg-white px-6 pt-4 border-b border-gray-200 overflow-x-auto whitespace-nowrap">
             <button onclick="switchTab('map')" id="btn-map" class="tab-btn active px-4 py-2 mr-4 text-lg hover:text-indigo-500 transition">📍 카카오 상권 지도</button>
             <button onclick="switchTab('pop')" id="btn-pop" class="tab-btn px-4 py-2 mr-4 text-lg hover:text-indigo-500 transition">👥 유동인구 분석</button>
@@ -60,6 +73,10 @@
 
         <!-- 탭 1: 카카오맵 -->
         <div id="tab-map" class="flex-grow w-full h-full relative">
+            <!-- 안내 문구 (모바일/PC 공용) -->
+            <div class="absolute top-4 left-1/2 transform -translate-x-1/2 z-10 bg-white/90 backdrop-blur-sm px-6 py-2 rounded-full shadow-md text-sm font-bold text-slate-700 border border-slate-200">
+                👆 지도를 클릭/터치하면 상권 중심지가 이동합니다!
+            </div>
             <div id="map" class="w-full h-full"></div>
         </div>
 
@@ -67,18 +84,10 @@
         <div id="tab-pop" class="hidden flex-grow w-full p-8 overflow-y-auto">
             <h2 class="text-2xl font-bold mb-6">👥 <span class="targetLocationName text-indigo-600">천안 신불당 상권</span> 유동인구 분석 보고서</h2>
             <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-                <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 text-center">
-                    <p class="text-sm text-slate-500 font-bold mb-1">일평균 유동인구</p><p class="text-2xl font-extrabold text-slate-800">28,450명</p>
-                </div>
-                <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 text-center">
-                    <p class="text-sm text-slate-500 font-bold mb-1">여성 비율</p><p class="text-2xl font-extrabold text-pink-500">58.2%</p>
-                </div>
-                <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 text-center">
-                    <p class="text-sm text-slate-500 font-bold mb-1">1020 타겟 비율</p><p class="text-2xl font-extrabold text-indigo-600">42.5%</p>
-                </div>
-                <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 text-center">
-                    <p class="text-sm text-slate-500 font-bold mb-1">최고 혼잡 시간대</p><p class="text-2xl font-extrabold text-slate-800">16시 ~ 20시</p>
-                </div>
+                <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 text-center"><p class="text-sm text-slate-500 font-bold mb-1">일평균 유동인구</p><p class="text-2xl font-extrabold text-slate-800">28,450명</p></div>
+                <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 text-center"><p class="text-sm text-slate-500 font-bold mb-1">여성 비율</p><p class="text-2xl font-extrabold text-pink-500">58.2%</p></div>
+                <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 text-center"><p class="text-sm text-slate-500 font-bold mb-1">1020 타겟 비율</p><p class="text-2xl font-extrabold text-indigo-600">42.5%</p></div>
+                <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 text-center"><p class="text-sm text-slate-500 font-bold mb-1">최고 혼잡 시간대</p><p class="text-2xl font-extrabold text-slate-800">16시 ~ 20시</p></div>
             </div>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 h-96"><div id="ageChart" class="w-full h-full"></div></div>
@@ -102,9 +111,7 @@
                         <li>📈 <b>상권 활력도:</b> 전체 상권의 성장세 및 공실률</li>
                     </ul>
                 </div>
-                <div class="w-full md:w-2/3 bg-white p-4 rounded-xl shadow-sm border border-slate-200" style="height: 500px;">
-                    <div id="radarChart" class="w-full h-full"></div>
-                </div>
+                <div class="w-full md:w-2/3 bg-white p-4 rounded-xl shadow-sm border border-slate-200" style="height: 500px;"><div id="radarChart" class="w-full h-full"></div></div>
             </div>
         </div>
 
@@ -112,7 +119,6 @@
         <div id="tab-roi" class="hidden flex-grow w-full p-8 overflow-y-auto">
             <h2 class="text-2xl font-bold mb-6">💸 예상 매출 및 투자금 회수(ROI) 시뮬레이터</h2>
             <div class="flex flex-col xl:flex-row gap-6">
-                
                 <!-- 입력부 -->
                 <div class="w-full xl:w-1/3 bg-white p-6 rounded-xl shadow-sm border border-slate-200 space-y-6">
                     <div>
@@ -123,71 +129,59 @@
                     </div>
                     <div>
                         <h3 class="font-bold border-b pb-2 mb-3">2. 월 매출 및 지출 설정</h3>
-                        <div class="mb-3">
-                            <div class="flex justify-between"><span class="text-sm">일평균 방문 고객</span><span class="text-sm font-bold text-indigo-600" id="val_cust">40명</span></div>
-                            <input type="range" id="roi_cust" min="10" max="150" value="40" step="5" class="w-full" oninput="calcROI()">
-                        </div>
-                        <div class="mb-3">
-                            <div class="flex justify-between"><span class="text-sm">객단가</span><span class="text-sm font-bold text-indigo-600" id="val_atv">3.5만 원</span></div>
-                            <input type="range" id="roi_atv" min="2.0" max="8.0" value="3.5" step="0.1" class="w-full" oninput="calcROI()">
-                        </div>
-                        <div class="mb-3">
-                            <div class="flex justify-between"><span class="text-sm">마진율</span><span class="text-sm font-bold text-indigo-600" id="val_margin">45%</span></div>
-                            <input type="range" id="roi_margin" min="30" max="70" value="45" step="1" class="w-full" oninput="calcROI()">
-                        </div>
+                        <div class="mb-3"><div class="flex justify-between"><span class="text-sm">일평균 방문 고객</span><span class="text-sm font-bold text-indigo-600" id="val_cust">40명</span></div><input type="range" id="roi_cust" min="10" max="150" value="40" step="5" class="w-full" oninput="calcROI()"></div>
+                        <div class="mb-3"><div class="flex justify-between"><span class="text-sm">객단가</span><span class="text-sm font-bold text-indigo-600" id="val_atv">3.5만 원</span></div><input type="range" id="roi_atv" min="2.0" max="8.0" value="3.5" step="0.1" class="w-full" oninput="calcROI()"></div>
+                        <div class="mb-3"><div class="flex justify-between"><span class="text-sm">마진율</span><span class="text-sm font-bold text-indigo-600" id="val_margin">45%</span></div><input type="range" id="roi_margin" min="30" max="70" value="45" step="1" class="w-full" oninput="calcROI()"></div>
                         <div class="flex justify-between items-center mb-2"><span class="text-sm">월 임대료 (만 원)</span><input type="number" id="roi_rent" value="300" step="50" class="border rounded p-1 w-24 text-right" oninput="calcROI()"></div>
-                        <div class="flex justify-between items-center mb-2"><span class="text-sm">월 고정비/인건비 (만 원)</span><input type="number" id="roi_labor" value="400" step="50" class="border rounded p-1 w-24 text-right" oninput="calcROI()"></div>
+                        <div class="flex justify-between items-center mb-2"><span class="text-sm">월 고정비 (만 원)</span><input type="number" id="roi_labor" value="400" step="50" class="border rounded p-1 w-24 text-right" oninput="calcROI()"></div>
                     </div>
                 </div>
-
-                <!-- 결과 및 차트부 -->
+                <!-- 결과부 -->
                 <div class="w-full xl:w-2/3 flex flex-col gap-4">
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200 text-center">
-                            <p class="text-sm text-slate-500 font-bold mb-1">총 투자금</p><p id="out_invest" class="text-2xl font-extrabold text-slate-800">14,000만</p>
-                        </div>
-                        <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200 text-center">
-                            <p class="text-sm text-slate-500 font-bold mb-1">예상 월 순수익</p><p id="out_profit" class="text-2xl font-extrabold text-emerald-500">1,190만</p>
-                        </div>
-                        <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200 text-center">
-                            <p class="text-sm text-slate-500 font-bold mb-1">투자금 회수 기간</p><p id="out_payback" class="text-2xl font-extrabold text-indigo-600">7.6개월</p>
-                        </div>
+                        <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200 text-center"><p class="text-sm text-slate-500 font-bold mb-1">총 투자금</p><p id="out_invest" class="text-2xl font-extrabold text-slate-800">14,000만</p></div>
+                        <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200 text-center"><p class="text-sm text-slate-500 font-bold mb-1">예상 월 순수익</p><p id="out_profit" class="text-2xl font-extrabold text-emerald-500">1,190만</p></div>
+                        <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200 text-center"><p class="text-sm text-slate-500 font-bold mb-1">투자금 회수 기간</p><p id="out_payback" class="text-2xl font-extrabold text-indigo-600">7.6개월</p></div>
                     </div>
-                    <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex-grow" style="min-height: 400px;">
-                        <div id="roiChart" class="w-full h-full"></div>
-                    </div>
+                    <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex-grow" style="min-height: 400px;"><div id="roiChart" class="w-full h-full"></div></div>
                 </div>
-
             </div>
         </div>
 
     </div>
 
-    <!-- 카카오맵 JS API -->
+    <!-- 카카오맵 JS API (services 라이브러리 포함) -->
     <script type="text/javascript" src="//dapi.kakao.com/v2/maps/sdk.js?appkey=c045609510f8b75252389123f086be48&libraries=services"></script>
     
     <script>
-        // 전역 변수 설정
+        // 전역 변수
         let currentStoreName = "렌즈미 천안쌍용점";
         let targetLocationName = "천안 신불당 상권";
-        let radarChartDrawn = false;
-        let roiChartDrawn = false;
 
         // 1. 카카오 지도 세팅
         let mapContainer = document.getElementById('map'); 
         let defaultLat = 36.81510, defaultLon = 127.11390;
         let mapOption = { center: new kakao.maps.LatLng(defaultLat, defaultLon), level: 4 };  
         let map = new kakao.maps.Map(mapContainer, mapOption); 
-        let ps = new kakao.maps.services.Places(); 
+        
+        let ps = new kakao.maps.services.Places(); // 장소 검색 객체
+        let geocoder = new kakao.maps.services.Geocoder(); // 주소 변환(역지오코딩) 객체
+        
         let centerMarker = null, circle = null, compMarkers = [];
 
-        // 시작 시 초기 렌더링
+        // 초기 화면 세팅
         drawMapElements(defaultLat, defaultLon, targetLocationName);
         drawPopCharts();
         drawRadarChart();
-        calcROI(); // ROI 초기 계산
+        calcROI();
 
-        // 2. 장소 검색 함수
+        // 🌟 2-1. A급 상권 퀵 버튼 작동 함수
+        function quickSearch(keyword) {
+            document.getElementById('searchInput').value = keyword;
+            searchLocation();
+        }
+
+        // 2-2. 장소 검색 함수
         function searchLocation() {
             let keyword = document.getElementById('searchInput').value;
             let statusMsg = document.getElementById('statusMessage');
@@ -197,7 +191,10 @@
                 if (status === kakao.maps.services.Status.OK) {
                     statusMsg.classList.add('hidden');
                     let lat = data[0].y, lon = data[0].x;
+                    
+                    // 이름 자동 업데이트
                     targetLocationName = data[0].place_name;
+                    document.getElementById('targetLocationInput').value = targetLocationName;
                     
                     updateStoreNames();
                     drawMapElements(lat, lon, targetLocationName);
@@ -209,10 +206,38 @@
             });
         }
 
-        // 지도 그리기 함수
+        // 🌟 2-3. 지도 직접 클릭/터치 이동 및 팝업 안전장치 기능
+        kakao.maps.event.addListener(map, 'click', function(mouseEvent) {
+            let latlng = mouseEvent.latLng;
+            
+            // 팝업창 띄우기 (예/아니오)
+            if (confirm("📍 이 위치로 상권 분석 중심지를 변경하시겠습니까?")) {
+                let lat = latlng.getLat();
+                let lon = latlng.getLng();
+
+                // 클릭한 곳의 실제 주소(동 이름 등) 알아내기
+                geocoder.coord2Address(lon, lat, function(result, status) {
+                    let placeName = "선택한 상권 위치";
+                    if (status === kakao.maps.services.Status.OK) {
+                        // 지번 주소 또는 도로명 주소를 가져옵니다.
+                        placeName = result[0].address.address_name;
+                    }
+                    
+                    // Input 창과 탭 제목 업데이트
+                    targetLocationName = placeName;
+                    document.getElementById('targetLocationInput').value = targetLocationName;
+                    
+                    updateStoreNames();
+                    drawMapElements(lat, lon, targetLocationName);
+                });
+            }
+        });
+
+        // 3. 지도 및 상가 핀 그리기 함수
         function drawMapElements(lat, lon, placeName) {
             let moveLatLon = new kakao.maps.LatLng(lat, lon);
-            map.panTo(moveLatLon);
+            map.panTo(moveLatLon); // 부드럽게 이동
+            
             if(centerMarker) centerMarker.setMap(null);
             if(circle) circle.setMap(null);
             compMarkers.forEach(m => m.setMap(null)); compMarkers = [];
@@ -246,48 +271,38 @@
             }).catch(err => console.log(err));
         }
 
-        // 이름 텍스트 일괄 업데이트
+        // 🌟 이름 텍스트(Input) 일괄 동기화
         function updateStoreNames() {
             currentStoreName = document.getElementById('currentStoreInput').value || "현재 매장";
-            document.getElementById('currentLocationText').innerText = targetLocationName;
+            targetLocationName = document.getElementById('targetLocationInput').value || "선택한 상권";
             
+            // 모든 탭에 있는 상권 이름 싹 다 바꾸기
             let targets = document.getElementsByClassName('targetLocationName');
             for(let i=0; i<targets.length; i++) targets[i].innerText = targetLocationName;
             
             let currents = document.getElementsByClassName('currentStoreName');
             for(let i=0; i<currents.length; i++) currents[i].innerText = currentStoreName;
 
-            drawRadarChart(); // 이름 바뀌면 레이더차트 범례도 업데이트
+            drawRadarChart(); // 레이더차트 범례 업데이트
         }
 
-        // 3. 탭(Tab) 전환
+        // 4. 탭(Tab) 전환
         function switchTab(tabId) {
-            document.getElementById('tab-map').classList.add('hidden');
-            document.getElementById('tab-pop').classList.add('hidden');
-            document.getElementById('tab-radar').classList.add('hidden');
-            document.getElementById('tab-roi').classList.add('hidden');
+            document.getElementById('tab-map').classList.add('hidden'); document.getElementById('tab-pop').classList.add('hidden');
+            document.getElementById('tab-radar').classList.add('hidden'); document.getElementById('tab-roi').classList.add('hidden');
             
-            document.getElementById('btn-map').classList.remove('active');
-            document.getElementById('btn-pop').classList.remove('active');
-            document.getElementById('btn-radar').classList.remove('active');
-            document.getElementById('btn-roi').classList.remove('active');
+            document.getElementById('btn-map').classList.remove('active'); document.getElementById('btn-pop').classList.remove('active');
+            document.getElementById('btn-radar').classList.remove('active'); document.getElementById('btn-roi').classList.remove('active');
 
-            document.getElementById('tab-' + tabId).classList.remove('hidden');
-            document.getElementById('btn-' + tabId).classList.add('active');
+            document.getElementById('tab-' + tabId).classList.remove('hidden'); document.getElementById('btn-' + tabId).classList.add('active');
 
-            if(tabId === 'map') {
-                map.relayout(); map.setCenter(centerMarker.getPosition());
-            } else if (tabId === 'pop') {
-                Plotly.Plots.resize(document.getElementById('ageChart'));
-                Plotly.Plots.resize(document.getElementById('timeChart'));
-            } else if (tabId === 'radar') {
-                Plotly.Plots.resize(document.getElementById('radarChart'));
-            } else if (tabId === 'roi') {
-                Plotly.Plots.resize(document.getElementById('roiChart'));
-            }
+            if(tabId === 'map') { map.relayout(); map.setCenter(centerMarker.getPosition()); }
+            else if (tabId === 'pop') { Plotly.Plots.resize(document.getElementById('ageChart')); Plotly.Plots.resize(document.getElementById('timeChart')); }
+            else if (tabId === 'radar') { Plotly.Plots.resize(document.getElementById('radarChart')); }
+            else if (tabId === 'roi') { Plotly.Plots.resize(document.getElementById('roiChart')); }
         }
 
-        // 4. 차트 그리기 (유동인구)
+        // 차트 및 시뮬레이터 로직 유지
         function drawPopCharts() {
             var ageData = [{ values: [4200, 7800, 6500, 5100, 4850], labels: ['10대', '20대', '30대', '40대', '50대 이상'], type: 'pie', hole: 0.4, textinfo: 'label+percent', marker: {colors: ['#a7f3d0', '#fbcfe8', '#fde68a', '#c7d2fe', '#e5e7eb']} }];
             Plotly.newPlot('ageChart', ageData, { title: {text: '📊 연령대별 유동인구 비중', font: {size: 16, family: 'Pretendard'}} }, {responsive: true, displayModeBar: false});
@@ -296,7 +311,6 @@
             Plotly.newPlot('timeChart', timeData, { title: {text: '📈 시간대별 유동인구 흐름', font: {size: 16, family: 'Pretendard'}}, yaxis: {rangemode: 'tozero'} }, {responsive: true, displayModeBar: false});
         }
 
-        // 5. 차트 그리기 (레이더)
         function drawRadarChart() {
             let data = [
                 { type: 'scatterpolar', r: [60, 55, 80, 70, 50, 60], theta: ['1020 유동인구', '타겟 밀집도', '경쟁 강도', '임대료 가성비', '상권 활력도', '1020 유동인구'], fill: 'toself', name: currentStoreName, line: {color: 'gray'}, fillcolor: 'rgba(128,128,128,0.4)' },
@@ -306,23 +320,19 @@
             Plotly.newPlot('radarChart', data, layout, {responsive: true, displayModeBar: false});
         }
 
-        // 6. ROI 시뮬레이터 실시간 계산
         function calcROI() {
-            // 슬라이더 값 텍스트 업데이트
             let cust = parseFloat(document.getElementById('roi_cust').value); document.getElementById('val_cust').innerText = cust + "명";
             let atv = parseFloat(document.getElementById('roi_atv').value); document.getElementById('val_atv').innerText = atv.toFixed(1) + "만 원";
             let margin = parseFloat(document.getElementById('roi_margin').value); document.getElementById('val_margin').innerText = margin + "%";
             
-            // 입력값 가져오기
             let deposit = parseFloat(document.getElementById('roi_deposit').value) || 0;
             let premium = parseFloat(document.getElementById('roi_premium').value) || 0;
             let interior = parseFloat(document.getElementById('roi_interior').value) || 0;
             let rent = parseFloat(document.getElementById('roi_rent').value) || 0;
             let labor = parseFloat(document.getElementById('roi_labor').value) || 0;
 
-            // 계산
             let totalInvest = deposit + premium + interior;
-            let sunkCost = premium + interior; // 소멸성 비용 (회수 대상)
+            let sunkCost = premium + interior; 
             
             let monthlySales = cust * atv * 30;
             let grossProfit = monthlySales * (margin / 100);
@@ -330,7 +340,6 @@
             
             let payback = (netProfit > 0) ? (sunkCost / netProfit) : 0;
 
-            // 텍스트 출력
             document.getElementById('out_invest').innerText = totalInvest.toLocaleString() + "만";
             let pfEl = document.getElementById('out_profit');
             pfEl.innerText = Math.round(netProfit).toLocaleString() + "만";
@@ -338,23 +347,17 @@
             
             document.getElementById('out_payback').innerText = payback > 0 ? payback.toFixed(1) + "개월" : "불가 (적자)";
 
-            // 차트 데이터 생성 (24개월)
             let months = Array.from({length: 24}, (_, i) => i + 1);
             let accProfits = months.map(m => (netProfit * m) - sunkCost);
             let colors = accProfits.map(v => v >= 0 ? '#10b981' : '#ef4444');
 
-            let chartData = [{
-                x: months.map(m => m + "개월"), y: accProfits,
-                type: 'bar', marker: {color: colors}
-            }];
-
+            let chartData = [{ x: months.map(m => m + "개월"), y: accProfits, type: 'bar', marker: {color: colors} }];
             let chartLayout = {
                 title: {text: '⏳ 향후 2년 누적 수익 (소멸성 투자금 회수 기준)', font: {size: 16, family: 'Pretendard'}},
                 yaxis: {title: '누적 수익 (만 원)'},
                 shapes: [{type: 'line', x0: -0.5, x1: 23.5, y0: 0, y1: 0, line: {color: 'black', width: 2, dash: 'dash'}}],
                 margin: {t:40, b:40, l:50, r:20}
             };
-
             Plotly.newPlot('roiChart', chartData, chartLayout, {responsive: true, displayModeBar: false});
         }
     </script>
