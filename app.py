@@ -3,8 +3,8 @@ import pandas as pd
 import plotly.graph_objects as go
 import plotly.express as px
 import folium
+from folium import plugins
 from streamlit_folium import st_folium
-import math
 
 # ==========================================
 # 0. 페이지 기본 설정
@@ -49,58 +49,77 @@ show_school = st.sidebar.checkbox("🏫 중·고등학교 / 대학교", value=Tr
 tab_map, tab_radar, tab_roi = st.tabs(["📍 상권 지도 및 경쟁사 분석", "📊 상권 매력도 비교 (As-Is vs To-Be)", "💰 이전 투자금 회수(ROI) 시뮬레이터"])
 
 # ---------------------------------------------------------
-# [탭 1] 상권 지도 분석 (Folium)
+# [탭 1] 상권 지도 분석 (Folium 프로버전)
 # ---------------------------------------------------------
 with tab_map:
-    st.markdown(f'<div class="sub-title">[{candidate_store}] 반경 500m 상권 현황</div>', unsafe_allow_html=True)
-    st.markdown("후보지 주변의 주요 경쟁사와 1020 타겟 집객 시설(학교 등)을 확인합니다.")
+    st.markdown(f'<div class="sub-title">[{candidate_store}] 핵심 상권 지도 (반경 500m)</div>', unsafe_allow_html=True)
+    st.markdown("💡 **Tip:** 우측 상단의 `[ ]` 버튼을 누르면 지도를 전체 화면으로 크게 볼 수 있습니다. 마커를 클릭하면 상세 정보가 나옵니다.")
     
-    # 💡 실제 서비스 시에는 카카오/네이버 지도 API로 위경도를 불러와야 합니다.
-    # 여기서는 시각적 연출을 위해 임의의 좌표(천안 불당동 부근)를 사용한 목업(Mock) 데이터입니다.
+    # 천안 불당동 기준 임의 좌표
     center_lat, center_lon = 36.8151, 127.1139 
     
-    m = folium.Map(location=[center_lat, center_lon], zoom_start=15, tiles="CartoDB positron")
+    # 🌟 지도 스타일 변경: OpenStreetMap (건물, 도로가 훨씬 선명함)
+    m = folium.Map(location=[center_lat, center_lon], zoom_start=15, tiles="OpenStreetMap")
     
-    # 1. 이전 후보지 마커
+    # 🌟 전체화면 플러그인 추가
+    plugins.Fullscreen(position='topright', title='전체화면 확대', title_cancel='전체화면 취소').add_to(m)
+    
+    # 1. 이전 후보지 마커 (크고 화려하게)
+    popup_html = f"""
+    <div style='width:200px; text-align:center;'>
+        <h4 style='color:#e21837; margin-bottom:5px;'>🚩 렌즈미 이전 후보지</h4>
+        <b>{candidate_store}</b><br>
+        <span style='font-size:12px; color:gray;'>선택된 분석 중심지점</span>
+    </div>
+    """
     folium.Marker(
-        [center_lat, center_lon], tooltip="이전 후보지 (렌즈미)",
+        [center_lat, center_lon], 
+        tooltip="<b style='font-size:14px; color:#e21837;'>클릭하여 확인 🚩</b>",
+        popup=folium.Popup(popup_html, max_width=300),
         icon=folium.Icon(color="red", icon="star", prefix='fa')
     ).add_to(m)
     
-    # 2. 반경 500m 원 그리기
+    # 2. 반경 500m 핵심 상권 영역
     folium.Circle(
         radius=500, location=[center_lat, center_lon],
-        color="#4f46e5", fill=True, fill_color="#4f46e5", fill_opacity=0.1
+        color="#4f46e5", weight=2, fill=True, fill_color="#4f46e5", fill_opacity=0.15,
+        tooltip="<b>도보 7~10분 (반경 500m) 핵심 상권 영역</b>"
     ).add_to(m)
     
-    # 3. 경쟁사 및 학교 마커 추가 (가상 좌표)
+    # 3. 경쟁사 및 학교 마커 추가
     competitors = []
-    if show_olens: competitors.extend([{"name": "오렌즈 불당점", "lat": 36.8165, "lon": 127.1120, "color": "orange", "icon": "eye"}])
-    if show_davich: competitors.extend([{"name": "다비치안경 신불당점", "lat": 36.8140, "lon": 127.1155, "color": "blue", "icon": "glasses"}])
-    if show_hapa: competitors.extend([{"name": "하파크리스틴 픽업점", "lat": 36.8170, "lon": 127.1145, "color": "pink", "icon": "heart"}])
-    if show_winc: competitors.extend([{"name": "윙크렌즈 안경원", "lat": 36.8135, "lon": 127.1110, "color": "purple", "icon": "dot-circle-o"}])
+    if show_olens: competitors.extend([{"name": "오렌즈 불당점", "lat": 36.8165, "lon": 127.1120, "color": "orange", "icon": "eye", "desc": "주요 경쟁사 (컬러렌즈)"}])
+    if show_davich: competitors.extend([{"name": "다비치안경 신불당점", "lat": 36.8140, "lon": 127.1155, "color": "blue", "icon": "glasses", "desc": "대형 안경원 (투명/팩렌즈 견제)"}])
+    if show_hapa: competitors.extend([{"name": "하파크리스틴 픽업점", "lat": 36.8170, "lon": 127.1145, "color": "pink", "icon": "heart", "desc": "온라인 픽업 중심 거점"}])
+    if show_winc: competitors.extend([{"name": "윙크렌즈 안경원", "lat": 36.8135, "lon": 127.1110, "color": "purple", "icon": "dot-circle-o", "desc": "신흥 앱 기반 경쟁사"}])
     
     for comp in competitors:
+        comp_html = f"<div style='width:150px;'><b>{comp['name']}</b><br><span style='font-size:12px; color:gray;'>{comp['desc']}</span></div>"
         folium.Marker(
-            [comp["lat"], comp["lon"]], tooltip=comp["name"],
+            [comp["lat"], comp["lon"]], 
+            tooltip=f"<b style='font-size:13px;'>{comp['name']}</b>",
+            popup=folium.Popup(comp_html, max_width=250),
             icon=folium.Icon(color=comp["color"], icon=comp["icon"], prefix='fa')
         ).add_to(m)
         
     if show_school:
         schools = [
-            {"name": "불당고등학교", "lat": 36.8185, "lon": 127.1105},
-            {"name": "불당중학교", "lat": 36.8120, "lon": 127.1170}
+            {"name": "불당고등학교", "lat": 36.8185, "lon": 127.1105, "students": "약 950명"},
+            {"name": "불당중학교", "lat": 36.8120, "lon": 127.1170, "students": "약 820명"}
         ]
         for sch in schools:
+            sch_html = f"<div style='width:150px;'><b>🏫 {sch['name']}</b><br><span style='color:#10b981;'>핵심 타겟: {sch['students']}</span></div>"
             folium.Marker(
-                [sch["lat"], sch["lon"]], tooltip=sch["name"],
+                [sch["lat"], sch["lon"]], 
+                tooltip=f"<b style='font-size:13px; color:green;'>{sch['name']}</b>",
+                popup=folium.Popup(sch_html, max_width=250),
                 icon=folium.Icon(color="green", icon="graduation-cap", prefix='fa')
             ).add_to(m)
 
     # Streamlit에 지도 렌더링
-    st_folium(m, width=1200, height=500)
+    st_folium(m, width="100%", height=600)
     
-    st.info("💡 **상권 요약:** 후보지 반경 500m 내에 1020 타겟 학교가 밀집해 있으나, 오렌즈와 하파크리스틴 등 컬러렌즈 경쟁 강도가 높은 지역입니다. (차별화된 인테리어 및 팩렌즈 공격적 마케팅 필요)")
+    st.info("💡 **상권 종합 브리핑:** 후보지 반경 500m 내에 1020 타겟 학교가 밀집해 있어 잠재 수요가 풍부하나, 오렌즈와 하파크리스틴 등 컬러렌즈 경쟁 강도가 높은 지역입니다. 차별화된 인테리어 및 공격적인 신규 고객 유입 프로모션이 필요합니다.")
 
 # ---------------------------------------------------------
 # [탭 2] 상권 매력도 레이더 차트 (As-Is vs To-Be)
@@ -112,14 +131,20 @@ with tab_radar:
     
     with col1:
         st.markdown("<br><br>", unsafe_allow_html=True)
-        st.markdown(f"**현재:** {current_store}")
-        st.markdown(f"**후보:** {candidate_store}")
+        st.markdown(f"🏪 **현재 매장:** {current_store}")
+        st.markdown(f"🚩 **이전 후보:** {candidate_store}")
         st.markdown("---")
-        st.markdown("- **1020 유동인구:** 해당 상권을 지나가는 주요 타겟층의 규모\n- **타겟 밀집도:** 학교, 학원가 등 주 고객층 체류 시설 비중\n- **경쟁 강도:** 주변 경쟁사(오렌즈, 다비치 등) 밀집도 (낮을수록 점수 높음)\n- **임대료 가성비:** 평당 임대료 대비 예상 매출액 비율\n- **상권 활력도:** 공실률, 신규 브랜드 입점 등 상권의 성장성")
+        st.markdown("""
+        **[평가 지표 가이드]**
+        - **1020 유동인구:** 핵심 타겟층의 통행량
+        - **타겟 밀집도:** 학교, 학원가 등 주 고객 체류 비중
+        - **경쟁 강도(역산):** 점수가 높을수록 경쟁사가 적어 유리함
+        - **임대료 가성비:** 평당 임대료 대비 예상 매출 비율
+        - **상권 활력도:** 상권 전체의 성장세 및 공실률
+        """)
         
     with col2:
         categories = ['1020 유동인구', '타겟 밀집도', '경쟁 강도(역산)', '임대료 가성비', '상권 활력도']
-        # 임의의 스코어 세팅 (1~100점)
         current_scores = [60, 55, 80, 70, 50] 
         candidate_scores = [90, 85, 40, 65, 95] 
         
@@ -135,7 +160,8 @@ with tab_radar:
         
         fig_radar.update_layout(
             polar=dict(radialaxis=dict(visible=True, range=[0, 100])),
-            showlegend=True, margin=dict(t=30, b=30, l=30, r=30)
+            showlegend=True, margin=dict(t=30, b=30, l=30, r=30),
+            legend=dict(orientation="h", yanchor="bottom", y=-0.2, xanchor="center", x=0.5)
         )
         st.plotly_chart(fig_radar, use_container_width=True)
 
@@ -164,12 +190,11 @@ with tab_roi:
         monthly_labor = st.number_input("월 인건비 및 기타 고정비 (만 원)", value=400, step=50)
         
     with col_result:
-        # 월 매출 및 순수익 계산
         monthly_sales = daily_cust * atv * 30
         monthly_gross_profit = monthly_sales * (margin_rate / 100)
         monthly_net_profit = monthly_gross_profit - monthly_rent - monthly_labor
         
-        # 회수 기간 계산 (보증금 제외 순수 소멸성 비용 기준 회수 기간)
+        # 보증금 제외 순수 소멸성 비용 기준 회수 기간
         sunk_investment = premium + interior
         if monthly_net_profit > 0:
             payback_months = sunk_investment / monthly_net_profit
@@ -184,7 +209,6 @@ with tab_roi:
         st.markdown("<br>", unsafe_allow_html=True)
         
         if monthly_net_profit > 0:
-            # 향후 24개월간의 누적 수익 그래프
             months = list(range(1, 25))
             accumulated_profit = [(monthly_net_profit * m) - sunk_investment for m in months]
             
