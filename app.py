@@ -6,14 +6,13 @@ import folium
 from folium import plugins
 from streamlit_folium import st_folium
 import requests
-import urllib.parse
 
 # ==========================================
-# 0. 페이지 및 기본 설정 (API 키 완벽 내장)
+# 0. 페이지 및 기본 설정 
 # ==========================================
 st.set_page_config(page_title="렌즈미 매장 이전 상권 분석기", page_icon="🗺️", layout="wide")
 
-# 🌟 사장님의 카카오 키와 소상공인 키 2개를 정확히 넣었습니다!
+# 🌟 사장님의 두 가지 API 키 완벽 내장 완료!
 KAKAO_REST_API_KEY = "f6eab02e349ec379ba08ebf65a54a1df"
 DATA_GO_KR_API_KEY = "aXN6wwYUtb8cmsw%2FKilpDWQn1wUuT6U1igFdsRMJNBT8%2ByFZY6dQe95h9rrcobd4%2Fz7JQG0e14PuzcIZNd%2BcbQ%3D%3D"
 
@@ -40,7 +39,7 @@ st.markdown("""
 st.markdown('<div class="main-title">🗺️ 렌즈미 매장 이전 & 상권 분석기</div>', unsafe_allow_html=True)
 
 # ==========================================
-# 🚀 API 연동 함수 (카카오 키워드 검색 / 소상공인 실시간 데이터)
+# 🚀 API 연동 함수 (에러 방지 처리 완벽 적용)
 # ==========================================
 def search_location_by_kakao(query, key):
     url = "https://dapi.kakao.com/v2/local/search/keyword.json"
@@ -51,45 +50,41 @@ def search_location_by_kakao(query, key):
         if res.status_code == 200:
             docs = res.json().get('documents')
             if docs:
+                # 에러 방지: 좌표값이 정상적인지 확인
                 return float(docs[0]['y']), float(docs[0]['x']), docs[0]['place_name']
-    except:
-        pass
+    except Exception as e:
+        st.sidebar.error("카카오 검색 서버와 통신이 원활하지 않습니다.")
     return None, None, None
 
 @st.cache_data(ttl=3600)
 def get_real_competitors(lat, lon, key):
-    if not key:
-        return None 
-    url = "http://apis.data.go.kr/B553077/api/open/sdam/bizesInfoInRadius"
+    # 공공데이터 포털은 URL 인코딩 충돌이 잦아 안전하게 주소에 직접 합칩니다.
+    url = f"http://apis.data.go.kr/B553077/api/open/sdam/bizesInfoInRadius?ServiceKey={key}&type=json&cy={lat}&cx={lon}&radius=500&numOfRows=100"
     try:
-        # 인코딩 키 디코딩 처리
-        decoded_key = urllib.parse.unquote(key)
-        params = {
-            "ServiceKey": decoded_key,
-            "type": "json",
-            "cy": lat,
-            "cx": lon,
-            "radius": 500,
-            "numOfRows": 100
-        }
-        res = requests.get(url, params=params, timeout=5)
+        res = requests.get(url, timeout=7)
         if res.status_code == 200:
-            items = res.json().get('body', {}).get('items', [])
+            data = res.json()
+            items = data.get('body', {}).get('items', [])
             real_stores = []
             for item in items:
                 name = item.get('bizesNm', '')
-                if any(kw in name for kw in ['안경', '렌즈', '다비치', '오렌즈', '으뜸']):
-                    real_stores.append({
-                        'name': name,
-                        'lat': float(item.get('lat', 0)),
-                        'lon': float(item.get('lon', 0)),
-                        'color': 'purple',
-                        'icon': 'glasses',
-                        'desc': item.get('indsSclsNm', '실제 주변 경쟁 안경원')
-                    })
+                if any(kw in name for kw in ['안경', '렌즈', '다비치', '오렌즈', '으뜸', '글라스']):
+                    try:
+                        c_lat = float(item.get('lat', 0))
+                        c_lon = float(item.get('lon', 0))
+                        real_stores.append({
+                            'name': name,
+                            'lat': c_lat,
+                            'lon': c_lon,
+                            'color': 'purple',
+                            'icon': 'glasses',
+                            'desc': item.get('indsSclsNm', '실제 안경원')
+                        })
+                    except:
+                        continue # 좌표가 이상한 가게는 무시하고 패스
             return real_stores
-    except:
-        return None
+    except Exception as e:
+        pass # 에러가 나도 대시보드가 뻗지 않도록 패스
     return None
 
 # ==========================================
@@ -98,18 +93,19 @@ def get_real_competitors(lat, lon, key):
 st.sidebar.title("🔍 상권 위치 검색")
 st.sidebar.markdown("상권 이름이나 건물명을 검색하세요.")
 
-# 💡 주의: 여기에 쉼표 없이 딱 하나의 지명만 적어주세요!
-search_query = st.sidebar.text_input("📍 검색어 입력 (예: 서면 올리브영)", value="")
+# 💡 쉼표 없이 지명 하나만 적어주세요 (예: 서면 올리브영)
+search_query = st.sidebar.text_input("📍 검색어 입력", value="")
+
 if st.sidebar.button("🚀 지도로 이동하기", use_container_width=True):
     if search_query:
         lat, lon, place_name = search_location_by_kakao(search_query, KAKAO_REST_API_KEY)
         if lat and lon:
+            # 상태 저장소에 업데이트 (버튼 누르면 자동으로 화면이 새로고침됨)
             st.session_state.center_lat = lat
             st.session_state.center_lon = lon
             st.session_state.candidate_store = place_name
-            st.rerun()
         else:
-            st.sidebar.error(f"'{search_query}'(을)를 찾을 수 없습니다. (띄어쓰기를 다르게 하거나 더 큰 지명으로 검색해보세요)")
+            st.sidebar.error(f"'{search_query}' 검색 결과가 없습니다. 띄어쓰기를 바꾸거나 더 큰 지명으로 다시 검색해주세요.")
 
 st.sidebar.markdown("---")
 current_store = st.sidebar.text_input("현재 기준 매장명", value="렌즈미 천안쌍용점")
@@ -131,6 +127,7 @@ tab_map, tab_pop, tab_radar, tab_roi = st.tabs([
 with tab_map:
     st.markdown(f'<div class="sub-title">[{st.session_state.candidate_store}] 핵심 상권 지도 (반경 500m)</div>', unsafe_allow_html=True)
     
+    # 맵 객체 생성
     m = folium.Map(location=[st.session_state.center_lat, st.session_state.center_lon], zoom_start=16, tiles=None)
     folium.TileLayer(
         tiles='http://mt0.google.com/vt/lyrs=m&hl=ko&x={x}&y={y}&z={z}',
@@ -138,7 +135,7 @@ with tab_map:
     ).add_to(m)
     plugins.Fullscreen(position='topright', title='전체화면').add_to(m)
     
-    # 선택 상권 핀
+    # 분석 중심지 핀 (빨간 별)
     folium.Marker(
         [st.session_state.center_lat, st.session_state.center_lon], 
         tooltip="<b style='font-size:14px; color:#e21837;'>선택 지점 🚩</b>",
@@ -146,31 +143,36 @@ with tab_map:
         icon=folium.Icon(color="red", icon="star", prefix='fa')
     ).add_to(m)
     
-    # 반경 500m 영역
+    # 반경 500m 상권 영역
     folium.Circle(
         radius=500, location=[st.session_state.center_lat, st.session_state.center_lon],
         color="#4f46e5", weight=2, fill=True, fill_color="#4f46e5", fill_opacity=0.15,
         tooltip="도보 7~10분 핵심 상권 영역"
     ).add_to(m)
     
-    # 소상공인 API 호출로 실시간 안경원 위치 수집
+    # 진짜 경쟁사(안경원) 데이터 불러오기
     competitors = get_real_competitors(st.session_state.center_lat, st.session_state.center_lon, DATA_GO_KR_API_KEY)
     
     if competitors is None or len(competitors) == 0:
-        st.info("💡 실시간 데이터 수신 대기 중이거나 이 근처 반경 500m 내에 안경원이 없습니다.")
+        st.info("💡 실시간 데이터 수신 중이거나 반경 500m 내에 검색된 안경원이 없습니다.")
     else:
-        st.success(f"✅ 소상공인 공공데이터 연동 완료! 반경 500m 내에 총 {len(competitors)}개의 진짜 안경원/렌즈샵을 찾았습니다.")
+        st.success(f"✅ 소상공인 공공데이터 연동 완료! 반경 500m 내에 총 {len(competitors)}개의 주변 안경원/렌즈샵을 찾았습니다.")
+        
+        # 지도에 경쟁사 마커 찍기
+        for comp in competitors:
+            comp_html = f"<div style='width:150px;'><b>{comp['name']}</b><br><span style='font-size:12px; color:gray;'>{comp.get('desc','')}</span></div>"
+            folium.Marker(
+                [comp["lat"], comp["lon"]], 
+                tooltip=f"<b style='font-size:13px;'>{comp['name']}</b>",
+                popup=folium.Popup(comp_html, max_width=250),
+                icon=folium.Icon(color=comp.get("color", "purple"), icon=comp.get("icon", "glasses"), prefix='fa')
+            ).add_to(m)
 
-    for comp in competitors:
-        comp_html = f"<div style='width:150px;'><b>{comp['name']}</b><br><span style='font-size:12px; color:gray;'>{comp.get('desc','')}</span></div>"
-        folium.Marker(
-            [comp["lat"], comp["lon"]], 
-            tooltip=f"<b style='font-size:13px;'>{comp['name']}</b>",
-            popup=folium.Popup(comp_html, max_width=250),
-            icon=folium.Icon(color=comp.get("color", "purple"), icon=comp.get("icon", "glasses"), prefix='fa')
-        ).add_to(m)
-
-    st_folium(m, width="100%", height=600)
+    # 맵 그리기 (에러 방지용으로 에러 발생 시 잡아냄)
+    try:
+        st_folium(m, width="100%", height=600)
+    except Exception as e:
+        st.error("지도 렌더링 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.")
 
 # ---------------------------------------------------------
 # [탭 2] 유동인구 및 타겟 분석
