@@ -12,10 +12,10 @@ import streamlit.components.v1 as components
 # ==========================================
 st.set_page_config(page_title="렌즈미 매장 이전 상권 분석기", page_icon="🗺️", layout="wide")
 
-# 🌟 사장님의 API 키 3종 세트 완벽 내장!
-KAKAO_REST_API_KEY = "f6eab02e349ec379ba08ebf65a54a1df" # 검색용
-KAKAO_JS_API_KEY = "c045609510f8b75252389123f086be48" # 카카오맵 지도 띄우기용
-DATA_GO_KR_API_KEY = "aXN6wwYUtb8cmsw%2FKilpDWQn1wUuT6U1igFdsRMJNBT8%2ByFZY6dQe95h9rrcobd4%2Fz7JQG0e14PuzcIZNd%2BcbQ%3D%3D" # 소상공인 안경원용
+# 🌟 사장님의 API 키 3종 세트
+KAKAO_REST_API_KEY = "f6eab02e349ec379ba08ebf65a54a1df" 
+KAKAO_JS_API_KEY = "c045609510f8b75252389123f086be48" 
+DATA_GO_KR_API_KEY = "aXN6wwYUtb8cmsw%2FKilpDWQn1wUuT6U1igFdsRMJNBT8%2ByFZY6dQe95h9rrcobd4%2Fz7JQG0e14PuzcIZNd%2BcbQ%3D%3D" 
 
 if 'center_lat' not in st.session_state:
     st.session_state.center_lat = 36.81510
@@ -54,7 +54,7 @@ def search_location_by_kakao(query, key):
             else:
                 return None, None, None, "검색 결과가 없습니다."
         else:
-            return None, None, None, f"카카오 에러: {res.status_code} - {res.text}"
+            return None, None, None, f"카카오 에러: {res.status_code}"
     except Exception as e:
         return None, None, None, f"통신 에러: {str(e)}"
 
@@ -111,8 +111,8 @@ st.sidebar.text_input("분석 대상 상권", value=st.session_state.candidate_s
 tab_map, tab_pop, tab_radar, tab_roi = st.tabs([
     "📍 카카오 상권 지도", 
     "👥 유동인구 및 타겟 분석", 
-    "📊 상권 매력도 비교 (As-Is vs To-Be)", 
-    "💰 이전 투자금 회수(ROI) 시뮬레이터"
+    "📊 상권 매력도 비교", 
+    "💰 투자금 회수(ROI) 시뮬레이터"
 ])
 
 # ---------------------------------------------------------
@@ -127,30 +127,30 @@ with tab_map:
         st.info("💡 반경 500m 내에 검색된 안경원이 없습니다.")
         competitors = []
     else:
-        st.success(f"✅ 소상공인 공공데이터 연동 완료! 반경 500m 내에 총 {len(competitors)}개의 주변 안경원/렌즈샵을 찾았습니다.")
+        st.success(f"✅ 반경 500m 내에 총 {len(competitors)}개의 주변 안경원/렌즈샵을 찾았습니다.")
 
-    # 🌟 카카오맵 HTML 및 JavaScript 코드 주입
+    # 🌟 URL을 명시적 HTTPS로 고정하여 스트림릿 보안 충돌 해결
     kakao_map_html = f"""
     <!DOCTYPE html>
     <html>
     <head>
         <meta charset="utf-8">
         <style>
-            #map {{width:100%; height:600px; border-radius: 10px; border: 1px solid #e2e8f0;}}
+            html, body {{ margin:0; padding:0; width:100%; height:100%; }}
+            #map {{width:100%; height:580px; border-radius: 10px; border: 1px solid #e2e8f0;}}
         </style>
     </head>
     <body>
     <div id="map"></div>
-    <script type="text/javascript" src="//dapi.kakao.com/v2/maps/sdk.js?appkey={KAKAO_JS_API_KEY}"></script>
+    <script type="text/javascript" src="https://dapi.kakao.com/v2/maps/sdk.js?appkey={KAKAO_JS_API_KEY}"></script>
     <script>
         var mapContainer = document.getElementById('map');
         var mapOption = {{
             center: new kakao.maps.LatLng({st.session_state.center_lat}, {st.session_state.center_lon}),
-            level: 4 // 지도 확대 레벨
+            level: 4
         }};
         var map = new kakao.maps.Map(mapContainer, mapOption);
 
-        // 중심지 핀 (이전 후보지)
         var centerMarker = new kakao.maps.Marker({{
             position: new kakao.maps.LatLng({st.session_state.center_lat}, {st.session_state.center_lon}),
             map: map
@@ -161,7 +161,6 @@ with tab_map:
         }});
         centerInfoWindow.open(map, centerMarker);
 
-        // 반경 500m 원 그리기
         var circle = new kakao.maps.Circle({{
             center : new kakao.maps.LatLng({st.session_state.center_lat}, {st.session_state.center_lon}),
             radius: 500,
@@ -174,7 +173,6 @@ with tab_map:
         }});
         circle.setMap(map);
 
-        // 경쟁사 핀 찍기
         var comps = {json.dumps(competitors)};
         
         comps.forEach(function(comp) {{
@@ -200,21 +198,16 @@ with tab_map:
     </html>
     """
     
-    # 생성된 카카오맵을 스트림릿 화면에 띄우기
-    components.html(kakao_map_html, height=620)
+    components.html(kakao_map_html, height=600)
 
-# ---------------------------------------------------------
-# [탭 2] 유동인구 및 타겟 분석
-# ---------------------------------------------------------
+# (이하 탭 2, 3, 4 코드는 이전과 동일)
 with tab_pop:
     st.markdown(f'<div class="sub-title">👥 [{st.session_state.candidate_store}] 유동인구 분석 보고서</div>', unsafe_allow_html=True)
-    
     col1, col2, col3, col4 = st.columns(4)
     with col1: st.markdown('<div class="metric-box"><div class="metric-title">일평균 유동인구</div><div class="metric-value">28,450명</div></div>', unsafe_allow_html=True)
     with col2: st.markdown('<div class="metric-box"><div class="metric-title">여성 비율</div><div class="metric-value" style="color:#ec4899;">58.2%</div></div>', unsafe_allow_html=True)
     with col3: st.markdown('<div class="metric-box"><div class="metric-title">1020 타겟 비율</div><div class="metric-value" style="color:#4f46e5;">42.5%</div></div>', unsafe_allow_html=True)
     with col4: st.markdown('<div class="metric-box"><div class="metric-title">최고 혼잡 시간대</div><div class="metric-value">16시 ~ 20시</div></div>', unsafe_allow_html=True)
-    
     st.markdown("<br>", unsafe_allow_html=True)
     col_chart1, col_chart2 = st.columns(2)
     with col_chart1:
@@ -228,9 +221,6 @@ with tab_pop:
         fig_time.update_traces(line_color='#4f46e5', line_width=3, marker_size=8)
         st.plotly_chart(fig_time, use_container_width=True)
 
-# ---------------------------------------------------------
-# [탭 3] 입지 지표 레이더 차트
-# ---------------------------------------------------------
 with tab_radar:
     st.markdown(f'<div class="sub-title">{current_store} vs {st.session_state.candidate_store} 입지 비교</div>', unsafe_allow_html=True)
     col1, col2 = st.columns([1, 2])
@@ -238,8 +228,6 @@ with tab_radar:
         st.markdown("<br><br>", unsafe_allow_html=True)
         st.markdown(f"🏪 **현재 매장:** {current_store}")
         st.markdown(f"🚩 **이전 후보:** {st.session_state.candidate_store}")
-        st.markdown("---")
-        st.markdown("- **1020 유동인구:** 핵심 타겟층 통행량\n- **타겟 밀집도:** 학교, 학원가 비중\n- **경쟁 강도:** 점수가 높을수록 경쟁사 적음\n- **임대료 가성비:** 임대료 대비 예상 매출\n- **상권 활력도:** 전체 성장세 및 공실률")
     with col2:
         categories = ['1020 유동인구', '타겟 밀집도', '경쟁 강도', '임대료 가성비', '상권 활력도']
         fig_radar = go.Figure()
@@ -248,41 +236,31 @@ with tab_radar:
         fig_radar.update_layout(polar=dict(radialaxis=dict(visible=True, range=[0, 100])), showlegend=True, margin=dict(t=30, b=30, l=30, r=30), legend=dict(orientation="h", yanchor="bottom", y=-0.2, xanchor="center", x=0.5))
         st.plotly_chart(fig_radar, use_container_width=True)
 
-# ---------------------------------------------------------
-# [탭 4] ROI 시뮬레이터
-# ---------------------------------------------------------
 with tab_roi:
     st.markdown('<div class="sub-title">💸 예상 매출 및 투자금 회수 시뮬레이터</div>', unsafe_allow_html=True)
     col_input, col_result = st.columns([1, 1.5])
-    
     with col_input:
         deposit = st.number_input("보증금 (만 원)", value=5000, step=1000)
         premium = st.number_input("권리금 (만 원)", value=3000, step=1000)
         interior = st.number_input("인테리어/집기 (만 원)", value=6000, step=1000)
         total_investment = deposit + premium + interior
-        
         st.markdown("---")
         daily_cust = st.slider("일평균 방문 고객 (명)", min_value=10, max_value=150, value=40, step=5)
         atv = st.slider("객단가 (만 원)", min_value=2.0, max_value=8.0, value=3.5, step=0.1)
         margin_rate = st.slider("마진율 (%)", min_value=30, max_value=70, value=45, step=1)
         monthly_rent = st.number_input("월 임대료 (만 원)", value=300, step=50)
         monthly_labor = st.number_input("월 고정비 (만 원)", value=400, step=50)
-        
     with col_result:
         monthly_sales = daily_cust * atv * 30
         monthly_gross_profit = monthly_sales * (margin_rate / 100)
         monthly_net_profit = monthly_gross_profit - monthly_rent - monthly_labor
-        
         sunk_investment = premium + interior
         payback_months = sunk_investment / monthly_net_profit if monthly_net_profit > 0 else 0
-            
         c1, c2, c3 = st.columns(3)
         with c1: st.markdown(f'<div class="metric-box"><div class="metric-title">총 투자금</div><div class="metric-value">{total_investment:,}만</div></div>', unsafe_allow_html=True)
         with c2: st.markdown(f'<div class="metric-box"><div class="metric-title">월 순수익</div><div class="metric-value" style="color:{"#ef4444" if monthly_net_profit<=0 else "#10b981"}">{int(monthly_net_profit):,}만</div></div>', unsafe_allow_html=True)
         with c3: st.markdown(f'<div class="metric-box"><div class="metric-title">투자 회수 기간</div><div class="metric-value">{"불가" if payback_months==0 else f"{payback_months:.1f}개월"}</div></div>', unsafe_allow_html=True)
-        
         st.markdown("<br>", unsafe_allow_html=True)
-        
         if monthly_net_profit > 0:
             months = list(range(1, 25))
             accumulated_profit = [(monthly_net_profit * m) - sunk_investment for m in months]
