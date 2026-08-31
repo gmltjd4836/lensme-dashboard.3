@@ -49,7 +49,7 @@ show_school = st.sidebar.checkbox("🏫 중·고등학교 / 대학교", value=Tr
 tab_map, tab_radar, tab_roi = st.tabs(["📍 상권 지도 및 경쟁사 분석", "📊 상권 매력도 비교 (As-Is vs To-Be)", "💰 이전 투자금 회수(ROI) 시뮬레이터"])
 
 # ---------------------------------------------------------
-# [탭 1] 상권 지도 분석 (Folium 프로버전)
+# [탭 1] 상권 지도 분석 (구글 맵 타일 적용)
 # ---------------------------------------------------------
 with tab_map:
     st.markdown(f'<div class="sub-title">[{candidate_store}] 핵심 상권 지도 (반경 500m)</div>', unsafe_allow_html=True)
@@ -58,13 +58,20 @@ with tab_map:
     # 천안 불당동 기준 임의 좌표
     center_lat, center_lon = 36.8151, 127.1139 
     
-    # 🌟 지도 스타일 변경: OpenStreetMap (건물, 도로가 훨씬 선명함)
-    m = folium.Map(location=[center_lat, center_lon], zoom_start=15, tiles="OpenStreetMap")
+    # 🌟 지도 스타일 변경: 기본 타일을 없애고 구글 맵(Google Maps)을 씌웁니다! (상가 이름, 건물명 표시)
+    m = folium.Map(location=[center_lat, center_lon], zoom_start=16, tiles=None)
+    folium.TileLayer(
+        tiles='http://mt0.google.com/vt/lyrs=m&hl=ko&x={x}&y={y}&z={z}',
+        attr='Google Maps',
+        name='Google Maps',
+        overlay=False,
+        control=True
+    ).add_to(m)
     
-    # 🌟 전체화면 플러그인 추가
+    # 전체화면 플러그인 추가
     plugins.Fullscreen(position='topright', title='전체화면 확대', title_cancel='전체화면 취소').add_to(m)
     
-    # 1. 이전 후보지 마커 (크고 화려하게)
+    # 1. 이전 후보지 마커
     popup_html = f"""
     <div style='width:200px; text-align:center;'>
         <h4 style='color:#e21837; margin-bottom:5px;'>🚩 렌즈미 이전 후보지</h4>
