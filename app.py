@@ -6,11 +6,15 @@ import folium
 from folium import plugins
 from streamlit_folium import st_folium
 import requests
+import urllib.parse
 
 # ==========================================
-# 0. 페이지 기본 설정
+# 0. 페이지 및 기본 설정
 # ==========================================
 st.set_page_config(page_title="렌즈미 매장 이전 상권 분석기", page_icon="🗺️", layout="wide")
+
+# 🌟🌟🌟 여기에 발급받으신 [일반 인증키(Encoding)]를 복사해서 큰따옴표("") 안에 넣어주세요! 🌟🌟🌟
+API_KEY = "aXN6wwYUtb8cmsw%2FKilpDWQn1wUuT6U1igFdsRMJNBT8%2ByFZY6dQe95h9rrcobd4%2Fz7JQG0e14PuzcIZNd%2BcbQ%3D%3D"
 
 st.markdown("""
 <style>
@@ -18,7 +22,6 @@ st.markdown("""
     * { font-family: 'Pretendard', sans-serif !important; }
     .main-title { color: #0f172a; font-weight: 800; font-size: 28px; border-bottom: 3px solid #4f46e5; padding-bottom: 10px; margin-bottom: 20px;}
     .sub-title { color: #334155; font-weight: 700; font-size: 20px; margin-top: 20px; margin-bottom: 10px;}
-    .highlight { color: #4f46e5; font-weight: 800; }
     .metric-box { background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 15px; text-align: center; }
     .metric-title { font-size: 14px; color: #64748b; margin-bottom: 5px; }
     .metric-value { font-size: 24px; font-weight: 800; color: #0f172a; }
@@ -28,23 +31,57 @@ st.markdown("""
 st.markdown('<div class="main-title">🗺️ 렌즈미 매장 이전 & 상권 분석 시뮬레이터</div>', unsafe_allow_html=True)
 
 # ==========================================
-# 1. 사이드바: 기본 설정 및 API 키 입력
+# 1. 사이드바: 기본 설정
 # ==========================================
 st.sidebar.title("🔍 상담 기본 정보 설정")
 current_store = st.sidebar.text_input("현재 매장명", value="렌즈미 천안쌍용점")
 candidate_store = st.sidebar.text_input("이전 후보지 상권명", value="천안 신불당 상권")
 
 st.sidebar.markdown("---")
-st.sidebar.subheader("🌐 소상공인 API 연동 설정")
-api_key = st.sidebar.text_input("공공데이터포털 API 인증키", type="password", help="인증키 미입력 시 샘플 데이터로 동작합니다.")
+st.sidebar.info("💡 **API 자동 연동됨**\n코드에 입력된 API 키를 통해 주변 안경원/렌즈샵 데이터를 실시간으로 불러옵니다.")
 
-st.sidebar.markdown("---")
-st.sidebar.subheader("🎯 경쟁사 및 타겟 필터")
-show_olens = st.sidebar.checkbox("🟠 오렌즈 (Olens)", value=True)
-show_davich = st.sidebar.checkbox("🔵 다비치안경 (Davich)", value=True)
-show_hapa = st.sidebar.checkbox("🌸 하파크리스틴 (Hapa Kristin)", value=True)
-show_winc = st.sidebar.checkbox("🟣 윙크렌즈 (Winc Lens)", value=True)
-show_school = st.sidebar.checkbox("🏫 중·고등학교 / 대학교", value=True)
+# ==========================================
+# 🚀 소상공인 API 호출 함수 (실제 데이터 가져오기)
+# ==========================================
+@st.cache_data(ttl=3600) # 한 번 불러온 데이터는 1시간 동안 저장(속도 향상)
+def get_real_competitors(lat, lon, key):
+    # 키를 안 넣었거나 기본 텍스트면 가짜(샘플) 데이터 반환
+    if not key or key == "여기에_사장님의_인증키를_붙여넣으세요":
+        return None 
+    
+    url = "http://apis.data.go.kr/B553077/api/open/sdam/bizesInfoInRadius"
+    try:
+        params = {
+            "ServiceKey": urllib.parse.unquote(key),
+            "type": "json",
+            "cy": lat,
+            "cx": lon,
+            "radius": 500,
+            "numOfRows": 100
+        }
+        res = requests.get(url, params=params, timeout=5)
+        
+        if res.status_code == 200:
+            data = res.json()
+            items = data.get('body', {}).get('items', [])
+            real_stores = []
+            
+            # 받아온 상가 목록 중 '안경'이나 '렌즈'가 포함된 곳만 필터링
+            for item in items:
+                name = item.get('bizesNm', '')
+                if '안경' in name or '렌즈' in name or '다비치' in name or '오렌즈' in name:
+                    real_stores.append({
+                        'name': name,
+                        'lat': float(item.get('lat', 0)),
+                        'lon': float(item.get('lon', 0)),
+                        'color': 'purple',
+                        'icon': 'glasses',
+                        'desc': item.get('indsSclsNm', '실제 주변 경쟁사')
+                    })
+            return real_stores
+    except Exception as e:
+        return None
+    return None
 
 # ==========================================
 # 2. 메인 화면 탭 구성
@@ -57,12 +94,12 @@ tab_map, tab_pop, tab_radar, tab_roi = st.tabs([
 ])
 
 # ---------------------------------------------------------
-# [탭 1] 상권 지도 분석 (구글 맵 타일 적용)
+# [탭 1] 상권 지도 분석 (구글 맵 + 진짜 공공데이터 연동)
 # ---------------------------------------------------------
 with tab_map:
     st.markdown(f'<div class="sub-title">[{candidate_store}] 핵심 상권 지도 (반경 500m)</div>', unsafe_allow_html=True)
-    st.markdown("💡 **Tip:** 우측 상단의 `[ ]` 버튼을 누르면 지도를 전체 화면으로 크게 볼 수 있습니다.")
     
+    # 임의 분석 좌표 (천안 신불당)
     center_lat, center_lon = 36.8151, 127.1139 
     
     m = folium.Map(location=[center_lat, center_lon], zoom_start=16, tiles=None)
@@ -73,21 +110,13 @@ with tab_map:
         overlay=False,
         control=True
     ).add_to(m)
-    
-    plugins.Fullscreen(position='topright', title='전체화면 확대', title_cancel='전체화면 취소').add_to(m)
+    plugins.Fullscreen(position='topright', title='전체화면').add_to(m)
     
     # 이전 후보지 마커
-    popup_html = f"""
-    <div style='width:200px; text-align:center;'>
-        <h4 style='color:#e21837; margin-bottom:5px;'>🚩 렌즈미 이전 후보지</h4>
-        <b>{candidate_store}</b><br>
-        <span style='font-size:12px; color:gray;'>선택된 분석 중심지점</span>
-    </div>
-    """
     folium.Marker(
         [center_lat, center_lon], 
         tooltip="<b style='font-size:14px; color:#e21837;'>클릭하여 확인 🚩</b>",
-        popup=folium.Popup(popup_html, max_width=300),
+        popup=folium.Popup(f"<b>{candidate_store}</b> (이전 후보지)", max_width=300),
         icon=folium.Icon(color="red", icon="star", prefix='fa')
     ).add_to(m)
     
@@ -95,52 +124,41 @@ with tab_map:
     folium.Circle(
         radius=500, location=[center_lat, center_lon],
         color="#4f46e5", weight=2, fill=True, fill_color="#4f46e5", fill_opacity=0.15,
-        tooltip="<b>도보 7~10분 (반경 500m) 핵심 상권 영역</b>"
+        tooltip="도보 7~10분 상권 영역"
     ).add_to(m)
     
-    competitors = []
-    if show_olens: competitors.extend([{"name": "오렌즈 불당점", "lat": 36.8165, "lon": 127.1120, "color": "orange", "icon": "eye", "desc": "주요 경쟁사 (컬러렌즈)"}])
-    if show_davich: competitors.extend([{"name": "다비치안경 신불당점", "lat": 36.8140, "lon": 127.1155, "color": "blue", "icon": "glasses", "desc": "대형 안경원 (투명/팩렌즈 견제)"}])
-    if show_hapa: competitors.extend([{"name": "하파크리스틴 픽업점", "lat": 36.8170, "lon": 127.1145, "color": "pink", "icon": "heart", "desc": "온라인 픽업 중심 거점"}])
-    if show_winc: competitors.extend([{"name": "윙크렌즈 안경원", "lat": 36.8135, "lon": 127.1110, "color": "purple", "icon": "dot-circle-o", "desc": "신흥 앱 기반 경쟁사"}])
+    # 🌟 API로 진짜 경쟁사 데이터 불러오기 시도
+    competitors = get_real_competitors(center_lat, center_lon, API_KEY)
     
+    # 만약 키가 없거나 에러가 나면 샘플 데이터 사용
+    if competitors is None:
+        competitors = [
+            {"name": "오렌즈 불당점", "lat": 36.8165, "lon": 127.1120, "color": "orange", "icon": "eye", "desc": "주요 경쟁사"},
+            {"name": "다비치안경 신불당점", "lat": 36.8140, "lon": 127.1155, "color": "blue", "icon": "glasses", "desc": "대형 안경원"},
+            {"name": "하파크리스틴 픽업점", "lat": 36.8170, "lon": 127.1145, "color": "pink", "icon": "heart", "desc": "온라인 픽업점"}
+        ]
+        st.warning("⚠️ API 키가 입력되지 않아 임시(샘플) 경쟁사 데이터를 표시합니다.")
+    else:
+        st.success(f"✅ 공공데이터 서버 연동 성공! 반경 500m 내에 총 {len(competitors)}개의 진짜 안경원/렌즈샵을 찾았습니다.")
+
+    # 지도에 경쟁사 마커 찍기
     for comp in competitors:
-        comp_html = f"<div style='width:150px;'><b>{comp['name']}</b><br><span style='font-size:12px; color:gray;'>{comp['desc']}</span></div>"
+        comp_html = f"<div style='width:150px;'><b>{comp['name']}</b><br><span style='font-size:12px; color:gray;'>{comp.get('desc','')}</span></div>"
         folium.Marker(
             [comp["lat"], comp["lon"]], 
             tooltip=f"<b style='font-size:13px;'>{comp['name']}</b>",
             popup=folium.Popup(comp_html, max_width=250),
-            icon=folium.Icon(color=comp["color"], icon=comp["icon"], prefix='fa')
+            icon=folium.Icon(color=comp.get("color", "purple"), icon=comp.get("icon", "glasses"), prefix='fa')
         ).add_to(m)
-        
-    if show_school:
-        schools = [
-            {"name": "불당고등학교", "lat": 36.8185, "lon": 127.1105, "students": "약 950명"},
-            {"name": "불당중학교", "lat": 36.8120, "lon": 127.1170, "students": "약 820명"}
-        ]
-        for sch in schools:
-            sch_html = f"<div style='width:150px;'><b>🏫 {sch['name']}</b><br><span style='color:#10b981;'>핵심 타겟: {sch['students']}</span></div>"
-            folium.Marker(
-                [sch["lat"], sch["lon"]], 
-                tooltip=f"<b style='font-size:13px; color:green;'>{sch['name']}</b>",
-                popup=folium.Popup(sch_html, max_width=250),
-                icon=folium.Icon(color="green", icon="graduation-cap", prefix='fa')
-            ).add_to(m)
 
     st_folium(m, width="100%", height=600)
-    st.info("💡 **상권 종합 브리핑:** 후보지 반경 500m 내에 1020 타겟 학교가 밀집해 있어 잠재 수요가 풍부하나, 경쟁사 밀집도가 높은 지역입니다.")
 
 # ---------------------------------------------------------
-# [탭 2] 유동인구 및 타겟 분석 (신규 기능)
+# [탭 2] 유동인구 및 타겟 분석 (상담용 시각화 세팅)
 # ---------------------------------------------------------
 with tab_pop:
     st.markdown(f'<div class="sub-title">👥 [{candidate_store}] 유동인구 분석 보고서</div>', unsafe_allow_html=True)
-    
-    if api_key:
-        st.success("✅ 소상공인시장진흥공단 API가 연결되었습니다.")
-        # API 호출 및 실데이터 로드 로직 위치
-    else:
-        st.info("💡 사이드바에 API 키가 입력되지 않아 공공데이터 샘플 기반 분석을 출력합니다.")
+    st.info("💡 유동인구 데이터는 고가의 유료 통신사 데이터가 필요하므로, 여기서는 점주 상담 설득용으로 가장 이상적인 상권 트래픽 모델을 시각화하여 제공합니다.")
 
     # KPI 대시보드
     col1, col2, col3, col4 = st.columns(4)
@@ -154,87 +172,47 @@ with tab_pop:
     col_chart1, col_chart2 = st.columns(2)
 
     with col_chart1:
-        # 1. 연령 및 성별 유동인구 (파이 차트)
-        age_data = pd.DataFrame({
-            '연령대': ['10대', '20대', '30대', '40대', '50대 이상'],
-            '유동인구 수': [4200, 7800, 6500, 5100, 4850]
-        })
-        fig_age = px.pie(
-            age_data, values='유동인구 수', names='연령대', hole=0.4,
-            title="📊 연령대별 유동인구 비중 (1020 비중 42.5%)",
-            color_discrete_sequence=px.colors.qualitative.Pastel
-        )
+        age_data = pd.DataFrame({'연령대': ['10대', '20대', '30대', '40대', '50대 이상'], '유동인구 수': [4200, 7800, 6500, 5100, 4850]})
+        fig_age = px.pie(age_data, values='유동인구 수', names='연령대', hole=0.4, title="📊 연령대별 유동인구 비중 (1020 비중 42.5%)", color_discrete_sequence=px.colors.qualitative.Pastel)
         fig_age.update_traces(textposition='inside', textinfo='percent+label')
         st.plotly_chart(fig_age, use_container_width=True)
 
     with col_chart2:
-        # 2. 시간대별 유동인구 추이 (라인 차트)
-        time_data = pd.DataFrame({
-            '시간대': ['06-09시', '09-12시', '12-15시', '15-18시', '18-21시', '21-24시'],
-            '유동인구 수': [1800, 3500, 5200, 8900, 7100, 1950]
-        })
-        fig_time = px.line(
-            time_data, x='시간대', y='유동인구 수', markers=True,
-            title="📈 시간대별 유동인구 흐름 (하교/퇴근 시간 집중)",
-            line_shape='spline'
-        )
+        time_data = pd.DataFrame({'시간대': ['06-09시', '09-12시', '12-15시', '15-18시', '18-21시', '21-24시'], '유동인구 수': [1800, 3500, 5200, 8900, 7100, 1950]})
+        fig_time = px.line(time_data, x='시간대', y='유동인구 수', markers=True, title="📈 시간대별 유동인구 흐름 (하교/퇴근 시간 집중)", line_shape='spline')
         fig_time.update_traces(line_color='#4f46e5', line_width=3, marker_size=8)
         st.plotly_chart(fig_time, use_container_width=True)
 
 # ---------------------------------------------------------
-# [탭 3] 상권 매력도 레이더 차트 (As-Is vs To-Be)
+# [탭 3] 상권 매력도 레이더 차트 
 # ---------------------------------------------------------
 with tab_radar:
     st.markdown(f'<div class="sub-title">{current_store} vs {candidate_store} 입지 지표 비교</div>', unsafe_allow_html=True)
-    
     col1, col2 = st.columns([1, 2])
-    
     with col1:
         st.markdown("<br><br>", unsafe_allow_html=True)
         st.markdown(f"🏪 **현재 매장:** {current_store}")
         st.markdown(f"🚩 **이전 후보:** {candidate_store}")
         st.markdown("---")
-        st.markdown("""
-        **[평가 지표 가이드]**
-        - **1020 유동인구:** 핵심 타겟층 통행량
-        - **타겟 밀집도:** 학교, 학원가 등 주 고객 체류 비중
-        - **경쟁 강도(역산):** 점수가 높을수록 경쟁사가 적어 유리함
-        - **임대료 가성비:** 평당 임대료 대비 예상 매출 비율
-        - **상권 활력도:** 상권 성장세 및 공실률
-        """)
+        st.markdown("- **1020 유동인구:** 핵심 타겟층 통행량\n- **타겟 밀집도:** 학교, 학원가 비중\n- **경쟁 강도(역산):** 점수가 높을수록 경쟁사 적음\n- **임대료 가성비:** 임대료 대비 매출\n- **상권 활력도:** 성장세 및 공실률")
         
     with col2:
         categories = ['1020 유동인구', '타겟 밀집도', '경쟁 강도(역산)', '임대료 가성비', '상권 활력도']
-        current_scores = [60, 55, 80, 70, 50] 
-        candidate_scores = [90, 85, 40, 65, 95] 
-        
         fig_radar = go.Figure()
-        fig_radar.add_trace(go.Scatterpolar(
-            r=current_scores + [current_scores[0]], theta=categories + [categories[0]],
-            fill='toself', name=current_store, line_color='gray', fillcolor='rgba(128, 128, 128, 0.4)'
-        ))
-        fig_radar.add_trace(go.Scatterpolar(
-            r=candidate_scores + [candidate_scores[0]], theta=categories + [categories[0]],
-            fill='toself', name=candidate_store, line_color='#ec4899', fillcolor='rgba(236, 72, 153, 0.4)'
-        ))
-        
-        fig_radar.update_layout(
-            polar=dict(radialaxis=dict(visible=True, range=[0, 100])),
-            showlegend=True, margin=dict(t=30, b=30, l=30, r=30),
-            legend=dict(orientation="h", yanchor="bottom", y=-0.2, xanchor="center", x=0.5)
-        )
+        fig_radar.add_trace(go.Scatterpolar(r=[60, 55, 80, 70, 50, 60], theta=categories + [categories[0]], fill='toself', name=current_store, line_color='gray', fillcolor='rgba(128, 128, 128, 0.4)'))
+        fig_radar.add_trace(go.Scatterpolar(r=[90, 85, 40, 65, 95, 90], theta=categories + [categories[0]], fill='toself', name=candidate_store, line_color='#ec4899', fillcolor='rgba(236, 72, 153, 0.4)'))
+        fig_radar.update_layout(polar=dict(radialaxis=dict(visible=True, range=[0, 100])), showlegend=True, margin=dict(t=30, b=30, l=30, r=30), legend=dict(orientation="h", yanchor="bottom", y=-0.2, xanchor="center", x=0.5))
         st.plotly_chart(fig_radar, use_container_width=True)
 
 # ---------------------------------------------------------
-# [탭 4] ROI 시뮬레이터
+# [탭 4] ROI 시뮬레이터 
 # ---------------------------------------------------------
 with tab_roi:
     st.markdown('<div class="sub-title">💸 예상 매출 및 투자금 회수 시뮬레이터</div>', unsafe_allow_html=True)
-    
     col_input, col_result = st.columns([1, 1.5])
     
     with col_input:
-        st.markdown("**1. 예상 투자 비용 설정 (단위: 만 원)**")
+        st.markdown("**1. 예상 투자 비용 설정 (만 원)**")
         deposit = st.number_input("보증금", value=5000, step=1000)
         premium = st.number_input("권리금", value=3000, step=1000)
         interior = st.number_input("인테리어 및 집기 비용", value=6000, step=1000)
@@ -267,16 +245,10 @@ with tab_roi:
         if monthly_net_profit > 0:
             months = list(range(1, 25))
             accumulated_profit = [(monthly_net_profit * m) - sunk_investment for m in months]
-            
-            df_roi = pd.DataFrame({'월(Month)': months, '누적 순수익 (권리/인테리어 차감 후)': accumulated_profit})
-            
-            fig_bar = px.bar(df_roi, x='월(Month)', y='누적 순수익 (권리/인테리어 차감 후)', 
-                             title=f"⏳ {candidate_store} 이전 시 향후 2년 누적 수익 예측",
-                             color='누적 순수익 (권리/인테리어 차감 후)', 
-                             color_continuous_scale=px.colors.diverging.RdYlGn)
-                             
+            df_roi = pd.DataFrame({'월(Month)': months, '누적 수익': accumulated_profit})
+            fig_bar = px.bar(df_roi, x='월(Month)', y='누적 수익', title=f"⏳ {candidate_store} 이전 시 향후 2년 누적 수익 예측", color='누적 수익', color_continuous_scale=px.colors.diverging.RdYlGn)
             fig_bar.add_hline(y=0, line_dash="dash", line_color="black", annotation_text="손익분기점(BEP)")
-            fig_bar.update_layout(xaxis_title="이전 후 개월 수", yaxis_title="누적 순수익 (만 원)", showlegend=False)
+            fig_bar.update_layout(xaxis_title="이전 후 개월 수", yaxis_title="누적 수익 (만 원)", showlegend=False)
             st.plotly_chart(fig_bar, use_container_width=True)
         else:
             st.error("🚨 예상 월 순수익이 적자입니다.")
