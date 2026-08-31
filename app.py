@@ -9,18 +9,15 @@ import requests
 import urllib.parse
 
 # ==========================================
-# 0. 페이지 및 세션(저장소) 초기 설정
+# 0. 페이지 및 기본 설정 (API 키 완벽 내장)
 # ==========================================
 st.set_page_config(page_title="렌즈미 매장 이전 상권 분석기", page_icon="🗺️", layout="wide")
 
-# 🚨🚨🚨 사장님이 주신 카카오 API 키가 들어간 부분입니다! 🚨🚨🚨
+# 🌟 사장님의 카카오 키와 소상공인 키 2개를 정확히 넣었습니다!
 KAKAO_REST_API_KEY = "f6eab02e349ec379ba08ebf65a54a1df"
-# 🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨
+DATA_GO_KR_API_KEY = "aXN6wwYUtb8cmsw%2FKilpDWQn1wUuT6U1igFdsRMJNBT8%2ByFZY6dQe95h9rrcobd4%2Fz7JQG0e14PuzcIZNd%2BcbQ%3D%3D"
 
-# 소상공인 API 키 (안경원 표시용 - 나중에 발급받으시면 여기에 넣으세요)
-DATA_GO_KR_API_KEY = "여기에_소상공인_인증키를_붙여넣으세요"
-
-# 지도 위치와 상권 이름을 기억해두는 세션 저장소
+# 지도 위치 및 상권명 세션 관리
 if 'center_lat' not in st.session_state:
     st.session_state.center_lat = 36.81510
 if 'center_lon' not in st.session_state:
@@ -43,7 +40,7 @@ st.markdown("""
 st.markdown('<div class="main-title">🗺️ 렌즈미 매장 이전 & 상권 분석기</div>', unsafe_allow_html=True)
 
 # ==========================================
-# 🚀 API 호출 함수 (카카오 검색 & 소상공인)
+# 🚀 API 연동 함수 (카카오 키워드 검색 / 소상공인 실시간 데이터)
 # ==========================================
 def search_location_by_kakao(query, key):
     url = "https://dapi.kakao.com/v2/local/search/keyword.json"
@@ -61,21 +58,34 @@ def search_location_by_kakao(query, key):
 
 @st.cache_data(ttl=3600)
 def get_real_competitors(lat, lon, key):
-    if not key or "여기에" in key:
+    if not key:
         return None 
     url = "http://apis.data.go.kr/B553077/api/open/sdam/bizesInfoInRadius"
     try:
-        params = {"ServiceKey": urllib.parse.unquote(key), "type": "json", "cy": lat, "cx": lon, "radius": 500, "numOfRows": 100}
+        # 인코딩 키 디코딩 처리
+        decoded_key = urllib.parse.unquote(key)
+        params = {
+            "ServiceKey": decoded_key,
+            "type": "json",
+            "cy": lat,
+            "cx": lon,
+            "radius": 500,
+            "numOfRows": 100
+        }
         res = requests.get(url, params=params, timeout=5)
         if res.status_code == 200:
             items = res.json().get('body', {}).get('items', [])
             real_stores = []
             for item in items:
                 name = item.get('bizesNm', '')
-                if '안경' in name or '렌즈' in name or '다비치' in name or '오렌즈' in name:
+                if any(kw in name for kw in ['안경', '렌즈', '다비치', '오렌즈', '으뜸']):
                     real_stores.append({
-                        'name': name, 'lat': float(item.get('lat', 0)), 'lon': float(item.get('lon', 0)),
-                        'color': 'purple', 'icon': 'glasses', 'desc': item.get('indsSclsNm', '경쟁 안경원/렌즈샵')
+                        'name': name,
+                        'lat': float(item.get('lat', 0)),
+                        'lon': float(item.get('lon', 0)),
+                        'color': 'purple',
+                        'icon': 'glasses',
+                        'desc': item.get('indsSclsNm', '실제 주변 경쟁 안경원')
                     })
             return real_stores
     except:
@@ -83,16 +93,15 @@ def get_real_competitors(lat, lon, key):
     return None
 
 # ==========================================
-# 1. 사이드바: 🌟통합 검색창🌟
+# 1. 사이드바: 통합 검색 및 상권 정보
 # ==========================================
 st.sidebar.title("🔍 상권 위치 검색")
-st.sidebar.markdown("상권 이름이나 건물명을 한글로 검색하세요.")
+st.sidebar.markdown("상권 이름이나 건물명을 검색하세요.")
 
-# [핵심!] 사용자가 한글로 검색하는 창
-search_query = st.sidebar.text_input("📍 검색어 (예: 서면 올리브영, 강남역)")
+# 💡 주의: 여기에 쉼표 없이 딱 하나의 지명만 적어주세요!
+search_query = st.sidebar.text_input("📍 검색어 입력 (예: 서면 올리브영)", value="")
 if st.sidebar.button("🚀 지도로 이동하기", use_container_width=True):
     if search_query:
-        # 사장님의 카카오 키를 이용해서 위치를 찾는 코드입니다!
         lat, lon, place_name = search_location_by_kakao(search_query, KAKAO_REST_API_KEY)
         if lat and lon:
             st.session_state.center_lat = lat
@@ -100,11 +109,11 @@ if st.sidebar.button("🚀 지도로 이동하기", use_container_width=True):
             st.session_state.candidate_store = place_name
             st.rerun()
         else:
-            st.sidebar.error(f"'{search_query}'(을)를 찾을 수 없습니다. 띄어쓰기를 다르게 하거나 더 큰 지명으로 검색해보세요.")
+            st.sidebar.error(f"'{search_query}'(을)를 찾을 수 없습니다. (띄어쓰기를 다르게 하거나 더 큰 지명으로 검색해보세요)")
 
 st.sidebar.markdown("---")
 current_store = st.sidebar.text_input("현재 기준 매장명", value="렌즈미 천안쌍용점")
-st.sidebar.text_input("현재 분석중인 상권 (목적지)", value=st.session_state.candidate_store, disabled=True)
+st.sidebar.text_input("분석 대상 상권", value=st.session_state.candidate_store, disabled=True)
 
 # ==========================================
 # 2. 메인 화면 탭 구성
@@ -129,6 +138,7 @@ with tab_map:
     ).add_to(m)
     plugins.Fullscreen(position='topright', title='전체화면').add_to(m)
     
+    # 선택 상권 핀
     folium.Marker(
         [st.session_state.center_lat, st.session_state.center_lon], 
         tooltip="<b style='font-size:14px; color:#e21837;'>선택 지점 🚩</b>",
@@ -136,22 +146,20 @@ with tab_map:
         icon=folium.Icon(color="red", icon="star", prefix='fa')
     ).add_to(m)
     
+    # 반경 500m 영역
     folium.Circle(
         radius=500, location=[st.session_state.center_lat, st.session_state.center_lon],
         color="#4f46e5", weight=2, fill=True, fill_color="#4f46e5", fill_opacity=0.15,
         tooltip="도보 7~10분 핵심 상권 영역"
     ).add_to(m)
     
+    # 소상공인 API 호출로 실시간 안경원 위치 수집
     competitors = get_real_competitors(st.session_state.center_lat, st.session_state.center_lon, DATA_GO_KR_API_KEY)
     
-    if competitors is None:
-        competitors = [
-            {"name": "오렌즈", "lat": st.session_state.center_lat + 0.0015, "lon": st.session_state.center_lon - 0.0019, "color": "orange", "icon": "eye", "desc": "가상 샘플 데이터"},
-            {"name": "다비치안경", "lat": st.session_state.center_lat - 0.0011, "lon": st.session_state.center_lon + 0.0016, "color": "blue", "icon": "glasses", "desc": "가상 샘플 데이터"},
-        ]
-        st.warning("⚠️ 소상공인 API 키가 입력되지 않아 임시(샘플) 안경원 마커를 표시합니다.")
+    if competitors is None or len(competitors) == 0:
+        st.info("💡 실시간 데이터 수신 대기 중이거나 이 근처 반경 500m 내에 안경원이 없습니다.")
     else:
-        st.success(f"✅ 반경 500m 내에 총 {len(competitors)}개의 진짜 안경원/렌즈샵을 찾았습니다.")
+        st.success(f"✅ 소상공인 공공데이터 연동 완료! 반경 500m 내에 총 {len(competitors)}개의 진짜 안경원/렌즈샵을 찾았습니다.")
 
     for comp in competitors:
         comp_html = f"<div style='width:150px;'><b>{comp['name']}</b><br><span style='font-size:12px; color:gray;'>{comp.get('desc','')}</span></div>"
@@ -165,7 +173,7 @@ with tab_map:
     st_folium(m, width="100%", height=600)
 
 # ---------------------------------------------------------
-# [탭 2] 유동인구 및 타겟 분석 
+# [탭 2] 유동인구 및 타겟 분석
 # ---------------------------------------------------------
 with tab_pop:
     st.markdown(f'<div class="sub-title">👥 [{st.session_state.candidate_store}] 유동인구 분석 보고서</div>', unsafe_allow_html=True)
@@ -199,6 +207,8 @@ with tab_radar:
         st.markdown("<br><br>", unsafe_allow_html=True)
         st.markdown(f"🏪 **현재 매장:** {current_store}")
         st.markdown(f"🚩 **이전 후보:** {st.session_state.candidate_store}")
+        st.markdown("---")
+        st.markdown("- **1020 유동인구:** 핵심 타겟층 통행량\n- **타겟 밀집도:** 학교, 학원가 비중\n- **경쟁 강도:** 점수가 높을수록 경쟁사 적음\n- **임대료 가성비:** 임대료 대비 예상 매출\n- **상권 활력도:** 전체 성장세 및 공실률")
     with col2:
         categories = ['1020 유동인구', '타겟 밀집도', '경쟁 강도', '임대료 가성비', '상권 활력도']
         fig_radar = go.Figure()
@@ -208,7 +218,7 @@ with tab_radar:
         st.plotly_chart(fig_radar, use_container_width=True)
 
 # ---------------------------------------------------------
-# [탭 4] ROI (투자 회수) 시뮬레이터
+# [탭 4] ROI 시뮬레이터
 # ---------------------------------------------------------
 with tab_roi:
     st.markdown('<div class="sub-title">💸 예상 매출 및 투자금 회수 시뮬레이터</div>', unsafe_allow_html=True)
