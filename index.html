@@ -25,7 +25,6 @@
 </head>
 <body class="flex flex-col md:flex-row h-screen text-slate-800">
 
-    <!-- 1. 좌측 사이드바 -->
     <div class="w-full md:w-1/4 bg-white border-r border-gray-200 p-6 flex flex-col shadow-lg z-20 overflow-y-auto">
         <h1 class="text-2xl font-extrabold text-slate-800 border-b-4 border-indigo-500 pb-3 mb-6">
             🗺️ 렌즈미 상권 분석기
@@ -61,47 +60,43 @@
         </div>
     </div>
 
-    <!-- 2. 우측 메인 화면 -->
     <div class="w-full md:w-3/4 flex flex-col bg-slate-50 overflow-hidden">
         
-        <!-- 탭 메뉴 -->
         <div class="flex bg-white px-6 pt-4 border-b border-gray-200 overflow-x-auto whitespace-nowrap z-10">
             <button onclick="switchTab('map')" id="btn-map" class="tab-btn active px-4 py-2 mr-4 text-lg hover:text-indigo-500 transition">📍 카카오 상권 지도</button>
             <button onclick="switchTab('radar')" id="btn-radar" class="tab-btn px-4 py-2 mr-4 text-lg hover:text-indigo-500 transition">📊 입지 매력도 비교</button>
             <button onclick="switchTab('roi')" id="btn-roi" class="tab-btn px-4 py-2 text-lg hover:text-indigo-500 transition">💰 ROI 시뮬레이터</button>
         </div>
 
-        <!-- 탭 1: 카카오맵 & 심플 브랜드 필터 -->
         <div id="tab-map" class="flex-grow w-full h-full relative">
             
             <div class="absolute top-4 left-1/2 transform -translate-x-1/2 z-10 bg-white/95 backdrop-blur-sm px-6 py-2 rounded-full shadow-md text-sm font-bold text-slate-700 border border-slate-200 text-center">
-                👆 화면 내 실시간 스캔! (드래그하여 상권을 분석하세요)
+                👆 화면 내 실시간 스캔! (전국 수량 17개 시·도 자동 정밀 합산 중)
             </div>
 
-            <!-- 🌟 심플 & 직관적인 필터 패널 -->
             <div class="absolute top-16 left-4 z-10 bg-white/95 backdrop-blur-sm p-4 rounded-xl shadow-lg border border-slate-200 w-56 max-h-[75vh] overflow-y-auto">
                 
-                <p class="text-sm font-extrabold text-slate-800 mb-3 border-b pb-2">🎯 렌즈 브랜드</p>
+                <p class="text-sm font-extrabold text-slate-800 mb-3 border-b pb-2">🎯 렌즈 브랜드 (전국 수량)</p>
                 <div class="space-y-3 mb-4">
-                    <label class="flex justify-between items-center cursor-pointer"><div class="flex items-center space-x-2"><input type="checkbox" id="f_lensme" onchange="refreshMarkers()" class="chk-purple" checked><span class="text-[14px] font-extrabold text-purple-700">🟣 렌즈미</span></div><span id="t_lensme" class="text-xs text-gray-500 font-bold">-</span></label>
-                    <label class="flex justify-between items-center cursor-pointer"><div class="flex items-center space-x-2"><input type="checkbox" id="f_olens" onchange="refreshMarkers()" class="chk-orange" checked><span class="text-[14px] font-extrabold text-orange-600">🟠 오렌즈</span></div><span id="t_olens" class="text-xs text-gray-500 font-bold">-</span></label>
-                    <label class="flex justify-between items-center cursor-pointer"><div class="flex items-center space-x-2"><input type="checkbox" id="f_hapa" onchange="refreshMarkers()" class="chk-pink" checked><span class="text-[14px] font-extrabold text-pink-500">🌸 하파크리스틴</span></div><span id="t_hapa" class="text-xs text-gray-500 font-bold">-</span></label>
-                    <label class="flex justify-between items-center cursor-pointer"><div class="flex items-center space-x-2"><input type="checkbox" id="f_winc" onchange="refreshMarkers()" class="chk-blue" checked><span class="text-[14px] font-extrabold text-blue-500">🔵 윙크렌즈</span></div><span id="t_winc" class="text-xs text-gray-500 font-bold">-</span></label>
-                    <label class="flex justify-between items-center cursor-pointer"><div class="flex items-center space-x-2"><input type="checkbox" id="f_lenstown" onchange="refreshMarkers()" class="chk-red" checked><span class="text-[14px] font-bold text-red-600">🔴 렌즈타운</span></div><span id="t_lenstown" class="text-xs text-gray-500 font-bold">-</span></label>
-                    <label class="flex justify-between items-center cursor-pointer"><div class="flex items-center space-x-2"><input type="checkbox" id="f_lensberry" onchange="refreshMarkers()" class="chk-green" checked><span class="text-[14px] font-bold text-green-600">🟢 렌즈베리</span></div><span id="t_lensberry" class="text-xs text-gray-500 font-bold">-</span></label>
-                    <label class="flex justify-between items-center cursor-pointer"><div class="flex items-center space-x-2"><input type="checkbox" id="f_withlens" onchange="refreshMarkers()" class="chk-yellow" checked><span class="text-[14px] font-bold text-yellow-600">🟡 위드렌즈</span></div><span id="t_withlens" class="text-xs text-gray-500 font-bold">-</span></label>
+                    <label class="flex justify-between items-center cursor-pointer"><div class="flex items-center space-x-2"><input type="checkbox" id="f_lensme" onchange="refreshMarkers()" class="chk-purple" checked><span class="text-[14px] font-extrabold text-purple-700">🟣 렌즈미</span></div><span id="t_lensme" class="text-xs text-indigo-600 font-extrabold">계산중...</span></label>
+                    <label class="flex justify-between items-center cursor-pointer"><div class="flex items-center space-x-2"><input type="checkbox" id="f_olens" onchange="refreshMarkers()" class="chk-orange" checked><span class="text-[14px] font-extrabold text-orange-600">🟠 오렌즈</span></div><span id="t_olens" class="text-xs text-indigo-600 font-extrabold">계산중...</span></label>
+                    <label class="flex justify-between items-center cursor-pointer"><div class="flex items-center space-x-2"><input type="checkbox" id="f_hapa" onchange="refreshMarkers()" class="chk-pink" checked><span class="text-[14px] font-extrabold text-pink-500">🌸 하파크리스틴</span></div><span id="t_hapa" class="text-xs text-indigo-600 font-extrabold">계산중...</span></label>
+                    <label class="flex justify-between items-center cursor-pointer"><div class="flex items-center space-x-2"><input type="checkbox" id="f_winc" onchange="refreshMarkers()" class="chk-blue" checked><span class="text-[14px] font-extrabold text-blue-500">🔵 윙크렌즈</span></div><span id="t_winc" class="text-xs text-indigo-600 font-extrabold">계산중...</span></label>
+                    <label class="flex justify-between items-center cursor-pointer"><div class="flex items-center space-x-2"><input type="checkbox" id="f_lenstown" onchange="refreshMarkers()" class="chk-red" checked><span class="text-[14px] font-bold text-red-600">🔴 렌즈타운</span></div><span id="t_lenstown" class="text-xs text-indigo-600 font-extrabold">계산중...</span></label>
+                    <label class="flex justify-between items-center cursor-pointer"><div class="flex items-center space-x-2"><input type="checkbox" id="f_lensberry" onchange="refreshMarkers()" class="chk-green" checked><span class="text-[14px] font-bold text-green-600">🟢 렌즈베리</span></div><span id="t_lensberry" class="text-xs text-indigo-600 font-extrabold">계산중...</span></label>
+                    <label class="flex justify-between items-center cursor-pointer"><div class="flex items-center space-x-2"><input type="checkbox" id="f_withlens" onchange="refreshMarkers()" class="chk-yellow" checked><span class="text-[14px] font-bold text-yellow-600">🟡 위드렌즈</span></div><span id="t_withlens" class="text-xs text-indigo-600 font-extrabold">계산중...</span></label>
                 </div>
 
                 <p class="text-sm font-extrabold text-slate-800 mb-2 border-b pb-2 mt-4">🌿 트렌드 샵인샵</p>
                 <div class="space-y-2 mb-4">
-                    <label class="flex justify-between items-center cursor-pointer"><div class="flex items-center space-x-2"><input type="checkbox" id="f_olive_shop" checked onchange="refreshMarkers()" class="chk-green"><span class="text-[13px] font-bold text-green-700">🌿 올영 입점(렌즈)</span></div><span id="t_olive_shop" class="text-xs text-gray-500 font-bold">-</span></label>
+                    <label class="flex justify-between items-center cursor-pointer"><div class="flex items-center space-x-2"><input type="checkbox" id="f_olive_shop" checked onchange="refreshMarkers()" class="chk-green"><span class="text-[13px] font-bold text-green-700">🌿 올영 입점(렌즈)</span></div><span id="t_olive_shop" class="text-xs text-indigo-600 font-extrabold">계산중...</span></label>
                 </div>
 
                 <p class="text-sm font-extrabold text-slate-800 mb-2 border-b pb-2">⚓ 상권 앵커 & 기타</p>
                 <div class="space-y-2">
-                    <label class="flex justify-between items-center cursor-pointer"><div class="flex items-center space-x-2"><input type="checkbox" id="f_davich" checked onchange="refreshMarkers()" class="chk-blue"><span class="text-[13px] font-bold text-blue-700">🟦 다비치안경</span></div><span id="t_davich" class="text-xs text-gray-500 font-bold">-</span></label>
-                    <label class="flex justify-between items-center cursor-pointer"><div class="flex items-center space-x-2"><input type="checkbox" id="f_olive" checked onchange="refreshMarkers()" class="chk-green"><span class="text-[13px] font-bold text-green-600">🟩 올리브영 (일반)</span></div><span id="t_olive" class="text-xs text-gray-500 font-bold">-</span></label>
-                    <label class="flex justify-between items-center cursor-pointer"><div class="flex items-center space-x-2"><input type="checkbox" id="f_daiso" checked onchange="refreshMarkers()" class="chk-red"><span class="text-[13px] font-bold text-red-500">🟥 다이소</span></div><span id="t_daiso" class="text-xs text-gray-500 font-bold">-</span></label>
+                    <label class="flex justify-between items-center cursor-pointer"><div class="flex items-center space-x-2"><input type="checkbox" id="f_davich" checked onchange="refreshMarkers()" class="chk-blue"><span class="text-[13px] font-bold text-blue-700">🟦 다비치안경</span></div><span id="t_davich" class="text-xs text-indigo-600 font-extrabold">계산중...</span></label>
+                    <label class="flex justify-between items-center cursor-pointer"><div class="flex items-center space-x-2"><input type="checkbox" id="f_olive" checked onchange="refreshMarkers()" class="chk-green"><span class="text-[13px] font-bold text-green-600">🟩 올리브영 (일반)</span></div><span id="t_olive" class="text-xs text-indigo-600 font-extrabold">계산중...</span></label>
+                    <label class="flex justify-between items-center cursor-pointer"><div class="flex items-center space-x-2"><input type="checkbox" id="f_daiso" checked onchange="refreshMarkers()" class="chk-red"><span class="text-[13px] font-bold text-red-500">🟥 다이소</span></div><span id="t_daiso" class="text-xs text-indigo-600 font-extrabold">계산중...</span></label>
                     <label class="flex justify-between items-center cursor-pointer"><div class="flex items-center space-x-2"><input type="checkbox" id="f_other" checked onchange="refreshMarkers()" class="chk-gray"><span class="text-[13px] font-bold text-gray-500">⚪ 기타 안경원</span></div></label>
                 </div>
             </div>
@@ -109,7 +104,6 @@
             <div id="map" class="w-full h-full"></div>
         </div>
 
-        <!-- 탭 2: 레이더 차트 -->
         <div id="tab-radar" class="hidden flex-grow w-full p-8 overflow-y-auto">
             <h2 class="text-2xl font-bold mb-6">📊 <span class="currentStoreName text-slate-600">렌즈미 천안쌍용점</span> vs <span class="targetLocationName text-indigo-600">천안 신불당 상권</span> 입지 비교</h2>
             <div class="flex flex-col md:flex-row gap-6">
@@ -133,7 +127,6 @@
             </div>
         </div>
 
-        <!-- 탭 3: ROI 시뮬레이터 -->
         <div id="tab-roi" class="hidden flex-grow w-full p-8 overflow-y-auto">
             <h2 class="text-2xl font-bold mb-6">💸 예상 매출 및 투자금 회수(ROI) 시뮬레이터</h2>
             <div class="flex flex-col xl:flex-row gap-6">
@@ -180,41 +173,64 @@
         let currentStoreName = "렌즈미 천안쌍용점";
         let targetLocationName = "천안 신불당 상권";
 
-        // 🌟 1. 정확한 전국 매장 카운터 (구조가 단순해져 정확하게 조회됩니다)
-        let nCounts = {};
-        function fetchNationwideCountsSafe() {
-            // 카카오 서버 차단 방지를 위해 시간차를 두고 요청
-            let queries = [
-                {k: '렌즈미', id: 'lensme'}, {k: '오렌즈', id: 'olens'}, {k: '하파크리스틴', id: 'hapa'},
-                {k: '윙크 렌즈스토어', id: 'winc'}, {k: '렌즈타운', id: 'lenstown'}, {k: '렌즈베리', id: 'lensberry'},
-                {k: '위드렌즈', id: 'withlens'}, {k: '하파크리스틴 올리브영', id: 'hapa_olive'}, {k: '윙크렌즈 올리브영', id: 'winc_olive'},
-                {k: '다비치안경', id: 'davich'}, {k: '올리브영', id: 'olive'}, {k: '다이소', id: 'daiso'}
-            ];
+        // 🌟 1. [A안 적용] 17개 시·도 분할 정밀 합산 전국 매장 수량 계산기
+        const REGIONS = ['서울', '경기', '인천', '강원', '충북', '충남', '대전', '세종', '전북', '전남', '광주', '경북', '경남', '대구', '울산', '부산', '제주'];
+        const TARGET_BRANDS = [
+            { id: 't_lensme', key: '렌즈미' },
+            { id: 't_olens', key: '오렌즈' },
+            { id: 't_hapa', key: '하파크리스틴' },
+            { id: 't_winc', key: '윙크 렌즈스토어' },
+            { id: 't_lenstown', key: '렌즈타운' },
+            { id: 't_lensberry', key: '렌즈베리' },
+            { id: 't_withlens', key: '위드렌즈' },
+            { id: 't_davich', key: '다비치안경' },
+            { id: 't_olive', key: '올리브영' },
+            { id: 't_daiso', key: '다이소' }
+        ];
+
+        let nationwideSums = {};
+
+        function fetchNationwideCountsA() {
+            let taskQueue = [];
             
-            let delay = 0;
-            queries.forEach((qObj) => {
-                setTimeout(() => {
-                    ps.keywordSearch(qObj.k, function(data, status, pagination) {
-                        if (status === kakao.maps.services.Status.OK) {
-                            nCounts[qObj.id] = pagination.totalCount;
-                            
-                            // 올영 샵인샵은 하파 + 윙크 올영점 합산
-                            if(qObj.id === 'hapa_olive' || qObj.id === 'winc_olive') {
-                                let totalOlive = (nCounts['hapa_olive'] || 0) + (nCounts['winc_olive'] || 0);
-                                document.getElementById('t_olive_shop').innerText = totalOlive + '개';
-                            } else {
-                                let el = document.getElementById(`t_${qObj.id}`);
-                                if(el) el.innerText = pagination.totalCount + '개';
-                            }
-                        }
-                    });
-                }, delay);
-                delay += 400; // 0.4초 간격으로 요청
+            // 일반 브랜드 17개 지역 쿼리 생성
+            TARGET_BRANDS.forEach(b => {
+                nationwideSums[b.id] = 0;
+                REGIONS.forEach(r => {
+                    taskQueue.push({ brandId: b.id, query: `${r} ${b.key}` });
+                });
             });
+
+            // 올영 샵인샵 17개 지역 쿼리 생성 (하파 + 윙크)
+            nationwideSums['t_olive_shop'] = 0;
+            REGIONS.forEach(r => {
+                taskQueue.push({ brandId: 't_olive_shop', query: `${r} 하파크리스틴 올리브영` });
+                taskQueue.push({ brandId: 't_olive_shop', query: `${r} 윙크렌즈 올리브영` });
+            });
+
+            // 0.06초 간격으로 하나씩 차례대로 쿼리 수행 (서버 차단 방지 및 실시간 누적)
+            let idx = 0;
+            let timer = setInterval(() => {
+                if (idx >= taskQueue.length) {
+                    clearInterval(timer);
+                    return;
+                }
+                let task = taskQueue[idx];
+                ps.keywordSearch(task.query, function(data, status, pagination) {
+                    if (status === kakao.maps.services.Status.OK) {
+                        nationwideSums[task.brandId] += pagination.totalCount;
+                        let el = document.getElementById(task.brandId);
+                        if (el) {
+                            el.innerText = nationwideSums[task.brandId].toLocaleString() + '개';
+                        }
+                    }
+                });
+                idx++;
+            }, 60);
         }
 
         // 초기 실행
-        fetchNationwideCountsSafe();
+        fetchNationwideCountsA();
         drawCenterAndCircle(defaultLat, defaultLon);
         calcROI();
         searchPlacesInView();
@@ -260,10 +276,9 @@
             circle.setMap(map);
         }
 
-        // 🌟 2. 화면 뷰포트 내 장소 검색 
+        // 🌟 2. 화면 뷰포트 내 실시간 장소 스캔
         function searchPlacesInView() {
             let bounds = map.getBounds(); 
-            // 윙크렌즈는 노래방 차단을 위해 '윙크 렌즈스토어' 등으로 좁힘
             let searchKeywords = ['렌즈미', '오렌즈', '하파크리스틴', '윙크 렌즈', '렌즈타운', '렌즈베리', '위드렌즈', '안경', '올리브영', '다이소'];
             let completedSearches = 0;
             
@@ -284,19 +299,18 @@
             });
         }
 
-        // 🌟 3. 블랙리스트 차단 및 심플 마커 생성
+        // 🌟 3. 블랙리스트 차단 및 브랜드 마커 생성
         function createBrandMarker(place) {
             if (placeCache.has(place.id)) return;
 
             let n = place.place_name.toLowerCase();
             
-            // 🚨 블랙리스트 (윙크 노래방 등 오작동 완벽 필터)
+            // 블랙리스트 차단 (노래방, PC방 등 무관 장소 제외)
             let blackList = ['노래', '주점', 'pc', '스터디', '당구', '룸', '뮤직', '호프', '파티', '마사지', '휴게', '바', 'bar', '클럽'];
             let isBad = false;
             blackList.forEach(bw => { if(n.includes(bw)) isBad = true; });
             if (isBad && !n.includes('안경')) return; 
 
-            // 기본 설정 (단순하게 통합)
             let bType = 'other', cHex = '%239ca3af', iText = '⚪';
             let isOlive = n.includes('올리브영');
 
@@ -319,7 +333,7 @@
             else if (n.includes('안경') || n.includes('렌즈')) { bType = 'other'; cHex = '%239ca3af'; iText = '⚪'; }
             else { return; } 
 
-            // 마커 디자인 (올영 샵인샵만 초록 테두리 유지, 나머진 심플하게)
+            // 마커 디자인 (올영 샵인샵만 초록 테두리 강조)
             let strokeColor = "white", strokeWidth = "2.5", fillHex = cHex;
             if (bType === 'olive_shop') { strokeColor = "%2322c55e"; strokeWidth = "4"; fillHex = "%23f0fdf4"; } 
 
@@ -334,11 +348,9 @@
             placeCache.set(place.id, { brand: bType, marker: marker, pos: marker.getPosition() });
         }
 
-        // 🌟 4. 필터 체크 여부에 따라 마커 노출/숨김 및 레이더 차트 분석
+        // 🌟 4. 필터 체크 적용 & 차트 데이터 동기화
         function refreshMarkers() {
             let bounds = map.getBounds();
-            
-            // 1단 구조의 아주 심플한 필터 상태
             let f = {
                 'lensme': document.getElementById('f_lensme').checked, 'olens': document.getElementById('f_olens').checked,
                 'hapa': document.getElementById('f_hapa').checked, 'winc': document.getElementById('f_winc').checked,
@@ -352,10 +364,8 @@
             placeCache.forEach((item) => {
                 let inBounds = bounds.contain(item.pos);
                 let show = inBounds && f[item.brand];
-                
                 item.marker.setMap(show ? map : null);
 
-                // 화면 안의 경쟁사/앵커 수 계산 (차트용)
                 if(show) {
                     if (['lensme','olens','hapa','winc','lenstown','lensberry','withlens','davich','other'].includes(item.brand)) v_comp++;
                     if (['olive','daiso','olive_shop'].includes(item.brand)) v_anchor++;
