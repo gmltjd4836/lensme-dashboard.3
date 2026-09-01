@@ -13,7 +13,6 @@
         ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
         .tab-btn.active { border-bottom: 4px solid #4f46e5; color: #4f46e5; font-weight: 800; }
         .tab-btn { color: #64748b; font-weight: 600; border-bottom: 4px solid transparent; }
-        input[type=checkbox] { width: 1.1rem; height: 1.1rem; cursor: pointer; }
 
         @keyframes pulse-gold { 0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(250, 204, 21, 0.7); } 70% { transform: scale(1); box-shadow: 0 0 0 25px rgba(250, 204, 21, 0); } 100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(250, 204, 21, 0); } }
         .rank-1-marker { animation: pulse-gold 2s infinite; background: linear-gradient(135deg, #fde047 0%, #eab308 100%); border: 3px solid #fff; border-radius: 30px; padding: 4px 12px; color: #713f12; font-size: 15px; font-weight: 900; box-shadow: 0 4px 6px rgba(0,0,0,0.3); z-index: 100; white-space: nowrap;}
@@ -57,16 +56,16 @@
                 <p class="text-xs text-slate-400 font-bold mb-1 text-right">오피셜 DB</p>
                 <p class="text-sm font-extrabold text-slate-800 mb-3 border-b pb-2">🎯 렌즈 브랜드</p>
                 <div class="space-y-3 mb-4">
-                    <label class="flex justify-between"><div class="flex space-x-2"><input type="checkbox" id="f_lensme" onchange="refreshMarkers()" checked><span class="text-[14px] font-bold text-purple-700">🟣 렌즈미</span></div></label>
-                    <label class="flex justify-between"><div class="flex space-x-2"><input type="checkbox" id="f_olens" onchange="refreshMarkers()" checked><span class="text-[14px] font-bold text-orange-600">🟠 오렌즈</span></div></label>
-                    <label class="flex justify-between"><div class="flex space-x-2"><input type="checkbox" id="f_hapa" onchange="refreshMarkers()" checked><span class="text-[14px] font-bold text-pink-500">🌸 하파크리스틴</span></div></label>
-                    <label class="flex justify-between"><div class="flex space-x-2"><input type="checkbox" id="f_winc" onchange="refreshMarkers()" checked><span class="text-[14px] font-bold text-blue-500">🔵 윙크렌즈</span></div></label>
+                    <label class="flex justify-between"><div class="flex space-x-2"><input type="checkbox" id="f_lensme" checked><span class="text-[14px] font-bold text-purple-700">🟣 렌즈미</span></div></label>
+                    <label class="flex justify-between"><div class="flex space-x-2"><input type="checkbox" id="f_olens" checked><span class="text-[14px] font-bold text-orange-600">🟠 오렌즈</span></div></label>
+                    <label class="flex justify-between"><div class="flex space-x-2"><input type="checkbox" id="f_hapa" checked><span class="text-[14px] font-bold text-pink-500">🌸 하파크리스틴</span></div></label>
+                    <label class="flex justify-between"><div class="flex space-x-2"><input type="checkbox" id="f_winc" checked><span class="text-[14px] font-bold text-blue-500">🔵 윙크렌즈</span></div></label>
                 </div>
                 <p class="text-sm font-extrabold text-slate-800 mb-2 border-b pb-2 mt-4">🌿 샵인샵 / 앵커</p>
                 <div class="space-y-2 mb-4">
-                    <label class="flex justify-between"><div class="flex space-x-2"><input type="checkbox" id="f_olive_shop" checked onchange="refreshMarkers()"><span class="text-[13px] font-bold text-green-700">🌿 올영 입점(렌즈)</span></div></label>
-                    <label class="flex justify-between"><div class="flex space-x-2"><input type="checkbox" id="f_olive" checked onchange="refreshMarkers()"><span class="text-[13px] font-bold text-green-600">🟩 올리브영</span></div></label>
-                    <label class="flex justify-between"><div class="flex space-x-2"><input type="checkbox" id="f_daiso" checked onchange="refreshMarkers()"><span class="text-[13px] font-bold text-red-500">🟥 다이소</span></div></label>
+                    <label class="flex justify-between"><div class="flex space-x-2"><input type="checkbox" id="f_olive_shop" checked><span class="text-[13px] font-bold text-green-700">🌿 올영 입점(렌즈)</span></div></label>
+                    <label class="flex justify-between"><div class="flex space-x-2"><input type="checkbox" id="f_olive" checked><span class="text-[13px] font-bold text-green-600">🟩 올리브영</span></div></label>
+                    <label class="flex justify-between"><div class="flex space-x-2"><input type="checkbox" id="f_daiso" checked><span class="text-[13px] font-bold text-red-500">🟥 다이소</span></div></label>
                 </div>
             </div>
 
@@ -98,13 +97,12 @@
         let allFeatures = [];
         let activePolygons = [];
         let goldenZoneMarkers = [];
-        let placeCache = new Map();
         let targetAnchors = [];
 
         async function loadNationalData() {
             let possiblePaths = [
-                '회식상권.geojson', '전국상권.geojson', '회식상권.json', '전국상권.json',
-                'data/회식상권.geojson', 'data/전국상권.geojson', 'data/회식상권.json', 'data/전국상권.json'
+                '전국상권.json', '전국상권.geojson', '회식상권.json', '회식상권.geojson',
+                'data/전국상권.json', 'data/전국상권.geojson', 'data/회식상권.json', 'data/회식상권.geojson'
             ];
             let geoData = null;
 
@@ -113,25 +111,27 @@
                     let res = await fetch(path);
                     if (res.ok) {
                         geoData = await res.json();
+                        console.log("연동 성공 경로:", path);
                         break;
                     }
                 } catch(e) {}
             }
 
             if (!geoData) {
-                document.getElementById('statusMessage').innerText = "⚠️ GeoJSON 파일을 읽지 못했습니다. 파일명을 확인해 주세요.";
+                document.getElementById('statusMessage').innerText = "⚠️ 데이터를 불러오는 중입니다. 잠시 후 새로고침해 주세요.";
                 document.getElementById('statusMessage').classList.replace('text-slate-700', 'text-red-600');
                 return;
             }
 
             allFeatures = geoData.features || [];
-            document.getElementById('statusMessage').innerText = `✅ 전국 ${allFeatures.length}개 상권 로딩 완료! 상권을 검색하세요.`;
+            document.getElementById('statusMessage').innerText = `✅ 전국 ${allFeatures.length}개 상권 로딩 완료! 검색어를 입력하세요.`;
             document.getElementById('statusMessage').classList.replace('text-slate-700', 'text-indigo-700');
             
             renderAreaButtons(allFeatures.slice(0, 30));
         }
 
         function extractAreaName(f) {
+            if(!f.properties) return '상권';
             return f.properties.MJR_BIZON_ || f.properties.MJR_BIZON_N || f.properties.상권명 || f.properties.MAIN_NM || '상권';
         }
 
@@ -219,7 +219,7 @@
             document.getElementById('anchor_count').innerText = olives.length + daisos.length;
 
             if(olives.length === 0 || daisos.length === 0) {
-                document.getElementById('statusMessage').innerText = "✅ 스캔 완료 (앵커시설 부족 상권)";
+                document.getElementById('statusMessage').innerText = "✅ 스캔 완료 (앵커시설 분석 완료)";
                 return;
             }
 
@@ -252,7 +252,7 @@
                 goldenZoneMarkers.push(overlay);
             });
 
-            document.getElementById('statusMessage').innerText = `👑 상권 내 1~${top3.length}순위 골든존 발견!`;
+            document.getElementById('statusMessage').innerText = `👑 상권 내 1~${top3.length}순위 골든존 발굴 완료!`;
             drawRadarChart(document.getElementById('comp_count').innerText, olives.length + daisos.length);
         }
 
