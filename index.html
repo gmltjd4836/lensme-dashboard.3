@@ -116,7 +116,7 @@
             <div id="map" class="w-full h-full"></div>
         </div>
 
-        <!-- 탭 2/3 (기존과 동일, 레이더 차트 등) -->
+        <!-- 탭 2: 입지 매력도 레이더 차트 -->
         <div id="tab-radar" class="hidden flex-grow w-full p-8 overflow-y-auto">
             <h2 class="text-2xl font-bold mb-6">📊 <span class="currentStoreName text-slate-600">현재 매장</span> vs <span class="targetLocationName text-indigo-600">목적지</span> 입지 비교</h2>
             <div class="flex flex-col md:flex-row gap-6">
@@ -133,9 +133,9 @@
             </div>
         </div>
 
+        <!-- 탭 3: ROI 시뮬레이터 -->
         <div id="tab-roi" class="hidden flex-grow w-full p-8 overflow-y-auto">
             <h2 class="text-2xl font-bold mb-6">💸 예상 매출 및 투자금 회수(ROI) 시뮬레이터</h2>
-            <!-- ROI 내용은 화면공간 절약을 위해 간소화 (기능 유지) -->
              <div class="flex flex-col xl:flex-row gap-6">
                 <div class="w-full xl:w-1/3 bg-white p-6 rounded-xl shadow-sm border border-slate-200 space-y-6">
                     <div>
@@ -162,7 +162,6 @@
     
     <script>
         // 🌟 1. 핵심 계층 데이터 (도 -> 시/구 -> 핵심 상권)
-        // 사장님이 뼈대를 쉽게 추가하실 수 있도록 구조화했습니다.
         const regionsData = {
             "서울": { lat: 37.5665, lng: 126.9780, level: 8, children: {
                 "강남구": { lat: 37.4959, lng: 127.0664, level: 6, children: { "강남역 상권": {lat:37.4979, lng:127.0276, level: 4}, "가로수길": {lat:37.5204, lng:127.0229, level: 4} } },
@@ -173,6 +172,20 @@
                 "구리시": { lat: 37.5943, lng: 127.1296, level: 6, children: { "돌다리(수택동)": {lat:37.6006, lng:127.1384, level: 4}, "구리역": {lat:37.6033, lng:127.1437, level: 4} } },
                 "성남시": { lat: 37.4200, lng: 127.1267, level: 6, children: { "서현역 로데오": {lat:37.3849, lng:127.1232, level: 4} } },
                 "안양시": { lat: 37.3942, lng: 126.9568, level: 6, children: { "범계역 로데오": {lat:37.3897, lng:126.9502, level: 4} } }
+            }},
+            "인천": { lat: 37.4562, lng: 126.7052, level: 8, children: {
+                "부평구": { lat: 37.5070, lng: 126.7218, level: 6, children: { "부평역 상권": {lat:37.4895, lng:126.7231, level: 4}, "굴포천역": {lat:37.5069, lng:126.7312, level: 4} } },
+                "남동구": { lat: 37.4472, lng: 126.7313, level: 6, children: { "간석동": {lat:37.4646, lng:126.7118, level: 4} } },
+                "서구": { lat: 37.5453, lng: 126.6760, level: 6, children: { "검단사거리역": {lat:37.6027, lng:126.6508, level: 4} } }
+            }},
+            "대전": { lat: 36.3504, lng: 127.3845, level: 8, children: {
+                "서구": { lat: 36.3553, lng: 127.3837, level: 6, children: { "둔산동 타임월드": {lat:36.3524, lng:127.3777, level: 4} } },
+                "유성구": { lat: 36.3622, lng: 127.3562, level: 6, children: { "봉명동 우산거리": {lat:36.3551, lng:127.3444, level: 4}, "관평동": {lat:36.4239, lng:127.3905, level: 4}, "노은역": {lat:36.3745, lng:127.3175, level: 4} } }
+            }},
+            "대구": { lat: 35.8714, lng: 128.6014, level: 8, children: {
+                "수성구": { lat: 35.8580, lng: 128.6295, level: 6, children: { "범어동": {lat:35.8587, lng:128.6247, level: 4} } },
+                "달서구": { lat: 35.8299, lng: 128.5325, level: 6, children: { "죽전역": {lat:35.8496, lng:128.5350, level: 4} } },
+                "달성군": { lat: 35.7745, lng: 128.4312, level: 6, children: { "테크노폴리스": {lat:35.6923, lng:128.4688, level: 4} } }
             }}
         };
 
@@ -185,6 +198,30 @@
         let targetAnchors = []; // 1030 핫스팟 탐지용 배열
         let searchTimeout = null;
         let goldenZoneOverlay = null;
+
+        // --- 🌟 검색창을 통한 지도 이동 및 검색 기능 ---
+        function searchLocation() {
+            let keyword = document.getElementById('searchInput').value;
+            if(!keyword.trim()) {
+                alert('이동하실 상권이나 지역명을 입력해주세요.');
+                return;
+            }
+            
+            ps.keywordSearch(keyword, function(data, status, pagination) {
+                if (status === kakao.maps.services.Status.OK) {
+                    let coords = new kakao.maps.LatLng(data[0].y, data[0].x);
+                    map.panTo(coords);
+                    
+                    document.getElementById('targetLocationInput').value = data[0].place_name;
+                    updateStoreNames();
+                    
+                    // 상권 이동 후 자동으로 골든존 스캔 호출
+                    setTimeout(() => { scanGoldenZone(); }, 500);
+                } else {
+                    alert('검색 결과가 없습니다. 다른 검색어를 입력해보세요.');
+                }
+            });
+        }
 
         // --- 🌟 드릴다운(줌인) UI 렌더링 함수 ---
         function renderDrillDown(level, parentObj = null) {
@@ -357,6 +394,9 @@
                 // 차트 데이터에 밀집도 반영
                 document.getElementById('anchor_count').innerText = maxScore;
                 drawRadarChart(document.getElementById('comp_count').innerText, maxScore);
+            } else {
+                document.getElementById('statusMessage').innerText = "✅ 해당 구역 스캔 완료 (골든존 기준 미달)";
+                document.getElementById('statusMessage').classList.replace('text-pink-600', 'text-slate-700');
             }
         }
 
@@ -437,7 +477,7 @@
             Plotly.newPlot('roiChart', chartData, chartLayout, {responsive: true, displayModeBar: false});
         }
 
-        setTimeout(() => { searchPlacesInView(); calcROI(); }, 1000);
+        setTimeout(() => { searchPlacesInView(); calcROI(); }, 500); 
     </script>
 </body>
 </html>
