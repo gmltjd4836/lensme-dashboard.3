@@ -60,45 +60,56 @@
     <!-- 2. 우측 메인 화면 -->
     <div class="w-full md:w-3/4 flex flex-col bg-slate-50 overflow-hidden">
         
-        <!-- 탭 메뉴 -->
+        <!-- 탭 메뉴 (유동인구 삭제, 3개 탭으로 압축) -->
         <div class="flex bg-white px-6 pt-4 border-b border-gray-200 overflow-x-auto whitespace-nowrap">
             <button onclick="switchTab('map')" id="btn-map" class="tab-btn active px-4 py-2 mr-4 text-lg hover:text-indigo-500 transition">📍 카카오 상권 지도</button>
-            <button onclick="switchTab('pop')" id="btn-pop" class="tab-btn px-4 py-2 mr-4 text-lg hover:text-indigo-500 transition">👥 유동인구 분석</button>
             <button onclick="switchTab('radar')" id="btn-radar" class="tab-btn px-4 py-2 mr-4 text-lg hover:text-indigo-500 transition">📊 입지 매력도 비교</button>
             <button onclick="switchTab('roi')" id="btn-roi" class="tab-btn px-4 py-2 text-lg hover:text-indigo-500 transition">💰 ROI 시뮬레이터</button>
         </div>
 
-        <!-- 탭 1: 카카오맵 -->
+        <!-- 탭 1: 카카오맵 & 브랜드 필터 -->
         <div id="tab-map" class="flex-grow w-full h-full relative">
+            
+            <!-- 클릭 유도 안내창 -->
             <div class="absolute top-4 left-1/2 transform -translate-x-1/2 z-10 bg-white/90 backdrop-blur-sm px-6 py-2 rounded-full shadow-md text-sm font-bold text-slate-700 border border-slate-200">
                 👆 지도를 클릭/터치하면 상권 중심지가 이동합니다!
             </div>
+
+            <!-- 🌟 브랜드 핀 필터 제어창 -->
+            <div class="absolute top-16 left-4 z-10 bg-white/95 backdrop-blur-sm p-4 rounded-xl shadow-lg border border-slate-200 w-44">
+                <p class="text-sm font-extrabold text-slate-800 mb-3 border-b pb-2">🎯 브랜드 필터 (500m)</p>
+                <label class="flex items-center space-x-2 mb-2 cursor-pointer">
+                    <input type="checkbox" id="chk_lensme" checked onchange="applyBrandFilter()" class="w-4 h-4 accent-purple-600">
+                    <span class="text-sm font-bold text-purple-700">🟣 렌즈미</span>
+                </label>
+                <label class="flex items-center space-x-2 mb-2 cursor-pointer">
+                    <input type="checkbox" id="chk_olens" checked onchange="applyBrandFilter()" class="w-4 h-4 accent-orange-500">
+                    <span class="text-sm font-bold text-orange-600">🟠 오렌즈</span>
+                </label>
+                <label class="flex items-center space-x-2 mb-2 cursor-pointer">
+                    <input type="checkbox" id="chk_hapa" checked onchange="applyBrandFilter()" class="w-4 h-4 accent-pink-500">
+                    <span class="text-sm font-bold text-pink-600">🌸 하파크리스틴</span>
+                </label>
+                <label class="flex items-center space-x-2 cursor-pointer">
+                    <input type="checkbox" id="chk_other" checked onchange="applyBrandFilter()" class="w-4 h-4 accent-gray-500">
+                    <span class="text-sm font-bold text-gray-600">⚪ 일반 안경원</span>
+                </label>
+            </div>
+
             <div id="map" class="w-full h-full"></div>
         </div>
 
-        <!-- 탭 2: 유동인구 분석 -->
-        <div id="tab-pop" class="hidden flex-grow w-full p-8 overflow-y-auto">
-            <h2 class="text-2xl font-bold mb-6">👥 <span class="targetLocationName text-indigo-600">천안 신불당 상권</span> 실시간 데이터 분석</h2>
-            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-                <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 text-center"><p class="text-sm text-slate-500 font-bold mb-1">일평균 유동인구</p><p id="pop_total" class="text-2xl font-extrabold text-slate-800">데이터 수집중</p></div>
-                <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 text-center"><p class="text-sm text-slate-500 font-bold mb-1">여성 비율</p><p id="pop_female" class="text-2xl font-extrabold text-pink-500">-</p></div>
-                <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 text-center"><p class="text-sm text-slate-500 font-bold mb-1">1020 타겟 비율</p><p id="pop_target" class="text-2xl font-extrabold text-indigo-600">-</p></div>
-                <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 text-center"><p class="text-sm text-slate-500 font-bold mb-1">최고 혼잡 시간대</p><p id="pop_peak" class="text-2xl font-extrabold text-slate-800">-</p></div>
-            </div>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 h-96"><div id="ageChart" class="w-full h-full"></div></div>
-                <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 h-96"><div id="timeChart" class="w-full h-full"></div></div>
-            </div>
-        </div>
-
-        <!-- 탭 3: 레이더 차트 -->
+        <!-- 탭 2: 레이더 차트 -->
         <div id="tab-radar" class="hidden flex-grow w-full p-8 overflow-y-auto">
             <h2 class="text-2xl font-bold mb-6">📊 <span class="currentStoreName text-slate-600">렌즈미 천안쌍용점</span> vs <span class="targetLocationName text-indigo-600">천안 신불당 상권</span> 입지 비교</h2>
             <div class="flex flex-col md:flex-row gap-6">
                 <div class="w-full md:w-1/3 bg-white p-6 rounded-xl shadow-sm border border-slate-200">
                     <p class="text-lg mb-2">🏪 <b>현재 매장:</b> <span class="currentStoreName text-slate-600 font-bold">렌즈미 천안쌍용점</span></p>
                     <p class="text-lg mb-2">🚩 <b>이전 후보:</b> <span class="targetLocationName text-pink-500 font-bold">천안 신불당 상권</span></p>
-                    <p class="text-sm text-indigo-600 font-bold mb-4 bg-indigo-50 p-2 rounded">검색된 경쟁 안경원: <span id="comp_count">0</span>개</p>
+                    <p class="text-sm text-indigo-600 font-bold mb-4 bg-indigo-50 p-3 rounded-lg border border-indigo-100">
+                        🔍 카카오맵 실시간 탐지 결과<br>
+                        반경 500m 내 경쟁 매장: <span id="comp_count" class="text-xl text-pink-600 ml-1">0</span>개
+                    </p>
                     <hr class="my-4 border-slate-200">
                     <ul class="text-sm text-slate-600 space-y-3 leading-relaxed">
                         <li>🎯 <b>1020 유동인구:</b> 핵심 타겟층 통행량</li>
@@ -112,7 +123,7 @@
             </div>
         </div>
 
-        <!-- 탭 4: ROI 시뮬레이터 -->
+        <!-- 탭 3: ROI 시뮬레이터 -->
         <div id="tab-roi" class="hidden flex-grow w-full p-8 overflow-y-auto">
             <h2 class="text-2xl font-bold mb-6">💸 예상 매출 및 투자금 회수(ROI) 시뮬레이터</h2>
             <div class="flex flex-col xl:flex-row gap-6">
@@ -151,22 +162,24 @@
     <script>
         let currentStoreName = "렌즈미 천안쌍용점";
         let targetLocationName = "천안 신불당 상권";
-        let competitorCount = 0; // 검색된 주변 경쟁사 개수 (레이더 차트용)
-
+        let competitorCount = 0; 
+        
         let mapContainer = document.getElementById('map'); 
         let defaultLat = 36.81510, defaultLon = 127.11390;
         let mapOption = { center: new kakao.maps.LatLng(defaultLat, defaultLon), level: 4 };  
         let map = new kakao.maps.Map(mapContainer, mapOption); 
         let ps = new kakao.maps.services.Places(); 
         let geocoder = new kakao.maps.services.Geocoder(); 
-        let centerMarker = null, circle = null, compMarkers = [];
+        let centerMarker = null, circle = null;
+        
+        let allBrandMarkers = []; // 필터링을 위해 마커 정보를 저장하는 배열
 
         // 시작 시 초기 렌더링
         drawMapElements(defaultLat, defaultLon, targetLocationName);
         calcROI();
 
-        // 퀵 버튼 & 검색 함수
         function quickSearch(keyword) { document.getElementById('searchInput').value = keyword; searchLocation(); }
+        
         function searchLocation() {
             let keyword = document.getElementById('searchInput').value;
             let statusMsg = document.getElementById('statusMessage');
@@ -188,7 +201,6 @@
             });
         }
 
-        // 지도 터치/클릭 이동
         kakao.maps.event.addListener(map, 'click', function(mouseEvent) {
             if (confirm("📍 이 위치로 상권 분석 중심지를 변경하시겠습니까?")) {
                 let lat = mouseEvent.latLng.getLat(), lon = mouseEvent.latLng.getLng();
@@ -208,110 +220,114 @@
             
             if(centerMarker) centerMarker.setMap(null);
             if(circle) circle.setMap(null);
-            compMarkers.forEach(m => m.setMap(null)); compMarkers = [];
+            
+            // 기존 마커 전체 초기화
+            allBrandMarkers.forEach(m => m.marker.setMap(null)); 
+            allBrandMarkers = [];
+            competitorCount = 0;
+            document.getElementById('comp_count').innerText = "검색중...";
 
             centerMarker = new kakao.maps.Marker({ map: map, position: moveLatLon });
             circle = new kakao.maps.Circle({ center : moveLatLon, radius: 500, strokeWeight: 2, strokeColor: '#4f46e5', strokeOpacity: 0.8, fillOpacity: 0.15, fillColor: '#4f46e5' });
             circle.setMap(map);
             
-            // 지도 이동 시 데이터 재요청
-            fetchCompetitors(lat, lon);
-            fetchPopulationData(lat, lon);
+            // 카카오맵 실시간 검색 실행
+            fetchKakaoCompetitors(moveLatLon);
         }
 
-        // 🌟 주변 상권 API (경쟁사 개수 연동 완료)
-        function fetchCompetitors(lat, lon) {
-            let apiKey = "aXN6wwYUtb8cmsw%2FKilpDWQn1wUuT6U1igFdsRMJNBT8%2ByFZY6dQe95h9rrcobd4%2Fz7JQG0e14PuzcIZNd%2BcbQ%3D%3D";
-            let url = `https://apis.data.go.kr/B553077/api/open/sdam/bizesInfoInRadius?ServiceKey=${apiKey}&type=json&cy=${lat}&cx=${lon}&radius=500&numOfRows=100`;
+        // 🌟 공공데이터 대신 카카오맵 실시간 검색(Places)으로 변경
+        function fetchKakaoCompetitors(centerLatLon) {
+            let searchOptions = { location: centerLatLon, radius: 500, size: 15 };
+            let searchKeywords = ['렌즈미', '오렌즈', '하파크리스틴', '안경', '렌즈'];
+            let seenPlaceIds = new Set();
             
-            document.getElementById('comp_count').innerText = "조회중...";
-            competitorCount = 0;
+            let completedSearches = 0;
 
-            fetch(url).then(res => res.json()).then(data => {
-                if(data && data.body && data.body.items) {
-                    data.body.items.forEach(item => {
-                        let name = item.bizesNm;
-                        if(name.includes('안경') || name.includes('렌즈') || name.includes('다비치') || name.includes('오렌즈') || name.includes('글라스')) {
-                            let compMarker = new kakao.maps.Marker({ map: map, position: new kakao.maps.LatLng(item.lat, item.lon) });
-                            let infowindow = new kakao.maps.InfoWindow({ content: `<div style="padding:5px;font-size:12px;font-weight:bold;">${name}</div>` });
-                            kakao.maps.event.addListener(compMarker, 'mouseover', function() { infowindow.open(map, compMarker); });
-                            kakao.maps.event.addListener(compMarker, 'mouseout', function() { infowindow.close(); });
-                            compMarkers.push(compMarker);
-                            competitorCount++;
+            searchKeywords.forEach(kw => {
+                ps.keywordSearch(kw, function(data, status, pagination) {
+                    if (status === kakao.maps.services.Status.OK) {
+                        data.forEach(place => {
+                            if (!seenPlaceIds.has(place.id)) {
+                                seenPlaceIds.add(place.id);
+                                createBrandMarker(place);
+                            }
+                        });
+                        
+                        // 결과가 더 있으면 다음 페이지도 탐색 (최대 3페이지)
+                        if (pagination.hasNextPage && pagination.current < 3) {
+                            pagination.nextPage();
+                            return; // 다음 페이지 검색 완료 후 콜백에서 completedSearches 증가
                         }
-                    });
-                }
-                document.getElementById('comp_count').innerText = competitorCount;
-                drawRadarChart(); // 경쟁사 갯수에 따라 레이더 차트 다시 그리기
-            }).catch(err => {
-                document.getElementById('comp_count').innerText = 0;
-                drawRadarChart();
+                    }
+                    
+                    completedSearches++;
+                    // 모든 키워드 검색이 끝나면 카운트 및 차트 업데이트
+                    if(completedSearches === searchKeywords.length) {
+                        updateCompetitorCount();
+                        applyBrandFilter(); // 검색 완료 직후 현재 체크박스 상태에 맞춰 핀 노출
+                    }
+                }, searchOptions);
             });
         }
 
-        // 🌟 유동인구 API 연결 통신 및 스마트 추정(Fallback) 
-        function fetchPopulationData(lat, lon) {
-            // 실제 유동인구 공공데이터 API 주소 형식 (상권유동인구)
-            // *주의: 사장님 키가 유동인구 서비스에 미등록되었거나, 외곽지역일 경우를 대비해 
-            // .catch()에서 해당 위치(위도/경도)를 기반으로 고정된 추정치를 계산해 화면이 멈추지 않게 보호합니다.
-            let popApiUrl = `https://apis.data.go.kr/B553077/api/open/sdam/popAsgnIdexInRadius?ServiceKey=aXN6wwYUtb8cmsw%2FKilpDWQn1wUuT6U1igFdsRMJNBT8%2ByFZY6dQe95h9rrcobd4%2Fz7JQG0e14PuzcIZNd%2BcbQ%3D%3D&type=json&cy=${lat}&cx=${lon}`;
+        function createBrandMarker(place) {
+            let name = place.place_name;
+            let brandType = 'other';
+            let colorHex = '%239ca3af'; // 기본 회색 (기타 안경원)
+            let iconText = '⚪';
 
-            document.getElementById('pop_total').innerText = "데이터 수집중...";
+            // 브랜드별 색상 및 타입 분류
+            if (name.includes('렌즈미')) { brandType = 'lensme'; colorHex = '%239333ea'; iconText = '🟣'; }
+            else if (name.includes('오렌즈')) { brandType = 'olens'; colorHex = '%23f97316'; iconText = '🟠'; }
+            else if (name.includes('하파크리스틴')) { brandType = 'hapa'; colorHex = '%23ec4899'; iconText = '🌸'; }
+            // '안경' 키워드로 렌즈샵이 아닌 일반 매장 등 필터링 (다비치, 으뜸 등)
+            
+            // SVG를 활용한 커스텀 마커 이미지 생성
+            let svgString = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24"><circle cx="12" cy="12" r="10" fill="${colorHex}" stroke="white" stroke-width="2.5"/></svg>`;
+            let markerImage = new kakao.maps.MarkerImage(
+                'data:image/svg+xml;utf-8,' + svgString,
+                new kakao.maps.Size(24, 24),
+                { offset: new kakao.maps.Point(12, 12) }
+            );
 
-            fetch(popApiUrl)
-            .then(res => res.json())
-            .then(data => {
-                if(data && data.body && data.body.items && data.body.items.length > 0) {
-                    // 리얼 데이터 성공 시 (나중에 API가 완벽히 뚫리면 이 부분이 작동)
-                    let realData = data.body.items[0];
-                    updatePopUI(realData.totalPop, realData.femaleRatio, realData.targetRatio, realData.peakTime, realData.ageArr, realData.timeArr);
-                } else {
-                    throw new Error("No data or Unregistered Service");
-                }
-            })
-            .catch(error => {
-                // 💡 [스마트 시뮬레이션] API 미등록 에러나 외곽지역 클릭으로 데이터가 없을 때 
-                // 화면이 뻗지 않도록, 클릭한 위치(좌표)를 계산해 아주 그럴듯한 해당 지역 추정 데이터를 즉시 생성합니다.
-                let pseudoRandom = Math.abs(Math.sin(lat * lon)) * 10000;
-                
-                let estTotal = Math.floor(10000 + (pseudoRandom * 5)); 
-                let estFemale = (45 + (pseudoRandom % 20)).toFixed(1); 
-                let estTarget = (30 + (pseudoRandom % 30)).toFixed(1); 
-                let peakTimes = ["12시 ~ 14시", "16시 ~ 18시", "18시 ~ 20시", "19시 ~ 21시"];
-                let estPeak = peakTimes[Math.floor(pseudoRandom) % 4];
+            let marker = new kakao.maps.Marker({
+                position: new kakao.maps.LatLng(place.y, place.x),
+                image: markerImage,
+                title: name
+            });
 
-                let ageArr = [
-                    Math.floor(pseudoRandom * 0.8), // 10대
-                    Math.floor(pseudoRandom * 1.5), // 20대
-                    Math.floor(pseudoRandom * 1.2), // 30대
-                    Math.floor(pseudoRandom * 0.9), // 40대
-                    Math.floor(pseudoRandom * 0.7)  // 50대 이상
-                ];
-                
-                let timeArr = [
-                    Math.floor(pseudoRandom * 0.2), Math.floor(pseudoRandom * 0.6), Math.floor(pseudoRandom * 1.1), 
-                    Math.floor(pseudoRandom * 1.6), Math.floor(pseudoRandom * 1.4), Math.floor(pseudoRandom * 0.5)
-                ];
+            // 마우스 오버 시 말풍선
+            let infowindow = new kakao.maps.InfoWindow({ content: `<div style="padding:5px;font-size:12px;font-weight:bold;">${iconText} ${name}</div>` });
+            kakao.maps.event.addListener(marker, 'mouseover', function() { infowindow.open(map, marker); });
+            kakao.maps.event.addListener(marker, 'mouseout', function() { infowindow.close(); });
 
-                updatePopUI(estTotal, estFemale, estTarget, estPeak, ageArr, timeArr);
+            allBrandMarkers.push({ brand: brandType, marker: marker });
+        }
+
+        // 🌟 체크박스 필터링 함수
+        function applyBrandFilter() {
+            let showLensme = document.getElementById('chk_lensme').checked;
+            let showOlens = document.getElementById('chk_olens').checked;
+            let showHapa = document.getElementById('chk_hapa').checked;
+            let showOther = document.getElementById('chk_other').checked;
+
+            allBrandMarkers.forEach(item => {
+                let show = false;
+                if (item.brand === 'lensme' && showLensme) show = true;
+                if (item.brand === 'olens' && showOlens) show = true;
+                if (item.brand === 'hapa' && showHapa) show = true;
+                if (item.brand === 'other' && showOther) show = true;
+
+                item.marker.setMap(show ? map : null);
             });
         }
 
-        // 유동인구 UI 업데이트 함수
-        function updatePopUI(total, female, target, peak, ageArr, timeArr) {
-            document.getElementById('pop_total').innerText = total.toLocaleString() + "명";
-            document.getElementById('pop_female').innerText = female + "%";
-            document.getElementById('pop_target').innerText = target + "%";
-            document.getElementById('pop_peak').innerText = peak;
-
-            var ageData = [{ values: ageArr, labels: ['10대', '20대', '30대', '40대', '50대 이상'], type: 'pie', hole: 0.4, textinfo: 'label+percent', marker: {colors: ['#a7f3d0', '#fbcfe8', '#fde68a', '#c7d2fe', '#e5e7eb']} }];
-            Plotly.newPlot('ageChart', ageData, { title: {text: '📊 연령대별 유동인구 비중', font: {size: 16, family: 'Pretendard'}} }, {responsive: true, displayModeBar: false});
-
-            var timeData = [{ x: ['06-09시', '09-12시', '12-15시', '15-18시', '18-21시', '21-24시'], y: timeArr, type: 'scatter', mode: 'lines+markers', line: {color: '#4f46e5', width: 4, shape: 'spline'}, marker: {size: 10} }];
-            Plotly.newPlot('timeChart', timeData, { title: {text: '📈 시간대별 유동인구 흐름', font: {size: 16, family: 'Pretendard'}}, yaxis: {rangemode: 'tozero'} }, {responsive: true, displayModeBar: false});
+        function updateCompetitorCount() {
+            competitorCount = allBrandMarkers.length;
+            document.getElementById('comp_count').innerText = competitorCount;
+            drawRadarChart();
         }
 
-        // 이름 텍스트 일괄 동기화
         function updateStoreNames() {
             currentStoreName = document.getElementById('currentStoreInput').value || "현재 매장";
             targetLocationName = document.getElementById('targetLocationInput').value || "선택한 상권";
@@ -326,23 +342,21 @@
         }
 
         function switchTab(tabId) {
-            document.getElementById('tab-map').classList.add('hidden'); document.getElementById('tab-pop').classList.add('hidden');
+            document.getElementById('tab-map').classList.add('hidden');
             document.getElementById('tab-radar').classList.add('hidden'); document.getElementById('tab-roi').classList.add('hidden');
             
-            document.getElementById('btn-map').classList.remove('active'); document.getElementById('btn-pop').classList.remove('active');
+            document.getElementById('btn-map').classList.remove('active');
             document.getElementById('btn-radar').classList.remove('active'); document.getElementById('btn-roi').classList.remove('active');
 
             document.getElementById('tab-' + tabId).classList.remove('hidden'); document.getElementById('btn-' + tabId).classList.add('active');
 
             if(tabId === 'map') { map.relayout(); map.setCenter(centerMarker.getPosition()); }
-            else if (tabId === 'pop') { Plotly.Plots.resize(document.getElementById('ageChart')); Plotly.Plots.resize(document.getElementById('timeChart')); }
             else if (tabId === 'radar') { Plotly.Plots.resize(document.getElementById('radarChart')); }
             else if (tabId === 'roi') { Plotly.Plots.resize(document.getElementById('roiChart')); }
         }
 
         function drawRadarChart() {
-            // 🌟 실제 경쟁사 개수를 기반으로 경쟁 강도 점수 자동 계산 (많을수록 점수 낮음)
-            let compScore = Math.max(10, 100 - (competitorCount * 5)); 
+            let compScore = Math.max(10, 100 - (competitorCount * 3)); 
             
             let data = [
                 { type: 'scatterpolar', r: [60, 55, 80, 70, 50, 60], theta: ['1020 유동인구', '타겟 밀집도', '경쟁 강도', '임대료 가성비', '상권 활력도', '1020 유동인구'], fill: 'toself', name: currentStoreName, line: {color: 'gray'}, fillcolor: 'rgba(128,128,128,0.4)' },
