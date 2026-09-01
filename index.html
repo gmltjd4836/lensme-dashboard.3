@@ -35,7 +35,7 @@
         
         <div class="mb-5 bg-slate-50 p-4 rounded-xl border border-slate-200">
             <label class="block text-xs font-extrabold text-indigo-700 mb-2">🎯 상권 검색 및 선택</label>
-            <input type="text" id="searchInput" placeholder="상권명 입력 (예: 강남역, 홍대, 서면)" class="w-full bg-white border border-indigo-300 px-3 py-2 rounded-lg text-sm mb-3 font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500" onkeyup="filterAreas()">
+            <input type="text" id="searchInput" placeholder="상권명 입력 (예: 부평역, 부천시청)" class="w-full bg-white border border-indigo-300 px-3 py-2 rounded-lg text-sm mb-3 font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500" onkeyup="filterAreas()">
             <div id="areaListUI" class="flex flex-wrap gap-1.5 max-h-52 overflow-y-auto p-1"></div>
         </div>
 
@@ -111,10 +111,10 @@
         </div>
     </div>
 
+    <!-- 카카오맵 API (키 그대로 유지) -->
     <script type="text/javascript" src="//dapi.kakao.com/v2/maps/sdk.js?appkey=c045609510f8b75252389123f086be48&libraries=services"></script>
 
     <script>
-        // Proj4 좌표 정의 (EPSG:5181/5179 -> WGS84)
         proj4.defs("EPSG:5181", "+proj=tmerc +lat_0=38 +lon_0=127 +k=1 +x_0=200000 +y_0=500000 +ellps=GRS80 +units=m +no_defs");
         proj4.defs("EPSG:5179", "+proj=tmerc +lat_0=38 +lon_0=127.5 +k=0.9996 +x_0=1000000 +y_0=2000000 +ellps=GRS80 +units=m +no_defs");
         proj4.defs("EPSG:4326", "+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs");
@@ -142,7 +142,6 @@
             f_daiso: { name: '다이소', kw: '다이소', color: '#e11d48' }
         };
 
-        // 좌표를 Kakao LatLng 객체로 변환 (자동 좌표계 판단)
         function parseToKakaoLatLng(c) {
             let lon = c[0], lat = c[1];
             if (lon > 120 && lon < 135 && lat > 30 && lat < 45) {
@@ -227,8 +226,14 @@
             clearMapOverlays();
 
             let geom = feature.geometry;
-            let rings = (geom.type === 'MultiPolygon') ? geom.coordinates[0] : geom.coordinates;
-            let rawCoords = rings[0] || rings;
+            let rawCoords = [];
+            
+            // 핵심 수정 1: 다각형(Polygon)과 다중 다각형(MultiPolygon) 구조를 정확히 파싱하도록 개선
+            if (geom.type === 'MultiPolygon') {
+                rawCoords = geom.coordinates[0][0]; 
+            } else if (geom.type === 'Polygon') {
+                rawCoords = geom.coordinates[0];
+            }
 
             let path = rawCoords.map(c => parseToKakaoLatLng(c)).filter(p => p !== null);
             if (path.length === 0) return;
@@ -283,6 +288,10 @@
 
             let bounds = new kakao.maps.LatLngBounds();
             polygonObj.getPath().forEach(coord => bounds.extend(coord));
+            
+            // 핵심 수정 2: 폴리곤 테두리에 갇히지 않고, 상권 중심축 기준으로 반경 700m까지 넉넉하게 스캔
+            let centerLat = (bounds.getSouthWest().getLat() + bounds.getNorthEast().getLat()) / 2;
+            let centerLng = (bounds.getSouthWest().getLng() + bounds.getNorthEast().getLng()) / 2;
 
             let activeKeys = Object.keys(BRAND_CONFIG).filter(key => document.getElementById(key) && document.getElementById(key).checked);
             let searchTasks = [];
@@ -293,6 +302,7 @@
             activeKeys.forEach(key => {
                 let cfg = BRAND_CONFIG[key];
                 searchTasks.push(new Promise((resolve) => {
+                    // bounds 대신 중심 좌표(x,y)와 radius를 사용하여 외곽에 걸친 샵인샵 매장까지 누락 없이 카운트
                     ps.keywordSearch(cfg.kw, function(data, status) {
                         let count = 0;
                         if (status === kakao.maps.services.Status.OK) {
@@ -320,7 +330,7 @@
                             totalCompStores += count;
                         }
                         resolve();
-                    }, { bounds: bounds, size: 15 });
+                    }, { x: centerLng, y: centerLat, radius: 700, size: 15 });
                 }));
             });
 
