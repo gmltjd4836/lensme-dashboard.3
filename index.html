@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>렌즈미 상권 분석 대시보드 (폴리곤 & 1~3순위 골든존)</title>
+    <title>렌즈미 상권 분석 (GeoJSON 분할 로딩 & 1~3순위 골든존)</title>
     <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
@@ -18,11 +18,9 @@
         .chk-red { accent-color: #dc2626; } .chk-green { accent-color: #16a34a; } 
         .chk-blue { accent-color: #3b82f6; } .chk-gray { accent-color: #9ca3af; }
 
-        /* 골든존 1순위 애니메이션 */
+        /* 골든존 애니메이션 */
         @keyframes pulse-gold { 0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(250, 204, 21, 0.7); } 70% { transform: scale(1); box-shadow: 0 0 0 25px rgba(250, 204, 21, 0); } 100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(250, 204, 21, 0); } }
         .rank-1-marker { animation: pulse-gold 2s infinite; background: linear-gradient(135deg, #fde047 0%, #eab308 100%); border: 3px solid #fff; border-radius: 30px; padding: 4px 12px; color: #713f12; font-size: 15px; font-weight: 900; text-shadow: 0px 1px 1px rgba(255,255,255,0.8); box-shadow: 0 4px 6px rgba(0,0,0,0.3); z-index: 100; white-space: nowrap;}
-        
-        /* 2순위, 3순위 마커 */
         .rank-2-marker { background: linear-gradient(135deg, #e2e8f0 0%, #94a3b8 100%); border: 2px solid #fff; border-radius: 20px; padding: 3px 10px; color: #1e293b; font-size: 13px; font-weight: 800; box-shadow: 0 3px 5px rgba(0,0,0,0.3); z-index: 90; white-space: nowrap;}
         .rank-3-marker { background: linear-gradient(135deg, #fed7aa 0%, #ea580c 100%); border: 2px solid #fff; border-radius: 20px; padding: 3px 10px; color: #fff; font-size: 13px; font-weight: 800; box-shadow: 0 3px 5px rgba(0,0,0,0.3); z-index: 80; white-space: nowrap;}
     </style>
@@ -32,10 +30,10 @@
     <!-- 1. 좌측 사이드바 -->
     <div class="w-full md:w-1/4 bg-white border-r border-gray-200 p-6 flex flex-col shadow-lg z-20 overflow-y-auto">
         <h1 class="text-2xl font-extrabold text-slate-800 border-b-4 border-indigo-500 pb-3 mb-6">
-            🗺️ 상권 입지 분석기
+            🗺️ 실전 상권 분석기
         </h1>
         
-        <!-- 🌟 사이드바 드릴다운 UI (지도 마커 삭제 완료) -->
+        <!-- 🌟 사이드바 드릴다운 UI -->
         <div class="mb-6 bg-slate-50 p-4 rounded-xl border border-slate-200">
             <label class="block text-sm font-extrabold text-indigo-700 mb-2">🎯 지역 줌인 (스무스 이동)</label>
             <p id="drillDownStatus" class="text-xs font-bold text-slate-500 mb-3 border-b pb-2"></p>
@@ -46,7 +44,7 @@
             <p class="text-xs text-slate-500 font-bold mb-1">현재 기준 매장명</p>
             <input type="text" id="currentStoreInput" value="현재 매장" class="w-full bg-slate-50 border border-gray-300 px-3 py-2 rounded-md font-semibold text-sm mb-3" oninput="updateStoreNames()">
             <p class="text-xs text-slate-500 font-bold mb-1">분석 대상 상권 (목적지)</p>
-            <input type="text" id="targetLocationInput" value="상권을 선택하세요" class="w-full bg-slate-50 border border-indigo-300 px-3 py-2 rounded-md font-extrabold text-indigo-600 text-lg" oninput="updateStoreNames()">
+            <input type="text" id="targetLocationInput" value="상권을 선택하세요" class="w-full bg-slate-50 border border-indigo-300 px-3 py-2 rounded-md font-extrabold text-indigo-600 text-lg" readonly>
         </div>
     </div>
 
@@ -58,7 +56,7 @@
             <button onclick="switchTab('radar')" id="btn-radar" class="tab-btn px-4 py-2 mr-4 text-lg hover:text-indigo-500 transition">📊 입지 매력도</button>
         </div>
 
-        <!-- 탭 1: 카카오맵 & 필터 -->
+        <!-- 탭 1: 카카오맵 -->
         <div id="tab-map" class="flex-grow w-full h-full relative">
             <div id="statusMessage" class="absolute top-4 left-1/2 transform -translate-x-1/2 z-10 bg-white/95 backdrop-blur-sm px-6 py-2 rounded-full shadow-md text-sm font-bold text-slate-700 border border-slate-200 text-center transition-all">
                 👆 왼쪽 메뉴에서 지역을 선택해 주세요.
@@ -82,11 +80,10 @@
                     <label class="flex justify-between"><div class="flex space-x-2"><input type="checkbox" id="f_other" checked onchange="refreshMarkers()"><span class="text-[13px] font-bold text-gray-500">⚪ 안경원</span></div></label>
                 </div>
             </div>
-
             <div id="map" class="w-full h-full"></div>
         </div>
 
-        <!-- 탭 2: 레이더 차트 (기존 유지) -->
+        <!-- 탭 2: 레이더 차트 -->
         <div id="tab-radar" class="hidden flex-grow w-full p-8 overflow-y-auto">
             <div class="flex flex-col md:flex-row gap-6">
                 <div class="w-full md:w-1/3 bg-white p-6 rounded-xl shadow-sm border border-slate-200">
@@ -105,40 +102,21 @@
     <script type="text/javascript" src="//dapi.kakao.com/v2/maps/sdk.js?appkey=c045609510f8b75252389123f086be48&libraries=services"></script>
     
     <script>
-        // 🌟 1. 전국 주요 A급 상권 데이터 (실제 상권 모양 폴리곤 다각형 좌표 탑재)
-        const regionsData = {
-            "서울": { lat: 37.5665, lng: 126.9780, level: 9, children: {
-                "강남구": { lat: 37.4959, lng: 127.0664, level: 7, children: { 
-                    "강남역 로데오": { lat:37.5005, lng:127.0265, level: 4, poly: [ {lat:37.5028, lng:127.0259}, {lat:37.5011, lng:127.0252}, {lat:37.4984, lng:127.0264}, {lat:37.4998, lng:127.0287} ] }
-                }},
-                "마포구": { lat: 37.5662, lng: 126.9016, level: 7, children: { 
-                    "홍대입구 메인": { lat:37.5555, lng:126.9235, level: 4, poly: [ {lat:37.5568, lng:126.9221}, {lat:37.5541, lng:126.9213}, {lat:37.5528, lng:126.9238}, {lat:37.5552, lng:126.9262} ] }
-                }}
-            }},
-            "인천": { lat: 37.4562, lng: 126.7052, level: 9, children: {
-                "부평구": { lat: 37.5070, lng: 126.7215, level: 6, children: { 
-                    "부평 문화의거리": { lat:37.4928, lng:126.7225, level: 3, poly: [ {lat:37.4938, lng:126.7215}, {lat:37.4920, lng:126.7210}, {lat:37.4918, lng:126.7240}, {lat:37.4940, lng:126.7245} ] },
-                    "부평 테마의거리": { lat:37.4905, lng:126.7250, level: 3, poly: [ {lat:37.4918, lng:126.7240}, {lat:37.4900, lng:126.7235}, {lat:37.4895, lng:126.7265}, {lat:37.4915, lng:126.7270} ] }
-                }}
-            }},
-            "경기": { lat: 37.2752, lng: 127.0095, level: 10, children: {
-                "구리시": { lat: 37.5943, lng: 127.1296, level: 6, children: { 
-                    "돌다리(수택동)": { lat:37.6000, lng:127.1380, level: 3, poly: [ {lat:37.6015, lng:127.1365}, {lat:37.5990, lng:127.1365}, {lat:37.5990, lng:127.1400}, {lat:37.6015, lng:127.1400} ] }
-                }},
-                "성남시": { lat: 37.4200, lng: 127.1267, level: 7, children: { 
-                    "서현역 로데오": { lat:37.3849, lng:127.1232, level: 3, poly: [ {lat:37.3860, lng:127.1215}, {lat:37.3835, lng:127.1215}, {lat:37.3835, lng:127.1250}, {lat:37.3860, lng:127.1250} ] }
-                }}
-            }},
-            "부산": { lat: 35.1795, lng: 129.0756, level: 9, children: {
-                "부산진구": { lat: 35.1627, lng: 129.0531, level: 7, children: { 
-                    "서면(쥬디스태화)": { lat:35.1534, lng:129.0602, level: 4, poly: [ {lat:35.1545, lng:129.0590}, {lat:35.1520, lng:129.0590}, {lat:35.1520, lng:129.0620}, {lat:35.1545, lng:129.0620} ] }
-                }}
-            }},
-            "대구": { lat: 35.8714, lng: 128.6014, level: 9, children: {
-                "중구": { lat: 35.8668, lng: 128.5907, level: 7, children: { 
-                    "동성로 메인": { lat:35.8696, lng:128.5960, level: 4, poly: [ {lat:35.8710, lng:128.5940}, {lat:35.8670, lng:128.5940}, {lat:35.8670, lng:128.5980}, {lat:35.8710, lng:128.5980} ] }
-                }}
-            }}
+        // 🌟 1. 뼈대 지역 데이터 (세부 상권은 GeoJSON에서 자동으로 불러옴)
+        const regionHierarchy = {
+            "서울": { lat: 37.5665, lng: 126.9780, level: 9, children: { "강남구": { lat: 37.4959, lng: 127.0664, level: 6 }, "마포구": { lat: 37.5662, lng: 126.9016, level: 6 } }},
+            "인천": { lat: 37.4562, lng: 126.7052, level: 9, children: { "부평구": { lat: 37.5070, lng: 126.7215, level: 6 } }},
+            "경기": { lat: 37.2752, lng: 127.0095, level: 10, children: { "수원시": { lat: 37.2635, lng: 127.0286, level: 7 }, "구리시": { lat: 37.5943, lng: 127.1296, level: 6 } }},
+            "부산": { lat: 35.1795, lng: 129.0756, level: 9, children: { "부산진구": { lat: 35.1627, lng: 129.0531, level: 7 } }}
+        };
+
+        // 🚨 사장님이 데이터 올리기 전까지 테스트할 수 있도록 만든 샘플 데이터 (부평구)
+        const sampleGeoJSON = {
+            "type": "FeatureCollection",
+            "features": [
+                { "type": "Feature", "properties": { "상권명": "부평 문화의거리", "시군구": "부평구" }, "geometry": { "type": "Polygon", "coordinates": [[[126.7215, 37.4938], [126.7210, 37.4920], [126.7240, 37.4918], [126.7245, 37.4940]]] } },
+                { "type": "Feature", "properties": { "상권명": "부평 테마의거리", "시군구": "부평구" }, "geometry": { "type": "Polygon", "coordinates": [[[126.7240, 37.4918], [126.7235, 37.4900], [126.7265, 37.4895], [126.7270, 37.4915]]] } }
+            ]
         };
 
         let mapContainer = document.getElementById('map'); 
@@ -148,58 +126,141 @@
         let placeCache = new Map(); 
         let targetAnchors = []; 
         let searchTimeout = null;
-        let goldenZoneMarkers = []; // 1~3순위 마커 저장소
-        let areaPolygon = null; // 상권 실제 모양(다각형)
+        let goldenZoneMarkers = []; 
+        let activePolygons = []; // 화면에 그려진 다각형들
 
-        // --- 🌟 드릴다운(줌인) 로직: 사이드바 전용 (지도 글자 제거) ---
-        function renderDrillDown(level, parentObj = null, parentName = "") {
+        // --- 🌟 드릴다운(줌인) 로직 ---
+        function renderDrillDown(level, parentObj = null, parentName = "", grandParentName = "") {
             let container = document.getElementById('drillDownUI');
             container.innerHTML = '';
 
             if (level === 1) {
                 document.getElementById('drillDownStatus').innerText = "1단계: 도/광역시 선택";
-                for(let prov in regionsData) {
+                for(let prov in regionHierarchy) {
                     let btn = document.createElement('button');
                     btn.className = "px-3 py-1 bg-indigo-50 text-indigo-700 text-sm font-bold rounded-lg border border-indigo-200 hover:bg-indigo-600 hover:text-white transition";
                     btn.innerText = prov;
-                    btn.onclick = () => { map.panTo(new kakao.maps.LatLng(regionsData[prov].lat, regionsData[prov].lng)); map.setLevel(regionsData[prov].level); renderDrillDown(2, regionsData[prov].children, prov); };
+                    btn.onclick = () => { 
+                        map.panTo(new kakao.maps.LatLng(regionHierarchy[prov].lat, regionHierarchy[prov].lng)); 
+                        map.setLevel(regionHierarchy[prov].level); 
+                        renderDrillDown(2, regionHierarchy[prov].children, prov); 
+                    };
                     container.appendChild(btn);
                 }
             } else if (level === 2) {
                 document.getElementById('drillDownStatus').innerText = `2단계: ${parentName} 산하 시/군/구 선택`;
-                let btnBack = document.createElement('button'); btnBack.className = "px-3 py-1 bg-gray-200 text-gray-700 text-sm font-bold rounded-lg mr-2"; btnBack.innerText = "🔙 지역 리셋"; btnBack.onclick = () => { map.setLevel(12); renderDrillDown(1); }; container.appendChild(btnBack);
+                let btnBack = document.createElement('button'); btnBack.className = "px-3 py-1 bg-gray-200 text-gray-700 text-sm font-bold rounded-lg mr-2"; btnBack.innerText = "🔙 지역 리셋"; btnBack.onclick = () => { map.setLevel(12); clearPolygons(); renderDrillDown(1); }; container.appendChild(btnBack);
                 for(let city in parentObj) {
                     let btn = document.createElement('button'); btn.className = "px-3 py-1 bg-blue-50 text-blue-700 text-sm font-bold rounded-lg border border-blue-200 hover:bg-blue-600 hover:text-white transition"; btn.innerText = city;
-                    btn.onclick = () => { map.panTo(new kakao.maps.LatLng(parentObj[city].lat, parentObj[city].lng)); map.setLevel(parentObj[city].level); renderDrillDown(3, parentObj[city].children, city); };
+                    btn.onclick = () => { 
+                        map.panTo(new kakao.maps.LatLng(parentObj[city].lat, parentObj[city].lng)); 
+                        map.setLevel(parentObj[city].level); 
+                        // 🌟 핵심: 여기서 외부 GeoJSON 파일을 불러와 상권 버튼을 자동 생성합니다!
+                        loadCommercialAreasGeoJSON(parentName, city);
+                    };
                     container.appendChild(btn);
                 }
             } else if (level === 3) {
                 document.getElementById('drillDownStatus').innerText = `3단계: ${parentName} 핵심 상권 진입!`;
-                let btnBack = document.createElement('button'); btnBack.className = "px-3 py-1 bg-gray-200 text-gray-700 text-sm font-bold rounded-lg mr-2"; btnBack.innerText = "🔙 처음으로"; btnBack.onclick = () => { map.setLevel(12); renderDrillDown(1); }; container.appendChild(btnBack);
-                for(let town in parentObj) {
+                let btnBack = document.createElement('button'); btnBack.className = "px-3 py-1 bg-gray-200 text-gray-700 text-sm font-bold rounded-lg mr-2"; btnBack.innerText = "🔙 처음으로"; btnBack.onclick = () => { map.setLevel(12); clearPolygons(); renderDrillDown(1); }; container.appendChild(btnBack);
+                
+                // GeoJSON에서 추출된 상권 목록(parentObj)으로 버튼 생성
+                parentObj.forEach(feature => {
+                    let town = feature.properties.상권명;
                     let btn = document.createElement('button'); btn.className = "px-3 py-1 bg-pink-50 text-pink-700 text-sm font-extrabold rounded-lg border border-pink-300 hover:bg-pink-600 hover:text-white transition shadow-sm"; btn.innerText = town;
-                    btn.onclick = () => { 
-                        document.getElementById('targetLocationInput').value = town; updateStoreNames();
-                        let tPos = new kakao.maps.LatLng(parentObj[town].lat, parentObj[town].lng);
-                        map.panTo(tPos); map.setLevel(parentObj[town].level); 
-                        
-                        // 🌟 다각형(Polygon) 상권 경계 그리기
-                        if(areaPolygon) areaPolygon.setMap(null);
-                        if(parentObj[town].poly) {
-                            let path = parentObj[town].poly.map(p => new kakao.maps.LatLng(p.lat, p.lng));
-                            areaPolygon = new kakao.maps.Polygon({
-                                path: path, strokeWeight: 4, strokeColor: '#ec4899', strokeOpacity: 0.8, strokeStyle: 'solid', fillColor: '#ec4899', fillOpacity: 0.15
-                            });
-                            areaPolygon.setMap(map);
-                        }
-                        scanGoldenZone(); // 1~3순위 골든존 스캔!
-                    };
+                    btn.onclick = () => { focusOnPolygon(feature); };
                     container.appendChild(btn);
-                }
+                });
             }
         }
-        
-        renderDrillDown(1);
+
+        // --- 🌟 비동기 GeoJSON 로딩 및 파싱 (분할 방식) ---
+        async function loadCommercialAreasGeoJSON(provName, cityName) {
+            document.getElementById('statusMessage').innerText = `⏳ ${cityName} 상권 데이터를 불러오는 중...`;
+            clearPolygons();
+            let geoData = null;
+
+            try {
+                // 깃허브에 업로드할 파일 경로 (예: data/인천.geojson)
+                let response = await fetch(`data/${provName}.geojson`);
+                if (!response.ok) throw new Error("파일 없음");
+                geoData = await response.json();
+            } catch (e) {
+                // 사장님이 아직 파일을 안 올리셨을 때, 에러 방지용 샘플 데이터 제공 (인천 부평구 한정)
+                if(cityName === "부평구") {
+                    console.log("샘플 부평구 데이터 로드");
+                    geoData = sampleGeoJSON;
+                } else {
+                    document.getElementById('statusMessage').innerText = `⚠️ 깃허브 data 폴더에 ${provName}.geojson 파일이 필요합니다.`;
+                    document.getElementById('statusMessage').classList.replace('text-slate-700', 'text-red-600');
+                    return;
+                }
+            }
+
+            // 가져온 도(道) 데이터 안에서 클릭한 '시/구'에 해당하는 상권만 필터링
+            let targetFeatures = geoData.features.filter(f => f.properties.시군구 === cityName);
+            
+            if(targetFeatures.length === 0) {
+                document.getElementById('statusMessage').innerText = `⚠️ ${cityName} 지역에 등록된 상권이 없습니다.`;
+                return;
+            }
+
+            document.getElementById('statusMessage').innerText = `✅ 상권 모양 스캔 완료! 분석할 골목을 선택하세요.`;
+            document.getElementById('statusMessage').classList.replace('text-red-600', 'text-slate-700');
+            
+            // 지도에 다각형 그리기 및 3단계 버튼 생성
+            drawPolygons(targetFeatures);
+            renderDrillDown(3, targetFeatures, cityName, provName);
+        }
+
+        function clearPolygons() {
+            activePolygons.forEach(p => p.polygon.setMap(null));
+            activePolygons = [];
+            goldenZoneMarkers.forEach(m => m.setMap(null));
+            goldenZoneMarkers = [];
+        }
+
+        function drawPolygons(features) {
+            features.forEach(feature => {
+                let path = feature.geometry.coordinates[0].map(coord => new kakao.maps.LatLng(coord[1], coord[0])); // GeoJSON은 [경도,위도] 순서임
+                let polygon = new kakao.maps.Polygon({
+                    path: path, strokeWeight: 3, strokeColor: '#94a3b8', strokeOpacity: 0.8, strokeStyle: 'dashed', fillColor: '#cbd5e1', fillOpacity: 0.1
+                });
+                
+                // 지도에서 상권 폴리곤을 직접 터치해도 작동하도록 이벤트 추가
+                kakao.maps.event.addListener(polygon, 'click', function() { focusOnPolygon(feature); });
+                
+                polygon.setMap(map);
+                activePolygons.push({ name: feature.properties.상권명, polygon: polygon, feature: feature });
+            });
+        }
+
+        // 특정 상권 버튼이나 폴리곤을 클릭했을 때 작동
+        function focusOnPolygon(targetFeature) {
+            let targetName = targetFeature.properties.상권명;
+            document.getElementById('targetLocationInput').value = targetName;
+            updateStoreNames();
+
+            let targetPolyObj = null;
+            let bounds = new kakao.maps.LatLngBounds();
+
+            activePolygons.forEach(p => {
+                if (p.name === targetName) {
+                    p.polygon.setOptions({ strokeColor: '#ec4899', strokeStyle: 'solid', fillColor: '#ec4899', fillOpacity: 0.15, strokeWeight: 4 });
+                    targetPolyObj = p.polygon;
+                    // 폴리곤의 모든 좌표를 bounds에 추가하여 중앙값 찾기
+                    p.polygon.getPath().forEach(coord => bounds.extend(coord));
+                } else {
+                    // 선택 안 된 곳은 회색으로 흐리게
+                    p.polygon.setOptions({ strokeColor: '#94a3b8', strokeStyle: 'dashed', fillColor: '#cbd5e1', fillOpacity: 0.1, strokeWeight: 2 });
+                }
+            });
+
+            if (targetPolyObj) {
+                map.setBounds(bounds); // 해당 상권 모양에 꽉 차게 줌인!
+                setTimeout(() => { scanGoldenZoneInPolygon(targetPolyObj); }, 500); // 줌인 후 1~3순위 골든존 스캔
+            }
+        }
 
         function getDistanceMeters(lat1, lon1, lat2, lon2) {
             let R = 6371000; 
@@ -265,15 +326,18 @@
             placeCache.set(place.id, { brand: bType, marker: marker, pos: marker.getPosition(), rawData: place });
         }
 
-        // --- 👑 1~3순위 골든존 동시 표출 시스템 (올영+다이소) ---
-        function scanGoldenZone() {
-            document.getElementById('statusMessage').innerText = "👑 상권 내 1~3순위 추천 입지 분석 중...";
+        // --- 👑 선택된 폴리곤(상권) 내부 1~3순위 골든존 스캔 ---
+        function scanGoldenZoneInPolygon(polygonObj) {
+            document.getElementById('statusMessage').innerText = "👑 상권 1~3순위 추천 입지 분석 중...";
             document.getElementById('statusMessage').classList.replace('text-slate-700', 'text-pink-600');
             targetAnchors = [];
             goldenZoneMarkers.forEach(m => m.setMap(null));
             goldenZoneMarkers = [];
 
-            let bounds = map.getBounds();
+            // 선택된 상권 테두리 범위를 기준으로 검색
+            let bounds = new kakao.maps.LatLngBounds();
+            polygonObj.getPath().forEach(coord => bounds.extend(coord));
+            
             let anchorKeywords = ['올리브영', '다이소'];
             let searchesDone = 0;
 
@@ -294,7 +358,7 @@
             document.getElementById('anchor_count').innerText = olives.length + daisos.length;
 
             if(olives.length === 0 || daisos.length === 0) {
-                document.getElementById('statusMessage').innerText = "✅ 해당 구역 스캔 완료 (조건 미달)";
+                document.getElementById('statusMessage').innerText = "✅ 스캔 완료 (올영+다이소 동시 상권 아님)";
                 document.getElementById('statusMessage').classList.replace('text-pink-600', 'text-slate-700');
                 return;
             }
@@ -303,7 +367,7 @@
             olives.forEach(oly => {
                 daisos.forEach(dai => {
                     let dist = getDistanceMeters(oly.data.y, oly.data.x, dai.data.y, dai.data.x);
-                    if(dist <= 300) { // 300m 이내 유효 거리 페어만 추출
+                    if(dist <= 300) { 
                         let cy = (parseFloat(oly.data.y) + parseFloat(dai.data.y))/2;
                         let cx = (parseFloat(oly.data.x) + parseFloat(dai.data.x))/2;
                         allPairs.push({ dist: dist, y: cy, x: cx });
@@ -311,11 +375,9 @@
                 });
             });
 
-            // 거리순 정렬 (가장 가까운 곳이 1순위)
             allPairs.sort((a, b) => a.dist - b.dist);
 
             let top3 = [];
-            // 중복되는 위치(30m 이내)는 건너뛰고 확실히 다른 3곳 추출
             for(let i=0; i<allPairs.length; i++) {
                 let candidate = allPairs[i];
                 let isTooClose = false;
@@ -327,9 +389,8 @@
             }
 
             if (top3.length > 0) {
-                document.getElementById('statusMessage').innerText = `👑 상권 내 1~${top3.length}순위 입지 발굴 완료!`;
+                document.getElementById('statusMessage').innerText = `👑 선택한 상권 내 1~${top3.length}순위 입지 발굴 완료!`;
                 
-                // 마커 그리기 (1순위, 2순위, 3순위 차등 디자인)
                 top3.forEach((zone, index) => {
                     let markerClass, labelText;
                     if(index === 0) { markerClass = 'rank-1-marker'; labelText = '👑 1순위 (최강입지)'; }
@@ -349,7 +410,7 @@
 
         function refreshMarkers() {
             let bounds = map.getBounds();
-            let f = { 'lensme': document.getElementById('f_lensme').checked, 'olens': document.getElementById('f_olens').checked, 'hapa': document.getElementById('f_hapa').checked, 'winc': document.getElementById('f_winc').checked, 'lenstown': document.getElementById('f_lenstown').checked, 'olive_shop': document.getElementById('f_olive_shop').checked, 'other': document.getElementById('f_other').checked };
+            let f = { 'lensme': document.getElementById('f_lensme').checked, 'olens': document.getElementById('f_olens').checked, 'hapa': document.getElementById('f_hapa').checked, 'winc': document.getElementById('f_winc').checked, 'olive_shop': document.getElementById('f_olive_shop').checked, 'other': document.getElementById('f_other').checked };
             let v_comp = 0; 
             placeCache.forEach((item) => {
                 let inBounds = bounds.contain(item.pos);
@@ -388,6 +449,8 @@
             let layout = { polar: { radialaxis: {visible: true, range: [0, 100]} }, showlegend: true, legend: {orientation: "h", y: -0.2}, margin: {t:30, b:30} };
             Plotly.newPlot('radarChart', data, layout, {responsive: true, displayModeBar: false});
         }
+        
+        renderDrillDown(1);
     </script>
 </body>
 </html>
