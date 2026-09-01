@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>렌즈미 전국 상권 분석 대시보드 (Pure Kakao API)</title>
+    <title>렌즈미 상권 분석 대시보드 (폴리곤 & 1~3순위 골든존)</title>
     <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
@@ -13,103 +13,88 @@
         ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
         .tab-btn.active { border-bottom: 4px solid #4f46e5; color: #4f46e5; font-weight: 800; }
         .tab-btn { color: #64748b; font-weight: 600; border-bottom: 4px solid transparent; }
-        input[type=checkbox] { width: 1.05rem; height: 1.05rem; cursor: pointer; }
+        input[type=checkbox] { width: 1.1rem; height: 1.1rem; cursor: pointer; }
+        .chk-purple { accent-color: #9333ea; } .chk-orange { accent-color: #f97316; } 
+        .chk-red { accent-color: #dc2626; } .chk-green { accent-color: #16a34a; } 
+        .chk-blue { accent-color: #3b82f6; } .chk-gray { accent-color: #9ca3af; }
 
-        @keyframes pulse-gold { 0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(250, 204, 21, 0.7); } 70% { transform: scale(1); box-shadow: 0 0 0 22px rgba(250, 204, 21, 0); } 100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(250, 204, 21, 0); } }
-        .rank-1-marker { animation: pulse-gold 2s infinite; background: linear-gradient(135deg, #fde047 0%, #eab308 100%); border: 3px solid #fff; border-radius: 30px; padding: 5px 14px; color: #713f12; font-size: 14px; font-weight: 900; box-shadow: 0 4px 8px rgba(0,0,0,0.3); z-index: 100; white-space: nowrap;}
-        .rank-2-marker { background: linear-gradient(135deg, #e2e8f0 0%, #94a3b8 100%); border: 2px solid #fff; border-radius: 20px; padding: 4px 11px; color: #1e293b; font-size: 12px; font-weight: 800; box-shadow: 0 3px 6px rgba(0,0,0,0.25); z-index: 90; white-space: nowrap;}
-        .rank-3-marker { background: linear-gradient(135deg, #fed7aa 0%, #ea580c 100%); border: 2px solid #fff; border-radius: 20px; padding: 4px 11px; color: #fff; font-size: 12px; font-weight: 800; box-shadow: 0 3px 6px rgba(0,0,0,0.25); z-index: 80; white-space: nowrap;}
+        /* 골든존 1순위 애니메이션 */
+        @keyframes pulse-gold { 0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(250, 204, 21, 0.7); } 70% { transform: scale(1); box-shadow: 0 0 0 25px rgba(250, 204, 21, 0); } 100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(250, 204, 21, 0); } }
+        .rank-1-marker { animation: pulse-gold 2s infinite; background: linear-gradient(135deg, #fde047 0%, #eab308 100%); border: 3px solid #fff; border-radius: 30px; padding: 4px 12px; color: #713f12; font-size: 15px; font-weight: 900; text-shadow: 0px 1px 1px rgba(255,255,255,0.8); box-shadow: 0 4px 6px rgba(0,0,0,0.3); z-index: 100; white-space: nowrap;}
         
-        .brand-badge { border: 2px solid #ffffff; border-radius: 12px; padding: 3px 9px; font-size: 11px; font-weight: 800; color: #ffffff; box-shadow: 0 2px 6px rgba(0,0,0,0.3); white-space: nowrap; }
+        /* 2순위, 3순위 마커 */
+        .rank-2-marker { background: linear-gradient(135deg, #e2e8f0 0%, #94a3b8 100%); border: 2px solid #fff; border-radius: 20px; padding: 3px 10px; color: #1e293b; font-size: 13px; font-weight: 800; box-shadow: 0 3px 5px rgba(0,0,0,0.3); z-index: 90; white-space: nowrap;}
+        .rank-3-marker { background: linear-gradient(135deg, #fed7aa 0%, #ea580c 100%); border: 2px solid #fff; border-radius: 20px; padding: 3px 10px; color: #fff; font-size: 13px; font-weight: 800; box-shadow: 0 3px 5px rgba(0,0,0,0.3); z-index: 80; white-space: nowrap;}
     </style>
 </head>
 <body class="flex flex-col md:flex-row h-screen text-slate-800">
 
-    <!-- 좌측 사이드바 -->
-    <div class="w-full md:w-1/4 bg-white border-r border-gray-200 p-5 flex flex-col shadow-lg z-20 overflow-y-auto">
-        <h1 class="text-xl font-extrabold text-slate-800 border-b-4 border-indigo-500 pb-3 mb-4 flex justify-between items-center">
-            <span>🗺️ 전국 상권 분석기</span>
-            <span class="text-xs bg-emerald-100 text-emerald-700 px-2.5 py-1 rounded-full font-bold">카카오맵 직통</span>
+    <!-- 1. 좌측 사이드바 -->
+    <div class="w-full md:w-1/4 bg-white border-r border-gray-200 p-6 flex flex-col shadow-lg z-20 overflow-y-auto">
+        <h1 class="text-2xl font-extrabold text-slate-800 border-b-4 border-indigo-500 pb-3 mb-6">
+            🗺️ 상권 입지 분석기
         </h1>
         
-        <!-- 실시간 카카오 검색 -->
-        <div class="mb-5 bg-slate-50 p-4 rounded-xl border border-slate-200">
-            <label class="block text-xs font-extrabold text-indigo-700 mb-2">🎯 전국 상권 검색 (카카오 검색)</label>
-            <div class="flex gap-2 mb-2">
-                <input type="text" id="searchInput" placeholder="상권명 입력 (예: 강남역, 홍대, 서면, 동성로)" class="w-full bg-white border border-indigo-300 px-3 py-2 rounded-lg text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500" onkeypress="if(event.key==='Enter') searchLocation()">
-                <button onclick="searchLocation()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-bold transition shadow-sm whitespace-nowrap">검색</button>
-            </div>
-            <p class="text-[11px] text-slate-400 font-medium">* 엔터키를 누르거나 검색 버튼을 클릭하세요.</p>
+        <!-- 🌟 사이드바 드릴다운 UI (지도 마커 삭제 완료) -->
+        <div class="mb-6 bg-slate-50 p-4 rounded-xl border border-slate-200">
+            <label class="block text-sm font-extrabold text-indigo-700 mb-2">🎯 지역 줌인 (스무스 이동)</label>
+            <p id="drillDownStatus" class="text-xs font-bold text-slate-500 mb-3 border-b pb-2"></p>
+            <div id="drillDownUI" class="flex flex-wrap gap-2"></div>
         </div>
 
-        <!-- 매장 정보 및 통계 카운터 -->
-        <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm space-y-3">
-            <div>
-                <p class="text-xs text-slate-400 font-bold mb-1">현재 기준 매장명</p>
-                <input type="text" id="currentStoreInput" value="현재 매장" class="w-full bg-slate-50 border border-gray-300 px-3 py-1.5 rounded-md font-semibold text-sm" oninput="updateStoreNames()">
-            </div>
-            <div>
-                <p class="text-xs text-slate-400 font-bold mb-1">분석 대상 상권 (목적지)</p>
-                <input type="text" id="targetLocationInput" value="강남역" class="w-full bg-slate-50 border border-indigo-300 px-3 py-1.5 rounded-md font-extrabold text-indigo-600 text-base" readonly>
-            </div>
-            
-            <div class="bg-indigo-50/80 p-3 rounded-lg border border-indigo-100 space-y-1.5 mt-2">
-                <div class="flex justify-between items-center text-xs font-bold text-slate-700">
-                    <span>⚔️ 경쟁 렌즈/안경 브랜드:</span>
-                    <span id="comp_count" class="text-sm font-black text-pink-600">0개</span>
-                </div>
-                <div class="flex justify-between items-center text-xs font-bold text-slate-700">
-                    <span>📸 핵심 앵커(올영/다이소):</span>
-                    <span id="anchor_count" class="text-sm font-black text-emerald-600">0개</span>
-                </div>
-            </div>
+        <div class="mt-2 bg-white p-4 rounded-lg border border-slate-200 shadow-sm">
+            <p class="text-xs text-slate-500 font-bold mb-1">현재 기준 매장명</p>
+            <input type="text" id="currentStoreInput" value="현재 매장" class="w-full bg-slate-50 border border-gray-300 px-3 py-2 rounded-md font-semibold text-sm mb-3" oninput="updateStoreNames()">
+            <p class="text-xs text-slate-500 font-bold mb-1">분석 대상 상권 (목적지)</p>
+            <input type="text" id="targetLocationInput" value="상권을 선택하세요" class="w-full bg-slate-50 border border-indigo-300 px-3 py-2 rounded-md font-extrabold text-indigo-600 text-lg" oninput="updateStoreNames()">
         </div>
     </div>
 
-    <!-- 우측 메인 영역 -->
+    <!-- 2. 우측 메인 화면 -->
     <div class="w-full md:w-3/4 flex flex-col bg-slate-50 overflow-hidden">
-        <div class="flex bg-white px-6 pt-3 border-b border-gray-200 overflow-x-auto whitespace-nowrap z-10">
-            <button onclick="switchTab('map')" id="btn-map" class="tab-btn active px-4 py-2 mr-4 text-base hover:text-indigo-500 transition">📍 골든존 지도</button>
-            <button onclick="switchTab('radar')" id="btn-radar" class="tab-btn px-4 py-2 mr-4 text-base hover:text-indigo-500 transition">📊 입지 매력도</button>
+        
+        <div class="flex bg-white px-6 pt-4 border-b border-gray-200 overflow-x-auto whitespace-nowrap z-10">
+            <button onclick="switchTab('map')" id="btn-map" class="tab-btn active px-4 py-2 mr-4 text-lg hover:text-indigo-500 transition">📍 골든존 지도</button>
+            <button onclick="switchTab('radar')" id="btn-radar" class="tab-btn px-4 py-2 mr-4 text-lg hover:text-indigo-500 transition">📊 입지 매력도</button>
         </div>
 
+        <!-- 탭 1: 카카오맵 & 필터 -->
         <div id="tab-map" class="flex-grow w-full h-full relative">
             <div id="statusMessage" class="absolute top-4 left-1/2 transform -translate-x-1/2 z-10 bg-white/95 backdrop-blur-sm px-6 py-2 rounded-full shadow-md text-sm font-bold text-slate-700 border border-slate-200 text-center transition-all">
-                🎯 상권명을 검색하시면 500m 분석 영역과 브랜드 마커가 표시됩니다.
+                👆 왼쪽 메뉴에서 지역을 선택해 주세요.
             </div>
 
-            <!-- 브랜드 필터 레이어 컨트롤러 (7개 렌즈 브랜드 + 2개 앵커) -->
-            <div class="absolute top-16 left-4 z-10 bg-white/95 backdrop-blur-sm p-4 rounded-xl shadow-lg border border-slate-200 w-60 max-h-[80vh] overflow-y-auto">
-                <p class="text-xs text-slate-400 font-bold mb-1 text-right">실시간 API DB</p>
-                <p class="text-xs font-extrabold text-slate-800 mb-2.5 border-b pb-1">🎯 렌즈 전문 브랜드 (7개)</p>
-                <div class="space-y-2 mb-3">
-                    <label class="flex justify-between items-center"><div class="flex items-center space-x-2"><input type="checkbox" id="f_lensme" onchange="runScan()" checked><span class="text-xs font-bold text-purple-700">🟣 렌즈미</span></div><span id="c_lensme" class="text-[11px] font-extrabold text-slate-400">0</span></label>
-                    <label class="flex justify-between items-center"><div class="flex items-center space-x-2"><input type="checkbox" id="f_olens" onchange="runScan()" checked><span class="text-xs font-bold text-orange-600">🟠 오렌즈</span></div><span id="c_olens" class="text-[11px] font-extrabold text-slate-400">0</span></label>
-                    <label class="flex justify-between items-center"><div class="flex items-center space-x-2"><input type="checkbox" id="f_hapa" onchange="runScan()" checked><span class="text-xs font-bold text-pink-500">🌸 하파크리스틴</span></div><span id="c_hapa" class="text-[11px] font-extrabold text-slate-400">0</span></label>
-                    <label class="flex justify-between items-center"><div class="flex items-center space-x-2"><input type="checkbox" id="f_winc" onchange="runScan()" checked><span class="text-xs font-bold text-blue-600">🔵 윙크렌즈</span></div><span id="c_winc" class="text-[11px] font-extrabold text-slate-400">0</span></label>
-                    <label class="flex justify-between items-center"><div class="flex items-center space-x-2"><input type="checkbox" id="f_withlens" onchange="runScan()" checked><span class="text-xs font-bold text-emerald-600">🟢 위드렌즈</span></div><span id="c_withlens" class="text-[11px] font-extrabold text-slate-400">0</span></label>
-                    <label class="flex justify-between items-center"><div class="flex items-center space-x-2"><input type="checkbox" id="f_lensvery" onchange="runScan()" checked><span class="text-xs font-bold text-yellow-600">🟡 렌즈베리</span></div><span id="c_lensvery" class="text-[11px] font-extrabold text-slate-400">0</span></label>
-                    <label class="flex justify-between items-center"><div class="flex items-center space-x-2"><input type="checkbox" id="f_lenstown" onchange="runScan()" checked><span class="text-xs font-bold text-red-600">🔴 렌즈타운</span></div><span id="c_lenstown" class="text-[11px] font-extrabold text-slate-400">0</span></label>
+            <!-- 전국 오피셜 수량 고정 필터 -->
+            <div class="absolute top-16 left-4 z-10 bg-white/95 backdrop-blur-sm p-4 rounded-xl shadow-lg border border-slate-200 w-56 max-h-[80vh] overflow-y-auto">
+                <p class="text-xs text-slate-400 font-bold mb-1 text-right">오피셜 DB</p>
+                <p class="text-sm font-extrabold text-slate-800 mb-3 border-b pb-2">🎯 렌즈 브랜드</p>
+                <div class="space-y-3 mb-4">
+                    <label class="flex justify-between"><div class="flex space-x-2"><input type="checkbox" id="f_lensme" onchange="refreshMarkers()" checked><span class="text-[14px] font-bold text-purple-700">🟣 렌즈미</span></div></label>
+                    <label class="flex justify-between"><div class="flex space-x-2"><input type="checkbox" id="f_olens" onchange="refreshMarkers()" checked><span class="text-[14px] font-bold text-orange-600">🟠 오렌즈</span></div></label>
+                    <label class="flex justify-between"><div class="flex space-x-2"><input type="checkbox" id="f_hapa" onchange="refreshMarkers()" checked><span class="text-[14px] font-bold text-pink-500">🌸 하파크리스틴</span></div></label>
+                    <label class="flex justify-between"><div class="flex space-x-2"><input type="checkbox" id="f_winc" onchange="refreshMarkers()" checked><span class="text-[14px] font-bold text-blue-500">🔵 윙크렌즈</span></div></label>
                 </div>
-                <p class="text-xs font-extrabold text-slate-800 mb-2 border-b pb-1 mt-3">🌿 샵인샵 / 앵커 집객시설</p>
-                <div class="space-y-2">
-                    <label class="flex justify-between items-center"><div class="flex items-center space-x-2"><input type="checkbox" id="f_olive_shop" checked onchange="runScan()"><span class="text-xs font-bold text-teal-700">🌿 올영 입점(렌즈)</span></div><span id="c_olive_shop" class="text-[11px] font-extrabold text-slate-400">0</span></label>
-                    <label class="flex justify-between items-center"><div class="flex items-center space-x-2"><input type="checkbox" id="f_olive" checked onchange="runScan()"><span class="text-xs font-bold text-green-600">🟩 올리브영</span></div><span id="c_olive" class="text-[11px] font-extrabold text-slate-400">0</span></label>
-                    <label class="flex justify-between items-center"><div class="flex items-center space-x-2"><input type="checkbox" id="f_daiso" checked onchange="runScan()"><span class="text-xs font-bold text-rose-600">🟥 다이소</span></div><span id="c_daiso" class="text-[11px] font-extrabold text-slate-400">0</span></label>
+                <p class="text-sm font-extrabold text-slate-800 mb-2 border-b pb-2 mt-4">🌿 샵인샵 / 앵커</p>
+                <div class="space-y-2 mb-4">
+                    <label class="flex justify-between"><div class="flex space-x-2"><input type="checkbox" id="f_olive_shop" checked onchange="refreshMarkers()"><span class="text-[13px] font-bold text-green-700">🌿 올영 입점(렌즈)</span></div></label>
+                    <label class="flex justify-between"><div class="flex space-x-2"><input type="checkbox" id="f_olive" checked onchange="refreshMarkers()"><span class="text-[13px] font-bold text-green-600">🟩 올리브영</span></div></label>
+                    <label class="flex justify-between"><div class="flex space-x-2"><input type="checkbox" id="f_daiso" checked onchange="refreshMarkers()"><span class="text-[13px] font-bold text-red-500">🟥 다이소</span></div></label>
+                    <label class="flex justify-between"><div class="flex space-x-2"><input type="checkbox" id="f_other" checked onchange="refreshMarkers()"><span class="text-[13px] font-bold text-gray-500">⚪ 안경원</span></div></label>
                 </div>
             </div>
 
             <div id="map" class="w-full h-full"></div>
         </div>
 
+        <!-- 탭 2: 레이더 차트 (기존 유지) -->
         <div id="tab-radar" class="hidden flex-grow w-full p-8 overflow-y-auto">
             <div class="flex flex-col md:flex-row gap-6">
                 <div class="w-full md:w-1/3 bg-white p-6 rounded-xl shadow-sm border border-slate-200">
-                    <p class="text-base mb-2">🏪 <b>현재:</b> <span class="currentStoreName font-bold"></span></p>
-                    <p class="text-base mb-2">🚩 <b>후보:</b> <span class="targetLocationName text-pink-500 font-bold"></span></p>
+                    <p class="text-lg mb-2">🏪 <b>현재:</b> <span class="currentStoreName font-bold"></span></p>
+                    <p class="text-lg mb-2">🚩 <b>후보:</b> <span class="targetLocationName text-pink-500 font-bold"></span></p>
                     <div class="bg-indigo-50 p-4 rounded-lg border border-indigo-100 mt-4 space-y-2">
-                        <p class="text-sm text-slate-700">⚔️ 선택 상권 내 경쟁 매장: <span id="comp_count_radar" class="text-lg font-extrabold text-pink-600 ml-1">0</span>개</p>
-                        <p class="text-sm text-slate-700">📸 선택 상권 내 집객 앵커: <span id="anchor_count_radar" class="text-lg font-extrabold text-green-600 ml-1">0</span>개</p>
+                        <p class="text-sm text-slate-700">⚔️ 경쟁 안경/렌즈샵: <span id="comp_count" class="text-lg font-extrabold text-pink-600 ml-1">0</span>개</p>
+                        <p class="text-sm text-slate-700">📸 올영/다이소: <span id="anchor_count" class="text-lg font-extrabold text-green-600 ml-1">0</span>개</p>
                     </div>
                 </div>
                 <div class="w-full md:w-2/3 bg-white p-4 rounded-xl shadow-sm border border-slate-200" style="height: 500px;"><div id="radarChart" class="w-full h-full"></div></div>
@@ -118,216 +103,291 @@
     </div>
 
     <script type="text/javascript" src="//dapi.kakao.com/v2/maps/sdk.js?appkey=c045609510f8b75252389123f086be48&libraries=services"></script>
-
+    
     <script>
-        let mapContainer = document.getElementById('map'); 
-        let currentCenter = new kakao.maps.LatLng(37.498095, 127.027610); // 기본값: 강남역
-        let map = new kakao.maps.Map(mapContainer, { center: currentCenter, level: 4 }); 
-        let ps = new kakao.maps.services.Places(); 
-        
-        let rangeCircle = null;
-        let brandMarkers = [];
-        let goldenZoneMarkers = [];
-
-        const BRAND_CONFIG = {
-            f_lensme: { name: '렌즈미', kw: '렌즈미', color: '#7e22ce' },
-            f_olens: { name: '오렌즈', kw: '오렌즈', color: '#ea580c' },
-            f_hapa: { name: '하파크리스틴', kw: '하파크리스틴', color: '#ec4899' },
-            f_winc: { name: '윙크렌즈', kw: '윙크렌즈', color: '#2563eb' },
-            f_withlens: { name: '위드렌즈', kw: '위드렌즈', color: '#059669' },
-            f_lensvery: { name: '렌즈베리', kw: '렌즈베리', color: '#ca8a04' },
-            f_lenstown: { name: '렌즈타운', kw: '렌즈타운', color: '#dc2626' },
-            f_olive_shop: { name: '올영입점렌즈', kw: '올리브영 안경', color: '#0f766e' },
-            f_olive: { name: '올리브영', kw: '올리브영', color: '#16a34a' },
-            f_daiso: { name: '다이소', kw: '다이소', color: '#e11d48' }
+        // 🌟 1. 전국 주요 A급 상권 데이터 (실제 상권 모양 폴리곤 다각형 좌표 탑재)
+        const regionsData = {
+            "서울": { lat: 37.5665, lng: 126.9780, level: 9, children: {
+                "강남구": { lat: 37.4959, lng: 127.0664, level: 7, children: { 
+                    "강남역 로데오": { lat:37.5005, lng:127.0265, level: 4, poly: [ {lat:37.5028, lng:127.0259}, {lat:37.5011, lng:127.0252}, {lat:37.4984, lng:127.0264}, {lat:37.4998, lng:127.0287} ] }
+                }},
+                "마포구": { lat: 37.5662, lng: 126.9016, level: 7, children: { 
+                    "홍대입구 메인": { lat:37.5555, lng:126.9235, level: 4, poly: [ {lat:37.5568, lng:126.9221}, {lat:37.5541, lng:126.9213}, {lat:37.5528, lng:126.9238}, {lat:37.5552, lng:126.9262} ] }
+                }}
+            }},
+            "인천": { lat: 37.4562, lng: 126.7052, level: 9, children: {
+                "부평구": { lat: 37.5070, lng: 126.7215, level: 6, children: { 
+                    "부평 문화의거리": { lat:37.4928, lng:126.7225, level: 3, poly: [ {lat:37.4938, lng:126.7215}, {lat:37.4920, lng:126.7210}, {lat:37.4918, lng:126.7240}, {lat:37.4940, lng:126.7245} ] },
+                    "부평 테마의거리": { lat:37.4905, lng:126.7250, level: 3, poly: [ {lat:37.4918, lng:126.7240}, {lat:37.4900, lng:126.7235}, {lat:37.4895, lng:126.7265}, {lat:37.4915, lng:126.7270} ] }
+                }}
+            }},
+            "경기": { lat: 37.2752, lng: 127.0095, level: 10, children: {
+                "구리시": { lat: 37.5943, lng: 127.1296, level: 6, children: { 
+                    "돌다리(수택동)": { lat:37.6000, lng:127.1380, level: 3, poly: [ {lat:37.6015, lng:127.1365}, {lat:37.5990, lng:127.1365}, {lat:37.5990, lng:127.1400}, {lat:37.6015, lng:127.1400} ] }
+                }},
+                "성남시": { lat: 37.4200, lng: 127.1267, level: 7, children: { 
+                    "서현역 로데오": { lat:37.3849, lng:127.1232, level: 3, poly: [ {lat:37.3860, lng:127.1215}, {lat:37.3835, lng:127.1215}, {lat:37.3835, lng:127.1250}, {lat:37.3860, lng:127.1250} ] }
+                }}
+            }},
+            "부산": { lat: 35.1795, lng: 129.0756, level: 9, children: {
+                "부산진구": { lat: 35.1627, lng: 129.0531, level: 7, children: { 
+                    "서면(쥬디스태화)": { lat:35.1534, lng:129.0602, level: 4, poly: [ {lat:35.1545, lng:129.0590}, {lat:35.1520, lng:129.0590}, {lat:35.1520, lng:129.0620}, {lat:35.1545, lng:129.0620} ] }
+                }}
+            }},
+            "대구": { lat: 35.8714, lng: 128.6014, level: 9, children: {
+                "중구": { lat: 35.8668, lng: 128.5907, level: 7, children: { 
+                    "동성로 메인": { lat:35.8696, lng:128.5960, level: 4, poly: [ {lat:35.8710, lng:128.5940}, {lat:35.8670, lng:128.5940}, {lat:35.8670, lng:128.5980}, {lat:35.8710, lng:128.5980} ] }
+                }}
+            }}
         };
 
-        // 장소 키워드 검색 및 중심 이동
-        function searchLocation() {
-            let q = document.getElementById('searchInput').value.trim();
-            if(!q) return;
+        let mapContainer = document.getElementById('map'); 
+        let map = new kakao.maps.Map(mapContainer, { center: new kakao.maps.LatLng(36.5, 127.5), level: 12 }); 
+        let ps = new kakao.maps.services.Places(); 
+        
+        let placeCache = new Map(); 
+        let targetAnchors = []; 
+        let searchTimeout = null;
+        let goldenZoneMarkers = []; // 1~3순위 마커 저장소
+        let areaPolygon = null; // 상권 실제 모양(다각형)
 
-            ps.keywordSearch(q, function(data, status) {
-                if (status === kakao.maps.services.Status.OK) {
-                    let place = data[0];
-                    currentCenter = new kakao.maps.LatLng(place.y, place.x);
-                    document.getElementById('targetLocationInput').value = place.place_name;
-                    updateStoreNames();
+        // --- 🌟 드릴다운(줌인) 로직: 사이드바 전용 (지도 글자 제거) ---
+        function renderDrillDown(level, parentObj = null, parentName = "") {
+            let container = document.getElementById('drillDownUI');
+            container.innerHTML = '';
 
-                    map.setCenter(currentCenter);
-                    map.setLevel(4);
-
-                    drawRangeCircle(currentCenter);
-                    runScan();
-                } else {
-                    alert("검색 결과가 없습니다. 지명을 다시 확인해 주세요.");
+            if (level === 1) {
+                document.getElementById('drillDownStatus').innerText = "1단계: 도/광역시 선택";
+                for(let prov in regionsData) {
+                    let btn = document.createElement('button');
+                    btn.className = "px-3 py-1 bg-indigo-50 text-indigo-700 text-sm font-bold rounded-lg border border-indigo-200 hover:bg-indigo-600 hover:text-white transition";
+                    btn.innerText = prov;
+                    btn.onclick = () => { map.panTo(new kakao.maps.LatLng(regionsData[prov].lat, regionsData[prov].lng)); map.setLevel(regionsData[prov].level); renderDrillDown(2, regionsData[prov].children, prov); };
+                    container.appendChild(btn);
                 }
+            } else if (level === 2) {
+                document.getElementById('drillDownStatus').innerText = `2단계: ${parentName} 산하 시/군/구 선택`;
+                let btnBack = document.createElement('button'); btnBack.className = "px-3 py-1 bg-gray-200 text-gray-700 text-sm font-bold rounded-lg mr-2"; btnBack.innerText = "🔙 지역 리셋"; btnBack.onclick = () => { map.setLevel(12); renderDrillDown(1); }; container.appendChild(btnBack);
+                for(let city in parentObj) {
+                    let btn = document.createElement('button'); btn.className = "px-3 py-1 bg-blue-50 text-blue-700 text-sm font-bold rounded-lg border border-blue-200 hover:bg-blue-600 hover:text-white transition"; btn.innerText = city;
+                    btn.onclick = () => { map.panTo(new kakao.maps.LatLng(parentObj[city].lat, parentObj[city].lng)); map.setLevel(parentObj[city].level); renderDrillDown(3, parentObj[city].children, city); };
+                    container.appendChild(btn);
+                }
+            } else if (level === 3) {
+                document.getElementById('drillDownStatus').innerText = `3단계: ${parentName} 핵심 상권 진입!`;
+                let btnBack = document.createElement('button'); btnBack.className = "px-3 py-1 bg-gray-200 text-gray-700 text-sm font-bold rounded-lg mr-2"; btnBack.innerText = "🔙 처음으로"; btnBack.onclick = () => { map.setLevel(12); renderDrillDown(1); }; container.appendChild(btnBack);
+                for(let town in parentObj) {
+                    let btn = document.createElement('button'); btn.className = "px-3 py-1 bg-pink-50 text-pink-700 text-sm font-extrabold rounded-lg border border-pink-300 hover:bg-pink-600 hover:text-white transition shadow-sm"; btn.innerText = town;
+                    btn.onclick = () => { 
+                        document.getElementById('targetLocationInput').value = town; updateStoreNames();
+                        let tPos = new kakao.maps.LatLng(parentObj[town].lat, parentObj[town].lng);
+                        map.panTo(tPos); map.setLevel(parentObj[town].level); 
+                        
+                        // 🌟 다각형(Polygon) 상권 경계 그리기
+                        if(areaPolygon) areaPolygon.setMap(null);
+                        if(parentObj[town].poly) {
+                            let path = parentObj[town].poly.map(p => new kakao.maps.LatLng(p.lat, p.lng));
+                            areaPolygon = new kakao.maps.Polygon({
+                                path: path, strokeWeight: 4, strokeColor: '#ec4899', strokeOpacity: 0.8, strokeStyle: 'solid', fillColor: '#ec4899', fillOpacity: 0.15
+                            });
+                            areaPolygon.setMap(map);
+                        }
+                        scanGoldenZone(); // 1~3순위 골든존 스캔!
+                    };
+                    container.appendChild(btn);
+                }
+            }
+        }
+        
+        renderDrillDown(1);
+
+        function getDistanceMeters(lat1, lon1, lat2, lon2) {
+            let R = 6371000; 
+            let dLat = (lat2-lat1) * (Math.PI/180); let dLon = (lon2-lon1) * (Math.PI/180);
+            let a = Math.sin(dLat/2) * Math.sin(dLat/2) + Math.cos(lat1*(Math.PI/180)) * Math.cos(lat2*(Math.PI/180)) * Math.sin(dLon/2) * Math.sin(dLon/2);
+            let c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+            return R * c;
+        }
+
+        // --- 🌟 실시간 렌즈 매장 스캔 (5m 중복 제거 유지) ---
+        kakao.maps.event.addListener(map, 'idle', function() {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(searchPlacesInView, 600); 
+        });
+
+        function searchPlacesInView() {
+            if(map.getLevel() > 5) return; 
+            let bounds = map.getBounds(); 
+            let searchKeywords = ['렌즈미', '오렌즈', '하파크리스틴', '윙크 렌즈', '렌즈타운', '안경'];
+            let completedSearches = 0;
+            
+            searchKeywords.forEach(kw => {
+                ps.keywordSearch(kw, function(data, status) {
+                    if (status === kakao.maps.services.Status.OK) {
+                        data.forEach(p => createMarkerWithDeduplication(p));
+                    }
+                    completedSearches++;
+                    if(completedSearches === searchKeywords.length) refreshMarkers(); 
+                }, { bounds: bounds, size: 15 });
             });
         }
 
-        // 상권 반경 500m 원 그리기
-        function drawRangeCircle(center) {
-            if(rangeCircle) rangeCircle.setMap(null);
-            rangeCircle = new kakao.maps.Circle({
-                center: center,
-                radius: 500, // 반경 500m
-                strokeWeight: 3,
-                strokeColor: '#ec4899',
-                strokeOpacity: 0.8,
-                strokeStyle: 'dashed',
-                fillColor: '#ec4899',
-                fillOpacity: 0.1
+        function createMarkerWithDeduplication(place) {
+            if (placeCache.has(place.id)) return;
+            let n = place.place_name.toLowerCase();
+            let blackList = ['노래', '주점', 'pc', '스터디', '당구', '룸', '뮤직', '호프', '파티', '마사지', '휴게', '바', 'bar'];
+            let isBad = false; blackList.forEach(bw => { if(n.includes(bw)) isBad = true; });
+            if (isBad && !n.includes('안경')) return; 
+
+            let bType = 'other', cHex = '%239ca3af', iText = '⚪';
+            if (n.includes('렌즈미')) { bType = 'lensme'; cHex = '%239333ea'; iText = '🟣'; }
+            else if (n.includes('오렌즈')) { bType = 'olens'; cHex = '%23f97316'; iText = '🟠'; }
+            else if (n.includes('하파크리스틴')) { bType = n.includes('올리브영') ? 'olive_shop' : 'hapa'; cHex = n.includes('올리브영')?'%2322c55e':'%23f472b6'; iText = n.includes('올리브영')?'🌿':'🌸'; }
+            else if (n.includes('윙크') || n.includes('winc')) { bType = n.includes('올리브영') ? 'olive_shop' : 'winc'; cHex = n.includes('올리브영')?'%2322c55e':'%233b82f6'; iText = n.includes('올리브영')?'🌿':'🔵'; }
+            else if (n.includes('렌즈타운')) { bType = 'lenstown'; cHex = '%23dc2626'; iText = '🔴'; }
+            else if (n.includes('안경')) { bType = 'other'; } else return;
+
+            let isDuplicate = false;
+            placeCache.forEach((existingItem) => {
+                if(existingItem.brand === bType && getDistanceMeters(place.y, place.x, existingItem.rawData.y, existingItem.rawData.x) < 5) isDuplicate = true;
             });
-            rangeCircle.setMap(map);
+            if(isDuplicate) return;
+
+            let strokeColor = bType === 'olive_shop' ? "%2322c55e" : "white";
+            let strokeWidth = bType === 'olive_shop' ? "4" : "2.5";
+            let svgString = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24"><circle cx="12" cy="12" r="10" fill="${cHex}" stroke="${strokeColor}" stroke-width="${strokeWidth}"/></svg>`;
+            let markerImage = new kakao.maps.MarkerImage('data:image/svg+xml;utf-8,' + svgString, new kakao.maps.Size(24, 24), { offset: new kakao.maps.Point(12, 12) });
+            let marker = new kakao.maps.Marker({ position: new kakao.maps.LatLng(place.y, place.x), image: markerImage, title: place.place_name });
+            let infowindow = new kakao.maps.InfoWindow({ content: `<div style="padding:5px;font-size:12px;font-weight:bold;">${iText} ${place.place_name}</div>` });
+            
+            kakao.maps.event.addListener(marker, 'mouseover', function() { infowindow.open(map, marker); });
+            kakao.maps.event.addListener(marker, 'mouseout', function() { infowindow.close(); });
+            placeCache.set(place.id, { brand: bType, marker: marker, pos: marker.getPosition(), rawData: place });
         }
 
-        function clearOverlays() {
-            brandMarkers.forEach(m => m.setMap(null));
-            brandMarkers = [];
+        // --- 👑 1~3순위 골든존 동시 표출 시스템 (올영+다이소) ---
+        function scanGoldenZone() {
+            document.getElementById('statusMessage').innerText = "👑 상권 내 1~3순위 추천 입지 분석 중...";
+            document.getElementById('statusMessage').classList.replace('text-slate-700', 'text-pink-600');
+            targetAnchors = [];
             goldenZoneMarkers.forEach(m => m.setMap(null));
             goldenZoneMarkers = [];
-        }
 
-        // 실시간 브랜드 마커 스캔
-        function runScan() {
-            document.getElementById('statusMessage').innerText = "🔎 상권 내 브랜드 매장 및 골든존 스캔 중...";
-            clearOverlays();
+            let bounds = map.getBounds();
+            let anchorKeywords = ['올리브영', '다이소'];
+            let searchesDone = 0;
 
-            Object.keys(BRAND_CONFIG).forEach(key => {
-                let el = document.getElementById('c_' + key.replace('f_', ''));
-                if(el) el.innerText = '0';
-            });
-
-            let activeKeys = Object.keys(BRAND_CONFIG).filter(key => document.getElementById(key) && document.getElementById(key).checked);
-            let searchTasks = [];
-            let totalCompStores = 0;
-            let totalAnchors = 0;
-            let anchorStores = { olives: [], daisos: [] };
-
-            activeKeys.forEach(key => {
-                let cfg = BRAND_CONFIG[key];
-                searchTasks.push(new Promise((resolve) => {
-                    ps.keywordSearch(cfg.kw, function(data, status) {
-                        let count = 0;
-                        if (status === kakao.maps.services.Status.OK) {
-                            data.forEach(place => {
-                                let latLng = new kakao.maps.LatLng(place.y, place.x);
-                                let dist = getDistanceMeters(currentCenter.getLat(), currentCenter.getLng(), place.y, place.x);
-                                
-                                // 반경 500m 이내 매장만 마커 표시 및 카운트
-                                if(dist <= 500) {
-                                    let overlay = new kakao.maps.CustomOverlay({
-                                        position: latLng,
-                                        content: `<div class="brand-badge" style="background-color:${cfg.color};">${cfg.name}</div>`,
-                                        xAnchor: 0.5, yAnchor: 1.2
-                                    });
-                                    overlay.setMap(map);
-                                    brandMarkers.push(overlay);
-                                    count++;
-
-                                    if(key === 'f_olive') anchorStores.olives.push(place);
-                                    if(key === 'f_daiso') anchorStores.daisos.push(place);
-                                }
-                            });
-                        }
-                        let countEl = document.getElementById('c_' + key.replace('f_', ''));
-                        if(countEl) countEl.innerText = count;
-
-                        if (['f_olive', 'f_daiso'].includes(key)) {
-                            totalAnchors += count;
-                        } else {
-                            totalCompStores += count;
-                        }
-                        resolve();
-                    }, { location: currentCenter, radius: 500, size: 15 });
-                }));
-            });
-
-            Promise.all(searchTasks).then(() => {
-                document.getElementById('comp_count').innerText = totalCompStores + '개';
-                document.getElementById('anchor_count').innerText = totalAnchors + '개';
-                document.getElementById('comp_count_radar').innerText = totalCompStores + '개';
-                document.getElementById('anchor_count_radar').innerText = totalAnchors + '개';
-
-                calculateTop3GoldenZones(anchorStores.olives, anchorStores.daisos);
-                drawRadarChart(totalCompStores, totalAnchors);
+            anchorKeywords.forEach(kw => {
+                ps.keywordSearch(kw, function(data, status) {
+                    if (status === kakao.maps.services.Status.OK) {
+                        data.forEach(p => targetAnchors.push({ type: kw, data: p }));
+                    }
+                    searchesDone++;
+                    if(searchesDone === anchorKeywords.length) calculateTop3GoldenZones();
+                }, { bounds: bounds, size: 15 });
             });
         }
 
-        // 올리브영 + 다이소 근접 골든존 발굴
-        function calculateTop3GoldenZones(olives, daisos) {
+        function calculateTop3GoldenZones() {
+            let olives = targetAnchors.filter(a => a.type === '올리브영');
+            let daisos = targetAnchors.filter(a => a.type === '다이소');
+            document.getElementById('anchor_count').innerText = olives.length + daisos.length;
+
             if(olives.length === 0 || daisos.length === 0) {
-                document.getElementById('statusMessage').innerText = "✅ 브랜드 매장 마커 스캔 완료";
+                document.getElementById('statusMessage').innerText = "✅ 해당 구역 스캔 완료 (조건 미달)";
+                document.getElementById('statusMessage').classList.replace('text-pink-600', 'text-slate-700');
                 return;
             }
 
-            let pairs = [];
-            olives.forEach(o => {
-                daisos.forEach(d => {
-                    let dist = getDistanceMeters(o.y, o.x, d.y, d.x);
-                    if(dist <= 300) {
-                        pairs.push({ dist: dist, y: (parseFloat(o.y)+parseFloat(d.y))/2, x: (parseFloat(o.x)+parseFloat(d.x))/2 });
+            let allPairs = [];
+            olives.forEach(oly => {
+                daisos.forEach(dai => {
+                    let dist = getDistanceMeters(oly.data.y, oly.data.x, dai.data.y, dai.data.x);
+                    if(dist <= 300) { // 300m 이내 유효 거리 페어만 추출
+                        let cy = (parseFloat(oly.data.y) + parseFloat(dai.data.y))/2;
+                        let cx = (parseFloat(oly.data.x) + parseFloat(dai.data.x))/2;
+                        allPairs.push({ dist: dist, y: cy, x: cx });
                     }
                 });
             });
 
-            pairs.sort((a,b) => a.dist - b.dist);
+            // 거리순 정렬 (가장 가까운 곳이 1순위)
+            allPairs.sort((a, b) => a.dist - b.dist);
+
             let top3 = [];
-            for(let p of pairs) {
-                if(!top3.some(t => getDistanceMeters(p.y, p.x, t.y, t.x) < 50)) top3.push(p);
+            // 중복되는 위치(30m 이내)는 건너뛰고 확실히 다른 3곳 추출
+            for(let i=0; i<allPairs.length; i++) {
+                let candidate = allPairs[i];
+                let isTooClose = false;
+                for(let j=0; j<top3.length; j++) {
+                    if(getDistanceMeters(candidate.y, candidate.x, top3[j].y, top3[j].x) < 50) isTooClose = true;
+                }
+                if(!isTooClose) top3.push(candidate);
                 if(top3.length >= 3) break;
             }
 
-            top3.forEach((z, idx) => {
-                let mClass = idx===0 ? 'rank-1-marker' : (idx===1 ? 'rank-2-marker' : 'rank-3-marker');
-                let label = idx===0 ? '👑 1순위 골든존' : (idx===1 ? '🥈 2순위 추천' : '🥉 3순위 추천');
-                let overlay = new kakao.maps.CustomOverlay({
-                    position: new kakao.maps.LatLng(z.y, z.x),
-                    content: `<div class="${mClass}">${label}</div>`,
-                    xAnchor: 0.5, yAnchor: 1.5
-                });
-                overlay.setMap(map);
-                goldenZoneMarkers.push(overlay);
-            });
+            if (top3.length > 0) {
+                document.getElementById('statusMessage').innerText = `👑 상권 내 1~${top3.length}순위 입지 발굴 완료!`;
+                
+                // 마커 그리기 (1순위, 2순위, 3순위 차등 디자인)
+                top3.forEach((zone, index) => {
+                    let markerClass, labelText;
+                    if(index === 0) { markerClass = 'rank-1-marker'; labelText = '👑 1순위 (최강입지)'; }
+                    else if (index === 1) { markerClass = 'rank-2-marker'; labelText = '🥈 2순위 대안'; }
+                    else { markerClass = 'rank-3-marker'; labelText = '🥉 3순위 대안'; }
 
-            document.getElementById('statusMessage').innerText = `👑 1~${top3.length}순위 추천 골든존 발굴 완료!`;
+                    let content = `<div class="${markerClass}">${labelText}</div>`;
+                    let overlay = new kakao.maps.CustomOverlay({
+                        position: new kakao.maps.LatLng(zone.y, zone.x), content: content, xAnchor: 0.5, yAnchor: 1.5
+                    });
+                    overlay.setMap(map);
+                    goldenZoneMarkers.push(overlay);
+                });
+            }
+            drawRadarChart(document.getElementById('comp_count').innerText, olives.length + daisos.length);
         }
 
-        function getDistanceMeters(lat1, lon1, lat2, lon2) {
-            let R = 6371000; 
-            let dLat = (lat2-lat1)*(Math.PI/180), dLon = (lon2-lon1)*(Math.PI/180);
-            let a = Math.sin(dLat/2)*Math.sin(dLat/2) + Math.cos(lat1*(Math.PI/180))*Math.cos(lat2*(Math.PI/180))*Math.sin(dLon/2)*Math.sin(dLon/2);
-            return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+        function refreshMarkers() {
+            let bounds = map.getBounds();
+            let f = { 'lensme': document.getElementById('f_lensme').checked, 'olens': document.getElementById('f_olens').checked, 'hapa': document.getElementById('f_hapa').checked, 'winc': document.getElementById('f_winc').checked, 'lenstown': document.getElementById('f_lenstown').checked, 'olive_shop': document.getElementById('f_olive_shop').checked, 'other': document.getElementById('f_other').checked };
+            let v_comp = 0; 
+            placeCache.forEach((item) => {
+                let inBounds = bounds.contain(item.pos);
+                let show = inBounds && f[item.brand];
+                item.marker.setMap(show ? map : null);
+                if(show && ['lensme','olens','hapa','winc','lenstown'].includes(item.brand)) v_comp++;
+            });
+            document.getElementById('comp_count').innerText = v_comp;
+            drawRadarChart(v_comp, document.getElementById('anchor_count').innerText);
         }
 
         function updateStoreNames() {
-            let cur = document.getElementById('currentStoreInput').value || "현재 매장";
-            let tar = document.getElementById('targetLocationInput').value || "선택 상권";
-            document.querySelectorAll('.currentStoreName').forEach(e => e.innerText = cur);
-            document.querySelectorAll('.targetLocationName').forEach(e => e.innerText = tar);
+            currentStoreName = document.getElementById('currentStoreInput').value || "현재 매장";
+            targetLocationName = document.getElementById('targetLocationInput').value || "선택 상권";
+            let targets = document.getElementsByClassName('targetLocationName');
+            for(let i=0; i<targets.length; i++) targets[i].innerText = targetLocationName;
+            let currents = document.getElementsByClassName('currentStoreName');
+            for(let i=0; i<currents.length; i++) currents[i].innerText = currentStoreName;
         }
 
         function switchTab(tabId) {
             document.getElementById('tab-map').classList.add('hidden'); document.getElementById('tab-radar').classList.add('hidden');
             document.getElementById('btn-map').classList.remove('active'); document.getElementById('btn-radar').classList.remove('active');
             document.getElementById('tab-' + tabId).classList.remove('hidden'); document.getElementById('btn-' + tabId).classList.add('active');
-            if(tabId === 'map') { map.relayout(); map.setCenter(currentCenter); }
+            if(tabId === 'map') { map.relayout(); map.setCenter(map.getCenter()); }
             else if (tabId === 'radar') Plotly.Plots.resize(document.getElementById('radarChart')); 
         }
 
-        function drawRadarChart(compCount=0, anchorScoreRaw=0) {
+        function drawRadarChart(compCount = 0, anchorScoreRaw = 0) {
             let compScore = Math.max(10, 100 - (compCount * 8)); 
             let anchorScore = Math.min(100, 40 + (anchorScoreRaw * 15));
             let data = [
-                { type: 'scatterpolar', r: [60, 55, 80, 70, 50, 60], theta: ['유동인구', '타겟밀집', '경쟁강도', '임대료효율', '상권활력', '유동인구'], fill: 'toself', name: document.getElementById('currentStoreInput').value, line: {color: 'gray'} },
-                { type: 'scatterpolar', r: [anchorScore, anchorScore-5, compScore, 65, anchorScore+5, anchorScore], theta: ['유동인구', '타겟밀집', '경쟁강도', '임대료효율', '상권활력', '유동인구'], fill: 'toself', name: document.getElementById('targetLocationInput').value, line: {color: '#ec4899'} }
+                { type: 'scatterpolar', r: [60, 55, 80, 70, 50, 60], theta: ['1020 유동인구', '타겟 밀집도', '경쟁 강도', '임대료 가성비', '상권 활력도', '1020 유동인구'], fill: 'toself', name: document.getElementById('currentStoreInput').value, line: {color: 'gray'}, fillcolor: 'rgba(128,128,128,0.4)' },
+                { type: 'scatterpolar', r: [anchorScore, anchorScore-5, compScore, 65, anchorScore+5, anchorScore], theta: ['1020 유동인구', '타겟 밀집도', '경쟁 강도', '임대료 가성비', '상권 활력도', '1020 유동인구'], fill: 'toself', name: document.getElementById('targetLocationInput').value, line: {color: '#ec4899'}, fillcolor: 'rgba(236,72,153,0.4)' }
             ];
-            Plotly.newPlot('radarChart', data, { polar: { radialaxis: {visible: true, range: [0, 100]} }, margin: {t:30, b:30} }, {responsive: true, displayModeBar: false});
+            let layout = { polar: { radialaxis: {visible: true, range: [0, 100]} }, showlegend: true, legend: {orientation: "h", y: -0.2}, margin: {t:30, b:30} };
+            Plotly.newPlot('radarChart', data, layout, {responsive: true, displayModeBar: false});
         }
-
-        // 초기 강남역 기본 실행
-        drawRangeCircle(currentCenter);
-        runScan();
     </script>
 </body>
 </html>
