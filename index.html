@@ -7,6 +7,8 @@
     <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+    <!-- 좌표계 자동 변환 라이브러리 (EPSG:5181/5179 -> WGS84) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/proj4js/2.9.0/proj4.js"></script>
     <style>
         body { font-family: 'Pretendard', sans-serif; background-color: #f8fafc; }
         ::-webkit-scrollbar { width: 6px; }
@@ -15,18 +17,16 @@
         .tab-btn { color: #64748b; font-weight: 600; border-bottom: 4px solid transparent; }
         input[type=checkbox] { width: 1.05rem; height: 1.05rem; cursor: pointer; }
 
-        /* 골든존 및 브랜드 커스텀 마커 스타일 */
         @keyframes pulse-gold { 0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(250, 204, 21, 0.7); } 70% { transform: scale(1); box-shadow: 0 0 0 22px rgba(250, 204, 21, 0); } 100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(250, 204, 21, 0); } }
         .rank-1-marker { animation: pulse-gold 2s infinite; background: linear-gradient(135deg, #fde047 0%, #eab308 100%); border: 3px solid #fff; border-radius: 30px; padding: 5px 14px; color: #713f12; font-size: 14px; font-weight: 900; box-shadow: 0 4px 8px rgba(0,0,0,0.3); z-index: 100; white-space: nowrap;}
         .rank-2-marker { background: linear-gradient(135deg, #e2e8f0 0%, #94a3b8 100%); border: 2px solid #fff; border-radius: 20px; padding: 4px 11px; color: #1e293b; font-size: 12px; font-weight: 800; box-shadow: 0 3px 6px rgba(0,0,0,0.25); z-index: 90; white-space: nowrap;}
         .rank-3-marker { background: linear-gradient(135deg, #fed7aa 0%, #ea580c 100%); border: 2px solid #fff; border-radius: 20px; padding: 4px 11px; color: #fff; font-size: 12px; font-weight: 800; box-shadow: 0 3px 6px rgba(0,0,0,0.25); z-index: 80; white-space: nowrap;}
         
-        .brand-badge { border: 2px solid #ffffff; border-radius: 12px; padding: 2px 8px; font-size: 11px; font-weight: 800; color: #ffffff; box-shadow: 0 2px 5px rgba(0,0,0,0.25); white-space: nowrap; cursor: pointer; }
+        .brand-badge { border: 2px solid #ffffff; border-radius: 12px; padding: 2px 8px; font-size: 11px; font-weight: 800; color: #ffffff; box-shadow: 0 2px 5px rgba(0,0,0,0.25); white-space: nowrap; }
     </style>
 </head>
 <body class="flex flex-col md:flex-row h-screen text-slate-800">
 
-    <!-- 좌측 사이드바 -->
     <div class="w-full md:w-1/4 bg-white border-r border-gray-200 p-5 flex flex-col shadow-lg z-20 overflow-y-auto">
         <h1 class="text-xl font-extrabold text-slate-800 border-b-4 border-indigo-500 pb-3 mb-4 flex justify-between items-center">
             <span>🗺️ 전국 상권 분석기</span>
@@ -35,11 +35,10 @@
         
         <div class="mb-5 bg-slate-50 p-4 rounded-xl border border-slate-200">
             <label class="block text-xs font-extrabold text-indigo-700 mb-2">🎯 상권 검색 및 선택</label>
-            <input type="text" id="searchInput" placeholder="상권명 입력 (예: 강남역, 홍대, 서면, 부평)" class="w-full bg-white border border-indigo-300 px-3 py-2 rounded-lg text-sm mb-3 font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500" onkeyup="filterAreas()">
+            <input type="text" id="searchInput" placeholder="상권명 입력 (예: 강남역, 홍대, 서면)" class="w-full bg-white border border-indigo-300 px-3 py-2 rounded-lg text-sm mb-3 font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500" onkeyup="filterAreas()">
             <div id="areaListUI" class="flex flex-wrap gap-1.5 max-h-52 overflow-y-auto p-1"></div>
         </div>
 
-        <!-- 매장 정보 및 통계 카운터 -->
         <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm space-y-3">
             <div>
                 <p class="text-xs text-slate-400 font-bold mb-1">현재 기준 매장명</p>
@@ -63,7 +62,6 @@
         </div>
     </div>
 
-    <!-- 우측 메인 영역 -->
     <div class="w-full md:w-3/4 flex flex-col bg-slate-50 overflow-hidden">
         <div class="flex bg-white px-6 pt-3 border-b border-gray-200 overflow-x-auto whitespace-nowrap z-10">
             <button onclick="switchTab('map')" id="btn-map" class="tab-btn active px-4 py-2 mr-4 text-base hover:text-indigo-500 transition">📍 골든존 지도</button>
@@ -75,7 +73,6 @@
                 ⏳ 전국 상권 데이터를 연동하고 있습니다...
             </div>
 
-            <!-- 브랜드 필터 레이어 컨트롤러 (전체 7개 브랜드 복구) -->
             <div class="absolute top-16 left-4 z-10 bg-white/95 backdrop-blur-sm p-4 rounded-xl shadow-lg border border-slate-200 w-60 max-h-[80vh] overflow-y-auto">
                 <p class="text-xs text-slate-400 font-bold mb-1 text-right">오피셜 DB</p>
                 <p class="text-xs font-extrabold text-slate-800 mb-2.5 border-b pb-1">🎯 렌즈 전문 브랜드 (7개)</p>
@@ -117,8 +114,13 @@
     <script type="text/javascript" src="//dapi.kakao.com/v2/maps/sdk.js?appkey=c045609510f8b75252389123f086be48&libraries=services"></script>
 
     <script>
+        // Proj4 좌표 정의 (EPSG:5181/5179 -> WGS84)
+        proj4.defs("EPSG:5181", "+proj=tmerc +lat_0=38 +lon_0=127 +k=1 +x_0=200000 +y_0=500000 +ellps=GRS80 +units=m +no_defs");
+        proj4.defs("EPSG:5179", "+proj=tmerc +lat_0=38 +lon_0=127.5 +k=0.9996 +x_0=1000000 +y_0=2000000 +ellps=GRS80 +units=m +no_defs");
+        proj4.defs("EPSG:4326", "+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs");
+
         let mapContainer = document.getElementById('map'); 
-        let map = new kakao.maps.Map(mapContainer, { center: new kakao.maps.LatLng(36.2, 127.8), level: 11 }); 
+        let map = new kakao.maps.Map(mapContainer, { center: new kakao.maps.LatLng(37.5665, 126.9780), level: 8 }); 
         let ps = new kakao.maps.services.Places(); 
         
         let allFeatures = [];
@@ -127,21 +129,38 @@
         let goldenZoneMarkers = [];
         let currentFocusedPolygon = null;
 
-        // 브랜드 컬러 및 검색 키워드 매핑
         const BRAND_CONFIG = {
-            f_lensme: { name: '렌즈미', kw: '렌즈미', color: '#7e22ce', bg: 'bg-purple-700' },
-            f_olens: { name: '오렌즈', kw: '오렌즈', color: '#ea580c', bg: 'bg-orange-600' },
-            f_hapa: { name: '하파크리스틴', kw: '하파크리스틴', color: '#ec4899', bg: 'bg-pink-500' },
-            f_winc: { name: '윙크렌즈', kw: '윙크렌즈', color: '#2563eb', bg: 'bg-blue-600' },
-            f_withlens: { name: '위드렌즈', kw: '위드렌즈', color: '#059669', bg: 'bg-emerald-600' },
-            f_lensvery: { name: '렌즈베리', kw: '렌즈베리', color: '#ca8a04', bg: 'bg-yellow-600' },
-            f_lenstown: { name: '렌즈타운', kw: '렌즈타운', color: '#dc2626', bg: 'bg-red-600' },
-            f_olive_shop: { name: '올영입점렌즈', kw: '올리브영 안경', color: '#0f766e', bg: 'bg-teal-700' },
-            f_olive: { name: '올리브영', kw: '올리브영', color: '#16a34a', bg: 'bg-green-600' },
-            f_daiso: { name: '다이소', kw: '다이소', color: '#e11d48', bg: 'bg-rose-600' }
+            f_lensme: { name: '렌즈미', kw: '렌즈미', color: '#7e22ce' },
+            f_olens: { name: '오렌즈', kw: '오렌즈', color: '#ea580c' },
+            f_hapa: { name: '하파크리스틴', kw: '하파크리스틴', color: '#ec4899' },
+            f_winc: { name: '윙크렌즈', kw: '윙크렌즈', color: '#2563eb' },
+            f_withlens: { name: '위드렌즈', kw: '위드렌즈', color: '#059669' },
+            f_lensvery: { name: '렌즈베리', kw: '렌즈베리', color: '#ca8a04' },
+            f_lenstown: { name: '렌즈타운', kw: '렌즈타운', color: '#dc2626' },
+            f_olive_shop: { name: '올영입점렌즈', kw: '올리브영 안경', color: '#0f766e' },
+            f_olive: { name: '올리브영', kw: '올리브영', color: '#16a34a' },
+            f_daiso: { name: '다이소', kw: '다이소', color: '#e11d48' }
         };
 
-        // 데이터 로딩 (캐시 방지 타임스탬프 적용)
+        // 좌표를 Kakao LatLng 객체로 변환 (자동 좌표계 판단)
+        function parseToKakaoLatLng(c) {
+            let lon = c[0], lat = c[1];
+            if (lon > 120 && lon < 135 && lat > 30 && lat < 45) {
+                return new kakao.maps.LatLng(lat, lon);
+            }
+            try {
+                let converted;
+                if (lon > 600000 && lat > 1000000) {
+                    converted = proj4("EPSG:5179", "EPSG:4326", [lon, lat]);
+                } else {
+                    converted = proj4("EPSG:5181", "EPSG:4326", [lon, lat]);
+                }
+                return new kakao.maps.LatLng(converted[1], converted[0]);
+            } catch(e) {
+                return null;
+            }
+        }
+
         async function loadNationalData() {
             let possiblePaths = [
                 '전국상권.json', '전국상권.geojson', '회식상권.json', '회식상권.geojson',
@@ -162,7 +181,7 @@
             }
 
             if (!geoData) {
-                document.getElementById('statusMessage').innerText = "⚠️ GeoJSON 파일을 읽지 못했습니다. 깃허브 업로드를 확인해 주세요.";
+                document.getElementById('statusMessage').innerText = "⚠️ GeoJSON 파일을 찾지 못했습니다. 깃허브 업로드를 확인해 주세요.";
                 document.getElementById('statusMessage').classList.replace('text-slate-700', 'text-red-600');
                 document.getElementById('total_area_badge').innerText = "0개";
                 return;
@@ -177,7 +196,7 @@
         }
 
         function extractAreaName(f) {
-            if(!f.properties) return '상권';
+            if(!f || !f.properties) return '상권';
             return f.properties.MJR_BIZON_ || f.properties.MJR_BIZON_N || f.properties.상권명 || f.properties.MAIN_NM || '상권';
         }
 
@@ -209,9 +228,10 @@
 
             let geom = feature.geometry;
             let rings = (geom.type === 'MultiPolygon') ? geom.coordinates[0] : geom.coordinates;
-            let coords = rings[0] || rings;
+            let rawCoords = rings[0] || rings;
 
-            let path = coords.map(c => new kakao.maps.LatLng(c[1], c[0]));
+            let path = rawCoords.map(c => parseToKakaoLatLng(c)).filter(p => p !== null);
+            if (path.length === 0) return;
             
             let polygon = new kakao.maps.Polygon({
                 path: path,
@@ -248,17 +268,14 @@
             }
         }
 
-        // 상권 영역 내 브랜드 매장 및 앵커 시설 실시간 검색 & 마커 표시
         function scanAreaBrandsAndAnchors(polygonObj) {
-            document.getElementById('statusMessage').innerText = "🔎 상권 내 브랜드 매장 및 골든존 스캔 중...";
+            document.getElementById('statusMessage').innerText = "🔎 브랜드 매장 및 골든존 스캔 중...";
             
-            // 기존 마커 초기화
             brandMarkers.forEach(m => m.setMap(null));
             brandMarkers = [];
             goldenZoneMarkers.forEach(m => m.setMap(null));
             goldenZoneMarkers = [];
 
-            // 카운터 0으로 초기화
             Object.keys(BRAND_CONFIG).forEach(key => {
                 let el = document.getElementById('c_' + key.replace('f_', ''));
                 if(el) el.innerText = '0';
@@ -281,10 +298,9 @@
                         if (status === kakao.maps.services.Status.OK) {
                             data.forEach(place => {
                                 let latLng = new kakao.maps.LatLng(place.y, place.x);
-                                // 상권 범위 및 지도 내 표시
                                 let overlay = new kakao.maps.CustomOverlay({
                                     position: latLng,
-                                    content: `<div class="brand-badge" style="background-color:${cfg.color};" title="${place.place_name}">${cfg.name}</div>`,
+                                    content: `<div class="brand-badge" style="background-color:${cfg.color};">${cfg.name}</div>`,
                                     xAnchor: 0.5, yAnchor: 1.2
                                 });
                                 overlay.setMap(map);
@@ -319,10 +335,9 @@
             });
         }
 
-        // 올리브영 + 다이소 근접 골든존 발굴
         function calculateTop3GoldenZones(olives, daisos) {
             if(olives.length === 0 || daisos.length === 0) {
-                document.getElementById('statusMessage').innerText = "✅ 매장 마커 스캔 완료";
+                document.getElementById('statusMessage').innerText = "✅ 브랜드 매장 마커 표시 완료";
                 return;
             }
 
@@ -355,7 +370,7 @@
                 goldenZoneMarkers.push(overlay);
             });
 
-            document.getElementById('statusMessage').innerText = `👑 상권 내 1~${top3.length}순위 골든존 발굴 완료!`;
+            document.getElementById('statusMessage').innerText = `👑 1~${top3.length}순위 추천 골든존 발굴 완료!`;
         }
 
         function getDistanceMeters(lat1, lon1, lat2, lon2) {
