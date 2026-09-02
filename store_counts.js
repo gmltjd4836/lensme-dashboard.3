@@ -1,0 +1,1 @@
+const GLOBAL_COUNTS = {"olive": 1381, "daiso": 1962, "lensme": 237, "olens": 262, "hapa": 45, "winc": 40, "withlens": 74, "lensvery": 38, "lenstown": 87, "davich": 294, "olive_hapa": 11, "olive_winc": 0};
