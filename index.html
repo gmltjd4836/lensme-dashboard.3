@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>렌즈미 상권 분석 대시보드 (다각형 영역 & 메인 스트리트 분석)</title>
+    <title>렌즈미 상권 분석 대시보드 (스트리트 밴드 & 말풍선 복구)</title>
     <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
@@ -20,11 +20,15 @@
         .chk-yellow { accent-color: #eab308; } .chk-pink { accent-color: #f472b6; } 
         .chk-blue { accent-color: #3b82f6; } .chk-emerald { accent-color: #059669; }
 
-        /* A급 라인 및 소형 마커 스타일 */
+        /* A급 메인 코어 소형 마커 */
         .core-marker-container { position: relative; }
         .core-dot { width: 16px; height: 16px; background-color: #ec4899; border: 3px solid #fff; border-radius: 50%; box-shadow: 0 2px 6px rgba(0,0,0,0.4); z-index: 100; animation: pulse-core 1.5s infinite; }
         .core-label { position: absolute; top: -24px; left: -20px; background: rgba(255,255,255,0.95); border: 1.5px solid #ec4899; color: #ec4899; font-size: 11px; font-weight: 900; padding: 2px 6px; border-radius: 6px; white-space: nowrap; box-shadow: 0 2px 4px rgba(236,72,153,0.2); }
         @keyframes pulse-core { 0% { box-shadow: 0 0 0 0 rgba(236, 72, 153, 0.7); } 70% { box-shadow: 0 0 0 10px rgba(236, 72, 153, 0); } 100% { box-shadow: 0 0 0 0 rgba(236, 72, 153, 0); } }
+        
+        /* 마우스 오버 말풍선(Tooltip) 스타일 */
+        .store-tooltip { background: #ffffff; border: 2px solid #334155; border-radius: 8px; padding: 6px 12px; font-size: 13px; font-weight: 800; color: #0f172a; box-shadow: 0 4px 10px rgba(0,0,0,0.2); white-space: nowrap; transform: translateY(-10px); }
+        .store-tooltip::after { content: ''; position: absolute; bottom: -6px; left: 50%; transform: translateX(-50%); border-width: 6px 6px 0; border-style: solid; border-color: #334155 transparent transparent transparent; }
     </style>
 </head>
 <body class="flex flex-col md:flex-row h-screen text-slate-800">
@@ -41,7 +45,7 @@
                 <input type="text" id="searchInput" placeholder="예: 의정부 행복로, 건대입구" class="w-full bg-white border border-indigo-300 px-3 py-2 rounded-lg text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500" onkeypress="if(event.key==='Enter') searchLocation()">
                 <button onclick="searchLocation()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-bold transition shadow-sm whitespace-nowrap">검색</button>
             </div>
-            <p class="text-xs text-slate-500 font-bold mt-2">💡 지도를 축소/이동해도 검색한 상권의 다각형 구역과 메인 스트리트가 영구 고정됩니다.</p>
+            <p class="text-xs text-slate-500 font-bold mt-2">💡 지도를 축소/이동해도 검색한 상권의 메인 스트리트가 영구 고정됩니다.</p>
         </div>
 
         <div id="gradeBadge" class="mb-4 text-center py-3 rounded-xl bg-gray-100 border border-gray-200 text-gray-500 font-bold text-sm shadow-sm transition-all duration-300">
@@ -79,7 +83,7 @@
 
         <div id="tab-map" class="flex-grow w-full h-full relative">
             <div id="statusMessage" class="absolute top-4 left-1/2 transform -translate-x-1/2 z-10 bg-white/95 backdrop-blur-sm px-6 py-2 rounded-full shadow-md text-sm font-bold text-slate-700 border border-slate-200 text-center transition-all">
-                🎯 검색된 상권의 영역과 내부 A급 메인 스트리트를 자동 표시합니다.
+                🎯 검색된 상권의 내부 A급 메인 스트리트를 자동 표시합니다. (마우스를 올리면 매장명이 뜹니다)
             </div>
 
             <div class="absolute top-16 left-4 z-10 bg-white/95 backdrop-blur-sm p-4 rounded-xl shadow-lg border border-slate-200 w-56 max-h-[80vh] overflow-y-auto hidden md:block">
@@ -116,10 +120,10 @@
         </div>
     </div>
 
-    <!-- API Keys -->
     <script type="text/javascript" src="//dapi.kakao.com/v2/maps/sdk.js?appkey=c045609510f8b75252389123f086be48&libraries=services"></script>
 
     <script>
+        // 사장님의 진짜 TMAP 열쇠 (오타 수정 완료!)
         const TMAP_APP_KEY = "mJJ00gscCg39Y6nR0LhUw2yzrIfr7arY65OwUZYk";
 
         let script = document.createElement('script');
@@ -147,10 +151,17 @@
         
         let mapMarkers = [];
         let tmapRouteLine = null; 
-        let zonePolygon = null; 
+        let tmapRouteBand = null; // 상권 밴드(두꺼운 형광펜)
         let coreMarkerOverlay = null;
         let placeCache = new Map();
         
+        // 매장명 팝업(Tooltip)을 위한 커스텀 오버레이 객체
+        let tooltipOverlay = new kakao.maps.CustomOverlay({
+            xAnchor: 0.5,
+            yAnchor: 1.5,
+            zIndex: 150
+        });
+
         const BRAND_CONFIG = {
             f_lensme: { kw: '렌즈미', hex: '%239333ea', icon: '🟣', isComp: true },
             f_olens: { kw: '오렌즈', hex: '%23f97316', icon: '🟠', isComp: true },
@@ -187,13 +198,14 @@
         function clearOverlays() {
             mapMarkers.forEach(m => m.setMap(null)); mapMarkers = [];
             if(tmapRouteLine) { tmapRouteLine.setMap(null); tmapRouteLine = null; }
-            if(zonePolygon) { zonePolygon.setMap(null); zonePolygon = null; } 
+            if(tmapRouteBand) { tmapRouteBand.setMap(null); tmapRouteBand = null; } 
             if(coreMarkerOverlay) { coreMarkerOverlay.setMap(null); coreMarkerOverlay = null; }
+            tooltipOverlay.setMap(null);
             placeCache.clear();
         }
 
         function runScan() {
-            document.getElementById('statusMessage').innerText = "🔎 상권 자동 타겟팅 및 내부 메인 스트리트 탐색 중...";
+            document.getElementById('statusMessage').innerText = "🔎 상권 스캔 및 A급 메인 스트리트 밴드 탐색 중...";
             clearOverlays();
             
             let activeKeys = Object.keys(BRAND_CONFIG).filter(key => document.getElementById(key) && document.getElementById(key).checked);
@@ -243,10 +255,21 @@
             let svgString = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24"><circle cx="12" cy="12" r="10" fill="${cfg.hex}" stroke="white" stroke-width="2.5"/></svg>`;
             let markerImage = new kakao.maps.MarkerImage('data:image/svg+xml;utf-8,' + svgString, new kakao.maps.Size(24, 24), { offset: new kakao.maps.Point(12, 12) });
             
-            let marker = new kakao.maps.Marker({ position: new kakao.maps.LatLng(place.y, place.x), image: markerImage, title: place.place_name });
+            let marker = new kakao.maps.Marker({ position: new kakao.maps.LatLng(place.y, place.x), image: markerImage });
             marker.setMap(map);
             mapMarkers.push(marker);
             placeCache.set(place.id, { brand: key, rawData: place });
+            
+            // 💡 잃어버렸던 마우스 오버(말풍선) 기능 완벽 복구 💡
+            kakao.maps.event.addListener(marker, 'mouseover', function() {
+                tooltipOverlay.setContent(`<div class="store-tooltip">${place.place_name}</div>`);
+                tooltipOverlay.setPosition(marker.getPosition());
+                tooltipOverlay.setMap(map);
+            });
+
+            kakao.maps.event.addListener(marker, 'mouseout', function() {
+                tooltipOverlay.setMap(null);
+            });
             
             return !isDuplicate;
         }
@@ -275,10 +298,7 @@
             }
 
             if (anchorData.allValidNodes.length > 2) {
-                // 1. 다각형(폴리곤)으로 상권 영역 감싸기 (정중앙 네임택 삭제됨)
-                drawZonePolygon(anchorData.allValidNodes, grade);
-
-                // 2. 내부 밀집도 계산 및 A급 메인 스트리트 점색
+                // 1. 내부 밀집도 계산 (코어 1, 코어 2 추출)
                 anchorData.allValidNodes.forEach(node => {
                     let score = 0;
                     anchorData.allValidNodes.forEach(other => {
@@ -293,12 +313,12 @@
                 let sortedNodes = [...anchorData.allValidNodes].sort((a, b) => b.densityScore - a.densityScore);
                 let coreNode1 = sortedNodes[0];
                 
-                // 작고 세련된 코어 마커 표시
+                // 작고 세련된 A급 코어 핀셋 마커
                 drawCoreMarker(new kakao.maps.LatLng(coreNode1.y, coreNode1.x));
 
-                // 3. A급 좋은 라인 연결 (밀집도 1위 노드와 거리상 80m 이상 떨어진 고밀도 서브 노드 연결)
+                // 2. A급 메인 라인 연결 (외부 유입로 삭제)
                 let coreNode2 = sortedNodes.find(n => getDistanceMeters(coreNode1.y, coreNode1.x, n.y, n.x) > 80);
-                if (!coreNode2) coreNode2 = sortedNodes[sortedNodes.length - 1]; // 전부 뭉쳐있다면 가장 먼 노드 선택
+                if (!coreNode2) coreNode2 = sortedNodes[sortedNodes.length - 1]; 
 
                 if (coreNode2) {
                     await drawTmapPedestrianRoute(
@@ -309,43 +329,8 @@
                 }
             }
             
-            document.getElementById('statusMessage').innerText = "✅ 다각형 상권 구역 및 내부 A급 메인 스트리트 분석 완료!";
+            document.getElementById('statusMessage').innerText = "✅ A급 메인 스트리트 탐색 완료! (마우스를 매장 위에 올려보세요)";
             drawRadarChart(compCount, (olyCount + daiCount));
-        }
-
-        function drawZonePolygon(nodes, grade) {
-            let points = nodes.map(n => ({x: parseFloat(n.x), y: parseFloat(n.y)}));
-            points.sort((a, b) => a.x !== b.x ? a.x - b.x : a.y - b.y);
-            
-            const cross = (o, a, b) => (a.x - o.x) * (b.y - o.y) - (a.y - o.y) * (b.x - o.x);
-            
-            let lower = [];
-            for (let i = 0; i < points.length; i++) {
-                while (lower.length >= 2 && cross(lower[lower.length - 2], lower[lower.length - 1], points[i]) <= 0) lower.pop();
-                lower.push(points[i]);
-            }
-            let upper = [];
-            for (let i = points.length - 1; i >= 0; i--) {
-                while (upper.length >= 2 && cross(upper[upper.length - 2], upper[upper.length - 1], points[i]) <= 0) upper.pop();
-                upper.push(points[i]);
-            }
-            upper.pop(); lower.pop();
-            let hull = lower.concat(upper);
-            
-            if(hull.length < 3) return;
-
-            let polygonPath = hull.map(p => new kakao.maps.LatLng(p.y, p.x));
-            
-            zonePolygon = new kakao.maps.Polygon({
-                path: polygonPath,
-                strokeWeight: 2,
-                strokeColor: grade === 'A' ? '#ec4899' : '#3b82f6',
-                strokeOpacity: 0.8,
-                strokeStyle: 'dashed',
-                fillColor: grade === 'A' ? '#fbcfe8' : '#bfdbfe',
-                fillOpacity: 0.35
-            });
-            zonePolygon.setMap(map);
         }
 
         async function drawTmapPedestrianRoute(startLatLng, endLatLng, grade) {
@@ -381,11 +366,24 @@
                     }
                 });
 
+                // 💡 폴리곤(다각형)을 대체하는 상권 밴드(두꺼운 배경선) 💡
+                tmapRouteBand = new kakao.maps.Polyline({
+                    path: linePath,
+                    strokeWeight: 45, // 다각형 대신 길 주변을 두껍게 감싸는 영역
+                    strokeColor: grade === 'A' ? '#fbcfe8' : '#bfdbfe', 
+                    strokeOpacity: 0.6,
+                    strokeStyle: 'solid',
+                    strokeLinecap: 'round',
+                    strokeLinejoin: 'round'
+                });
+                tmapRouteBand.setMap(map);
+
+                // 실제 걷는 메인 스트리트 진한 선
                 tmapRouteLine = new kakao.maps.Polyline({
                     path: linePath,
-                    strokeWeight: 14,
+                    strokeWeight: 10,
                     strokeColor: grade === 'A' ? '#ec4899' : '#3b82f6',
-                    strokeOpacity: 0.6,
+                    strokeOpacity: 0.9,
                     strokeStyle: 'solid',
                     strokeLinecap: 'round',
                     strokeLinejoin: 'round'
@@ -393,9 +391,16 @@
                 tmapRouteLine.setMap(map);
 
             } catch(e) {
+                // TMAP 에러 시 기본 직선으로 대체
+                tmapRouteBand = new kakao.maps.Polyline({
+                    path: [startLatLng, endLatLng],
+                    strokeWeight: 45, strokeColor: '#e2e8f0', strokeOpacity: 0.6
+                });
+                tmapRouteBand.setMap(map);
+
                 tmapRouteLine = new kakao.maps.Polyline({
                     path: [startLatLng, endLatLng],
-                    strokeWeight: 8, strokeColor: '#94a3b8', strokeOpacity: 0.7
+                    strokeWeight: 8, strokeColor: '#94a3b8', strokeOpacity: 0.9
                 });
                 tmapRouteLine.setMap(map);
             }
