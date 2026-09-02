@@ -79,23 +79,23 @@
                 🎯 검색 및 지도를 이동하면 상권 스캔이 자동으로 시작됩니다.
             </div>
 
-            <div class="absolute top-16 left-4 z-10 bg-white/95 backdrop-blur-sm p-4 rounded-xl shadow-lg border border-slate-200 w-52 max-h-[80vh] overflow-y-auto">
-                <p class="text-xs font-extrabold text-slate-800 mb-2.5 border-b pb-1">🎯 렌즈 전문 브랜드</p>
+            <div class="absolute top-16 left-4 z-10 bg-white/95 backdrop-blur-sm p-4 rounded-xl shadow-lg border border-slate-200 w-56 max-h-[80vh] overflow-y-auto">
+                <p class="text-xs font-extrabold text-slate-800 mb-2.5 border-b pb-1">🎯 렌즈 전문 브랜드 <span class="text-[10px] text-pink-500 ml-1 font-bold">LIVE</span></p>
                 <div class="space-y-2 mb-4">
-                    <label class="flex items-center space-x-2 cursor-pointer"><input type="checkbox" id="f_lensme" onchange="triggerScan()" class="chk-purple" checked><span class="text-[13px] font-bold text-purple-700">🟣 렌즈미 <span id="global_lensme" class="text-slate-400 font-normal ml-1"></span></span></label>
-                    <label class="flex items-center space-x-2 cursor-pointer"><input type="checkbox" id="f_olens" onchange="triggerScan()" class="chk-orange" checked><span class="text-[13px] font-bold text-orange-600">🟠 오렌즈 <span id="global_olens" class="text-slate-400 font-normal ml-1"></span></span></label>
-                    <label class="flex items-center space-x-2 cursor-pointer"><input type="checkbox" id="f_hapa" onchange="triggerScan()" class="chk-pink" checked><span class="text-[13px] font-bold text-pink-500">🌸 하파크리스틴 <span id="global_hapa" class="text-slate-400 font-normal ml-1"></span></span></label>
-                    <label class="flex items-center space-x-2 cursor-pointer"><input type="checkbox" id="f_winc" onchange="triggerScan()" class="chk-blue" checked><span class="text-[13px] font-bold text-blue-600">🔵 윙크렌즈 <span id="global_winc" class="text-slate-400 font-normal ml-1"></span></span></label>
-                    <label class="flex items-center space-x-2 cursor-pointer"><input type="checkbox" id="f_withlens" onchange="triggerScan()" class="chk-emerald" checked><span class="text-[13px] font-bold text-emerald-600">🟢 위드렌즈 <span id="global_withlens" class="text-slate-400 font-normal ml-1"></span></span></label>
-                    <label class="flex items-center space-x-2 cursor-pointer"><input type="checkbox" id="f_lensvery" onchange="triggerScan()" class="chk-yellow" checked><span class="text-[13px] font-bold text-yellow-600">🟡 렌즈베리 <span id="global_lensvery" class="text-slate-400 font-normal ml-1"></span></span></label>
-                    <label class="flex items-center space-x-2 cursor-pointer"><input type="checkbox" id="f_lenstown" onchange="triggerScan()" class="chk-red" checked><span class="text-[13px] font-bold text-red-600">🔴 렌즈타운 <span id="global_lenstown" class="text-slate-400 font-normal ml-1"></span></span></label>
+                    <label class="flex items-center space-x-2 cursor-pointer"><input type="checkbox" id="f_lensme" onchange="triggerScan()" class="chk-purple" checked><span class="text-[13px] font-bold text-purple-700">🟣 렌즈미 <span id="global_lensme" class="text-slate-400 font-bold ml-1"></span></span></label>
+                    <label class="flex items-center space-x-2 cursor-pointer"><input type="checkbox" id="f_olens" onchange="triggerScan()" class="chk-orange" checked><span class="text-[13px] font-bold text-orange-600">🟠 오렌즈 <span id="global_olens" class="text-slate-400 font-bold ml-1"></span></span></label>
+                    <label class="flex items-center space-x-2 cursor-pointer"><input type="checkbox" id="f_hapa" onchange="triggerScan()" class="chk-pink" checked><span class="text-[13px] font-bold text-pink-500">🌸 하파크리스틴 <span id="global_hapa" class="text-slate-400 font-bold ml-1"></span></span></label>
+                    <label class="flex items-center space-x-2 cursor-pointer"><input type="checkbox" id="f_winc" onchange="triggerScan()" class="chk-blue" checked><span class="text-[13px] font-bold text-blue-600">🔵 윙크렌즈 <span id="global_winc" class="text-slate-400 font-bold ml-1"></span></span></label>
+                    <label class="flex items-center space-x-2 cursor-pointer"><input type="checkbox" id="f_withlens" onchange="triggerScan()" class="chk-emerald" checked><span class="text-[13px] font-bold text-emerald-600">🟢 위드렌즈 <span id="global_withlens" class="text-slate-400 font-bold ml-1"></span></span></label>
+                    <label class="flex items-center space-x-2 cursor-pointer"><input type="checkbox" id="f_lensvery" onchange="triggerScan()" class="chk-yellow" checked><span class="text-[13px] font-bold text-yellow-600">🟡 렌즈베리 <span id="global_lensvery" class="text-slate-400 font-bold ml-1"></span></span></label>
+                    <label class="flex items-center space-x-2 cursor-pointer"><input type="checkbox" id="f_lenstown" onchange="triggerScan()" class="chk-red" checked><span class="text-[13px] font-bold text-red-600">🔴 렌즈타운 <span id="global_lenstown" class="text-slate-400 font-bold ml-1"></span></span></label>
                 </div>
                 <p class="text-xs font-extrabold text-slate-800 mb-2 border-b pb-1 mt-3">🌿 앵커 집객시설</p>
                 <div class="space-y-2">
-                    <label class="flex items-center space-x-2 cursor-pointer"><input type="checkbox" id="f_olive_shop" checked onchange="triggerScan()" class="chk-green"><span class="text-[13px] font-bold text-teal-700">🌿 올영 입점(렌즈)</span></label>
-                    <label class="flex items-center space-x-2 cursor-pointer"><input type="checkbox" id="f_olive" checked onchange="triggerScan()" class="chk-green"><span class="text-[13px] font-bold text-green-600">🟩 올리브영</span></label>
-                    <label class="flex items-center space-x-2 cursor-pointer"><input type="checkbox" id="f_daiso" checked onchange="triggerScan()" class="chk-red"><span class="text-[13px] font-bold text-rose-600">🟥 다이소</span></label>
-                    <label class="flex items-center space-x-2 cursor-pointer"><input type="checkbox" id="f_davich" checked onchange="triggerScan()" class="chk-blue"><span class="text-[13px] font-bold text-blue-700">🟦 다비치안경</span></label>
+                    <label class="flex items-center space-x-2 cursor-pointer"><input type="checkbox" id="f_olive_shop" checked onchange="triggerScan()" class="chk-green"><span class="text-[13px] font-bold text-teal-700">🌿 올영(하파/윙크) <span id="global_olive_hapa" class="text-slate-400 font-bold ml-1"></span></span></label>
+                    <label class="flex items-center space-x-2 cursor-pointer"><input type="checkbox" id="f_olive" checked onchange="triggerScan()" class="chk-green"><span class="text-[13px] font-bold text-green-600">🟩 올리브영 <span id="global_olive" class="text-slate-400 font-bold ml-1"></span></span></label>
+                    <label class="flex items-center space-x-2 cursor-pointer"><input type="checkbox" id="f_daiso" checked onchange="triggerScan()" class="chk-red"><span class="text-[13px] font-bold text-rose-600">🟥 다이소 <span id="global_daiso" class="text-slate-400 font-bold ml-1"></span></span></label>
+                    <label class="flex items-center space-x-2 cursor-pointer"><input type="checkbox" id="f_davich" checked onchange="triggerScan()" class="chk-blue"><span class="text-[13px] font-bold text-blue-700">🟦 다비치안경 <span id="global_davich" class="text-slate-400 font-bold ml-1"></span></span></label>
                 </div>
             </div>
 
@@ -118,9 +118,27 @@
         </div>
     </div>
 
+    <!-- 👇 사장님의 카카오 API 앱 키로 변경 필수 -->
     <script type="text/javascript" src="//dapi.kakao.com/v2/maps/sdk.js?appkey=c045609510f8b75252389123f086be48&libraries=services"></script>
 
     <script>
+        let script = document.createElement('script');
+        script.src = 'store_counts.js?v=' + new Date().getTime();
+        script.onload = function() {
+            if (typeof GLOBAL_COUNTS !== 'undefined') {
+                const idMap = {
+                    'lensme': 'global_lensme', 'olens': 'global_olens', 'hapa': 'global_hapa',
+                    'winc': 'global_winc', 'withlens': 'global_withlens', 'lensvery': 'global_lensvery', 'lenstown': 'global_lenstown',
+                    'davich': 'global_davich', 'olive': 'global_olive', 'daiso': 'global_daiso', 'olive_hapa': 'global_olive_hapa'
+                };
+                for(let key in idMap) {
+                    let el = document.getElementById(idMap[key]);
+                    if(el && GLOBAL_COUNTS[key] !== undefined) el.innerText = `(${GLOBAL_COUNTS[key]}개)`;
+                }
+            }
+        };
+        document.head.appendChild(script);
+
         let mapContainer = document.getElementById('map'); 
         let currentCenter = new kakao.maps.LatLng(37.498095, 127.027610); 
         let map = new kakao.maps.Map(mapContainer, { center: currentCenter, level: 4 }); 
@@ -200,10 +218,14 @@
                 ps.keywordSearch(BRAND_CONFIG[key].kw, function(data, status) {
                     if (status === kakao.maps.services.Status.OK) {
                         data.forEach(place => {
-                            if (createMarkerWithDeduplication(place, key)) {
-                                if (['f_olive', 'f_daiso', 'f_davich'].includes(key)) totalAnchors++;
+                            let shouldCount = processPlaceAndDrawMarker(place, key);
+                            
+                            if (shouldCount) {
+                                if (['f_olive_shop', 'f_olive', 'f_daiso'].includes(key)) totalAnchors++;
+                                else if (key === 'f_davich') totalAnchors++; // 다비치는 앵커로 취급
                                 else totalCompStores++;
-                                if(key === 'f_olive') anchorData.olives.push(place);
+
+                                if(key === 'f_olive' || key === 'f_olive_shop') anchorData.olives.push(place);
                                 if(key === 'f_daiso') anchorData.daisos.push(place);
                                 if(key === 'f_olens') anchorData.olens.push(place);
                                 if(key === 'f_davich') anchorData.davichs.push(place);
@@ -234,16 +256,24 @@
             });
         }
 
-        function createMarkerWithDeduplication(place, key) {
+        // 🎯 핵심: 화면에 그릴 때도 3m 정밀 필터링(다이소/올영은 패스)
+        function processPlaceAndDrawMarker(place, key) {
             let isDuplicate = false;
-            placeCache.forEach((existingItem) => {
-                if(existingItem.brand === key) {
-                    let dist = getDistanceMeters(place.y, place.x, existingItem.rawData.y, existingItem.rawData.x);
-                    if(dist < 5) isDuplicate = true;
-                }
-            });
-            if(isDuplicate) return false;
+            
+            // 다이소와 올리브영은 중복 검사 패스! (있는 그대로 보여줌)
+            let skipDeduplication = ['f_daiso', 'f_olive', 'f_olive_shop'].includes(key);
 
+            if (!skipDeduplication) {
+                placeCache.forEach((existingItem) => {
+                    if(existingItem.brand === key) {
+                        let dist = getDistanceMeters(place.y, place.x, existingItem.rawData.y, existingItem.rawData.x);
+                        // 다비치와 렌즈브랜드는 3m 이내면 샵인샵으로 간주하여 중복 처리
+                        if(dist <= 3) isDuplicate = true; 
+                    }
+                });
+            }
+
+            // 지도에 마커는 겹쳐도 무조건 그려줍니다
             let cfg = BRAND_CONFIG[key];
             let svgString = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24"><circle cx="12" cy="12" r="10" fill="${cfg.hex}" stroke="white" stroke-width="2.5"/></svg>`;
             let markerImage = new kakao.maps.MarkerImage('data:image/svg+xml;utf-8,' + svgString, new kakao.maps.Size(24, 24), { offset: new kakao.maps.Point(12, 12) });
@@ -256,9 +286,11 @@
             
             marker.setMap(map);
             mapMarkers.push(marker);
+            
             placeCache.set(place.id, { brand: key, rawData: place });
             
-            return true;
+            // 중복이면 false 리턴하여 화면 왼쪽 카운터에서 수량 증가를 막음
+            return !isDuplicate;
         }
 
         function calculatePathwayGoldenZones(anchorData) {
