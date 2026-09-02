@@ -44,7 +44,6 @@
             </div>
         </div>
 
-        <!-- 🏆 상권 체급 판독 뱃지 (신규 추가!) -->
         <div id="gradeBadge" class="mb-4 text-center py-3 rounded-xl bg-gray-100 border border-gray-200 text-gray-500 font-bold text-sm shadow-sm transition-all duration-300">
             상권을 검색하면 체급을 분석합니다.
         </div>
@@ -83,18 +82,21 @@
                 🎯 검색 및 지도를 이동하면 상권 스캔이 자동으로 시작됩니다.
             </div>
 
-            <!-- 브랜드 필터링 부분 -->
+            <!-- 👇 빠졌던 브랜드들 모두 복구 완료! -->
             <div class="absolute top-16 left-4 z-10 bg-white/95 backdrop-blur-sm p-4 rounded-xl shadow-lg border border-slate-200 w-56 max-h-[80vh] overflow-y-auto hidden md:block">
                 <p class="text-xs font-extrabold text-slate-800 mb-2.5 border-b pb-1">🎯 렌즈 전문 브랜드</p>
                 <div class="space-y-2 mb-4">
                     <label class="flex items-center space-x-2 cursor-pointer"><input type="checkbox" id="f_lensme" onchange="triggerScan()" class="chk-purple" checked><span class="text-[13px] font-bold text-purple-700">🟣 렌즈미 <span id="global_lensme" class="text-slate-400 font-bold ml-1"></span></span></label>
                     <label class="flex items-center space-x-2 cursor-pointer"><input type="checkbox" id="f_olens" onchange="triggerScan()" class="chk-orange" checked><span class="text-[13px] font-bold text-orange-600">🟠 오렌즈 <span id="global_olens" class="text-slate-400 font-bold ml-1"></span></span></label>
-                    <label class="flex items-center space-x-2 cursor-pointer"><input type="checkbox" id="f_hapa" onchange="triggerScan()" class="chk-pink" checked><span class="text-[13px] font-bold text-pink-500">🌸 하파크리스틴</span></label>
-                    <label class="flex items-center space-x-2 cursor-pointer"><input type="checkbox" id="f_winc" onchange="triggerScan()" class="chk-blue" checked><span class="text-[13px] font-bold text-blue-600">🔵 윙크렌즈</span></label>
-                    <label class="flex items-center space-x-2 cursor-pointer"><input type="checkbox" id="f_lenstown" onchange="triggerScan()" class="chk-red" checked><span class="text-[13px] font-bold text-red-600">🔴 렌즈타운</span></label>
+                    <label class="flex items-center space-x-2 cursor-pointer"><input type="checkbox" id="f_hapa" onchange="triggerScan()" class="chk-pink" checked><span class="text-[13px] font-bold text-pink-500">🌸 하파크리스틴 <span id="global_hapa" class="text-slate-400 font-bold ml-1"></span></span></label>
+                    <label class="flex items-center space-x-2 cursor-pointer"><input type="checkbox" id="f_winc" onchange="triggerScan()" class="chk-blue" checked><span class="text-[13px] font-bold text-blue-600">🔵 윙크렌즈 <span id="global_winc" class="text-slate-400 font-bold ml-1"></span></span></label>
+                    <label class="flex items-center space-x-2 cursor-pointer"><input type="checkbox" id="f_withlens" onchange="triggerScan()" class="chk-emerald" checked><span class="text-[13px] font-bold text-emerald-600">🟢 위드렌즈 <span id="global_withlens" class="text-slate-400 font-bold ml-1"></span></span></label>
+                    <label class="flex items-center space-x-2 cursor-pointer"><input type="checkbox" id="f_lensvery" onchange="triggerScan()" class="chk-yellow" checked><span class="text-[13px] font-bold text-yellow-600">🟡 렌즈베리 <span id="global_lensvery" class="text-slate-400 font-bold ml-1"></span></span></label>
+                    <label class="flex items-center space-x-2 cursor-pointer"><input type="checkbox" id="f_lenstown" onchange="triggerScan()" class="chk-red" checked><span class="text-[13px] font-bold text-red-600">🔴 렌즈타운 <span id="global_lenstown" class="text-slate-400 font-bold ml-1"></span></span></label>
                 </div>
                 <p class="text-xs font-extrabold text-slate-800 mb-2 border-b pb-1 mt-3">🌿 앵커 집객시설</p>
                 <div class="space-y-2">
+                    <label class="flex items-center space-x-2 cursor-pointer"><input type="checkbox" id="f_olive_shop" checked onchange="triggerScan()" class="chk-green"><span class="text-[13px] font-bold text-teal-700">🌿 올영(하파/윙크) <span id="global_olive_hapa" class="text-slate-400 font-bold ml-1"></span></span></label>
                     <label class="flex items-center space-x-2 cursor-pointer"><input type="checkbox" id="f_olive" checked onchange="triggerScan()" class="chk-green"><span class="text-[13px] font-bold text-green-600">🟩 올리브영 <span id="global_olive" class="text-slate-400 font-bold ml-1"></span></span></label>
                     <label class="flex items-center space-x-2 cursor-pointer"><input type="checkbox" id="f_daiso" checked onchange="triggerScan()" class="chk-red"><span class="text-[13px] font-bold text-rose-600">🟥 다이소 <span id="global_daiso" class="text-slate-400 font-bold ml-1"></span></span></label>
                     <label class="flex items-center space-x-2 cursor-pointer"><input type="checkbox" id="f_davich" checked onchange="triggerScan()" class="chk-blue"><span class="text-[13px] font-bold text-blue-700">🟦 다비치안경 <span id="global_davich" class="text-slate-400 font-bold ml-1"></span></span></label>
@@ -123,7 +125,11 @@
         script.src = 'store_counts.js?v=' + new Date().getTime();
         script.onload = function() {
             if (typeof GLOBAL_COUNTS !== 'undefined') {
-                const idMap = { 'lensme': 'global_lensme', 'olens': 'global_olens', 'davich': 'global_davich', 'olive': 'global_olive', 'daiso': 'global_daiso' };
+                const idMap = { 
+                    'lensme': 'global_lensme', 'olens': 'global_olens', 'hapa': 'global_hapa',
+                    'winc': 'global_winc', 'withlens': 'global_withlens', 'lensvery': 'global_lensvery', 'lenstown': 'global_lenstown',
+                    'davich': 'global_davich', 'olive': 'global_olive', 'daiso': 'global_daiso', 'olive_hapa': 'global_olive_hapa' 
+                };
                 for(let key in idMap) {
                     let el = document.getElementById(idMap[key]);
                     if(el && GLOBAL_COUNTS[key] !== undefined) el.innerText = `(${GLOBAL_COUNTS[key]}개)`;
@@ -140,7 +146,7 @@
         let mapMarkers = [];
         let goldenZoneMarkers = [];
         let targetMarkerOverlay = null; 
-        let mainRouteLine = null; // 메인 동선 형광펜 객체
+        let routeZoneCircles = []; // 이상한 직선 대신, 거리를 감싸는 부드러운 하이라이트 영역 배열!
         let placeCache = new Map();
         let searchTimeout = null;
 
@@ -149,7 +155,10 @@
             f_olens: { kw: '오렌즈', hex: '%23f97316', icon: '🟠', isComp: true },
             f_hapa: { kw: '하파크리스틴', hex: '%23f472b6', icon: '🌸', isComp: true },
             f_winc: { kw: '윙크 렌즈', hex: '%233b82f6', icon: '🔵', isComp: true },
+            f_withlens: { kw: '위드렌즈', hex: '%23059669', icon: '🟢', isComp: true },
+            f_lensvery: { kw: '렌즈베리', hex: '%23eab308', icon: '🟡', isComp: true },
             f_lenstown: { kw: '렌즈타운', hex: '%23dc2626', icon: '🔴', isComp: true },
+            f_olive_shop: { kw: '올리브영 안경', hex: '%230f766e', icon: '🌿', isAnchor: true },
             f_olive: { kw: '올리브영', hex: '%2316a34a', icon: '🟩', isAnchor: true },
             f_daiso: { kw: '다이소', hex: '%23e11d48', icon: '🟥', isAnchor: true },
             f_davich: { kw: '다비치안경', hex: '%231d4ed8', icon: '🟦', isOther: true }
@@ -189,7 +198,7 @@
         function clearOverlays() {
             mapMarkers.forEach(m => m.setMap(null)); mapMarkers = [];
             goldenZoneMarkers.forEach(m => m.setMap(null)); goldenZoneMarkers = [];
-            if(mainRouteLine) { mainRouteLine.setMap(null); mainRouteLine = null; }
+            routeZoneCircles.forEach(c => c.setMap(null)); routeZoneCircles = []; // 하이라이트 영역 초기화
             placeCache.clear();
         }
 
@@ -209,14 +218,11 @@
                         data.forEach(place => {
                             let shouldCount = processPlaceAndDrawMarker(place, key);
                             if (shouldCount) {
-                                // 400m 이내 진짜 앵커들만 데이터에 담기 (골목상권 배제)
                                 let dist = getDistanceMeters(centerForCalc.getLat(), centerForCalc.getLng(), place.y, place.x);
                                 if(dist <= 400) {
-                                    if(key === 'f_olive') anchorData.olives.push(place);
+                                    if(key === 'f_olive' || key === 'f_olive_shop') anchorData.olives.push(place);
                                     if(key === 'f_daiso') anchorData.daisos.push(place);
                                     if(BRAND_CONFIG[key].isComp) anchorData.comps.push(place);
-                                    
-                                    // 메인 동선 그리기를 위한 유효 노드 배열에 추가 (다비치는 제외)
                                     if(key !== 'f_davich') anchorData.allValidNodes.push(place);
                                 }
                             }
@@ -226,7 +232,6 @@
                 }, { bounds: bounds, size: 15 });
             }));
 
-            // 지하철역도 400m 이내만 수집
             searchPromises.push(new Promise(resolve => {
                 ps.keywordSearch("지하철역", function(data, status) {
                     if (status === kakao.maps.services.Status.OK) {
@@ -244,10 +249,9 @@
             });
         }
 
-        // 3m 정밀 필터링 및 지도에 마커 그리기 로직 (그대로 유지)
         function processPlaceAndDrawMarker(place, key) {
             let isDuplicate = false;
-            let skipDeduplication = ['f_daiso', 'f_olive'].includes(key);
+            let skipDeduplication = ['f_daiso', 'f_olive', 'f_olive_shop'].includes(key);
 
             if (!skipDeduplication) {
                 placeCache.forEach((existingItem) => {
@@ -275,7 +279,6 @@
             return !isDuplicate;
         }
 
-        // 🏆 상권 체급 판독 및 메인 동선 형광펜 그리기
         function evaluateAndDrawGrade(anchorData, centerObj) {
             let olyCount = anchorData.olives.length;
             let daiCount = anchorData.daisos.length;
@@ -288,7 +291,6 @@
             let gradeBadge = document.getElementById('gradeBadge');
             let grade = 'C';
             
-            // 다비치는 제외하고, 올영 다점포 및 경쟁사/역세권 기준으로 판독
             if ((olyCount >= 2 && compCount >= 3 && subCount >= 1) || (olyCount >= 3)) {
                 grade = 'A';
                 gradeBadge.className = "mb-4 text-center py-3 rounded-xl bg-pink-100 border-2 border-pink-500 text-pink-700 font-extrabold text-lg shadow-md";
@@ -303,38 +305,37 @@
                 gradeBadge.innerHTML = "🌱 C급 잠재 상권 (동네/항아리)";
             }
 
-            // A급, B급일 경우 400m 내 핵심 앵커들을 이어 '메인 동선 형광펜' 긋기
+            // 어색한 직선 대신, 거리를 따라 번지는 '황금빛 상권 영역(Zone)' 시각화!
             if (grade !== 'C' && anchorData.allValidNodes.length > 2) {
                 let pathArr = [];
-                // 시작점: 지하철역이 있으면 역부터, 없으면 첫번째 노드부터
                 let startNode = anchorData.stations.length > 0 ? anchorData.stations[0] : anchorData.allValidNodes[0];
                 let unvisited = anchorData.allValidNodes.filter(n => n.id !== startNode.id);
                 let curr = startNode;
                 
                 pathArr.push(new kakao.maps.LatLng(curr.y, curr.x));
 
-                // 가장 가까운 노드를 찾아가며 선을 이어줌 (자연스러운 거리 형성)
                 while(unvisited.length > 0) {
                     unvisited.sort((a,b) => getDistanceMeters(curr.y, curr.x, a.y, a.x) - getDistanceMeters(curr.y, curr.x, b.y, b.x));
                     curr = unvisited.shift();
-                    // 너무 멀리 떨어진 튀는 값(200m 이상 이격)은 선에서 제외
                     let distCheck = getDistanceMeters(pathArr[pathArr.length-1].getLat(), pathArr[pathArr.length-1].getLng(), curr.y, curr.x);
                     if(distCheck < 250) {
                         pathArr.push(new kakao.maps.LatLng(curr.y, curr.x));
                     }
                 }
 
-                // 형광펜 스타일 (A급은 두꺼운 핑크, B급은 파란색)
-                mainRouteLine = new kakao.maps.Polyline({
-                    path: pathArr,
-                    strokeWeight: grade === 'A' ? 12 : 8,
-                    strokeColor: grade === 'A' ? '#ec4899' : '#3b82f6',
-                    strokeOpacity: 0.5,
-                    strokeStyle: 'solid'
+                // 🎯 앵커들을 잇는 50m 반경의 블록들을 겹쳐 그려서 '거리 전체'를 하이라이트 합니다.
+                pathArr.forEach(latlng => {
+                    let circle = new kakao.maps.Circle({
+                        center: latlng,
+                        radius: 60, // 60m 반경의 상권 영역
+                        strokeWeight: 0, 
+                        fillColor: grade === 'A' ? '#ec4899' : '#3b82f6',
+                        fillOpacity: 0.25 // 은은하게 겹치게 만듦
+                    });
+                    circle.setMap(map);
+                    routeZoneCircles.push(circle);
                 });
-                mainRouteLine.setMap(map);
                 
-                // 골든존 1, 2순위 핀포인트 마커 찍기 (선 위의 가장 핵심 위치)
                 if(pathArr.length >= 2) {
                     drawRankMarker(pathArr[Math.floor(pathArr.length/2)], '👑 1순위 상권목', 'rank-1-marker');
                     if(pathArr.length >= 4) {
@@ -342,11 +343,10 @@
                     }
                 }
             } else if(grade === 'C' && anchorData.allValidNodes.length > 0) {
-                // C급은 핀만 하나 찍어줌
                 drawRankMarker(new kakao.maps.LatLng(anchorData.allValidNodes[0].y, anchorData.allValidNodes[0].x), '💡 핵심 타겟 지점', 'rank-2-marker');
             }
 
-            document.getElementById('statusMessage').innerText = "✅ 상권 스캔 완료! (등급 및 동선 분석 적용됨)";
+            document.getElementById('statusMessage').innerText = "✅ 상권 스캔 완료! (등급 및 핵심 구역 분석 적용됨)";
             drawRadarChart(compCount, (olyCount + daiCount));
         }
 
