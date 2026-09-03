@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>렌즈미 상권 분석 대시보드 (원클릭 타겟팅 & 투트랙 스캔)</title>
+    <title>렌즈미 상권 분석 대시보드 (하이브리드 엔진 & 무게중심 코어)</title>
     <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
@@ -20,36 +20,40 @@
         .chk-yellow { accent-color: #eab308; } .chk-pink { accent-color: #f472b6; } 
         .chk-blue { accent-color: #3b82f6; } .chk-emerald { accent-color: #059669; }
 
-        /* A급 메인 코어 소형 마커 */
+        /* A급 메인 코어 (무게중심 사거리) 소형 마커 */
         .core-marker-container { position: relative; cursor: pointer; }
-        .core-dot { width: 16px; height: 16px; background-color: #ec4899; border: 3px solid #fff; border-radius: 50%; box-shadow: 0 2px 6px rgba(0,0,0,0.4); z-index: 100; animation: pulse-core 1.5s infinite; }
-        .core-label { position: absolute; top: -24px; left: -20px; background: rgba(255,255,255,0.95); border: 1.5px solid #ec4899; color: #ec4899; font-size: 11px; font-weight: 900; padding: 2px 6px; border-radius: 6px; white-space: nowrap; box-shadow: 0 2px 4px rgba(236,72,153,0.2); pointer-events: none;}
-        @keyframes pulse-core { 0% { box-shadow: 0 0 0 0 rgba(236, 72, 153, 0.7); } 70% { box-shadow: 0 0 0 10px rgba(236, 72, 153, 0); } 100% { box-shadow: 0 0 0 0 rgba(236, 72, 153, 0); } }
+        .core-dot { width: 18px; height: 18px; background-color: #ec4899; border: 3px solid #fff; border-radius: 50%; box-shadow: 0 2px 8px rgba(0,0,0,0.5); z-index: 100; animation: pulse-core 1.5s infinite; }
+        .core-label { position: absolute; top: -26px; left: -30px; background: rgba(255,255,255,0.95); border: 2px solid #ec4899; color: #ec4899; font-size: 12px; font-weight: 900; padding: 3px 8px; border-radius: 6px; white-space: nowrap; box-shadow: 0 3px 6px rgba(236,72,153,0.3); pointer-events: none;}
+        @keyframes pulse-core { 0% { box-shadow: 0 0 0 0 rgba(236, 72, 153, 0.7); } 70% { box-shadow: 0 0 0 12px rgba(236, 72, 153, 0); } 100% { box-shadow: 0 0 0 0 rgba(236, 72, 153, 0); } }
         
         /* 마우스 오버 말풍선(Tooltip) 스타일 */
-        .store-tooltip { background: #ffffff; border: 2px solid #334155; border-radius: 8px; padding: 6px 12px; font-size: 13px; font-weight: 800; color: #0f172a; box-shadow: 0 4px 10px rgba(0,0,0,0.2); white-space: nowrap; transform: translateY(-10px); }
+        .store-tooltip { background: #ffffff; border: 2px solid #334155; border-radius: 8px; padding: 6px 12px; font-size: 13px; font-weight: 800; color: #0f172a; box-shadow: 0 4px 10px rgba(0,0,0,0.2); white-space: nowrap; transform: translateY(-10px); z-index: 200;}
         .store-tooltip::after { content: ''; position: absolute; bottom: -6px; left: 50%; transform: translateX(-50%); border-width: 6px 6px 0; border-style: solid; border-color: #334155 transparent transparent transparent; }
+
+        /* 지도 위 둥둥 떠있는 상권 이름표 (클릭 가능) */
+        .district-nametag { background: rgba(79, 70, 229, 0.95); border: 2px solid #fff; border-radius: 20px; padding: 6px 14px; color: #fff; font-size: 13px; font-weight: 800; box-shadow: 0 4px 8px rgba(0,0,0,0.3); cursor: pointer; transition: all 0.2s ease; white-space: nowrap; z-index: 90; backdrop-filter: blur(4px); }
+        .district-nametag:hover { background: #ec4899; transform: scale(1.05) translateY(-2px); box-shadow: 0 6px 12px rgba(236, 72, 153, 0.4); }
     </style>
 </head>
 <body class="flex flex-col md:flex-row h-screen text-slate-800">
 
     <div class="w-full md:w-1/4 bg-white border-r border-gray-200 p-6 flex flex-col shadow-lg z-20 overflow-y-auto">
         <h1 class="text-xl font-extrabold text-slate-800 border-b-4 border-indigo-500 pb-3 mb-4 flex justify-between items-center">
-            <span>🗺️ 상권 핵심 메인길 분석기</span>
-            <span class="text-xs bg-emerald-100 text-emerald-700 px-2 py-1 rounded-full font-bold">투트랙 스캔</span>
+            <span>🗺️ 스마트 상권 분석기</span>
+            <span class="text-xs bg-emerald-100 text-emerald-700 px-2 py-1 rounded-full font-bold">무게중심 코어</span>
         </h1>
         
         <div class="mb-4 bg-slate-50 p-4 rounded-xl border border-slate-200">
-            <label class="block text-sm font-extrabold text-indigo-700 mb-2">🎯 상권 검색 (자동 스캔)</label>
+            <label class="block text-sm font-extrabold text-indigo-700 mb-2">🎯 상권 검색 및 클릭</label>
             <div class="flex gap-2">
-                <input type="text" id="searchInput" placeholder="예: 의정부 행복로, 건대입구" class="w-full bg-white border border-indigo-300 px-3 py-2 rounded-lg text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500" onkeypress="if(event.key==='Enter') searchLocation()">
+                <input type="text" id="searchInput" placeholder="예: 의정부역, 부평역" class="w-full bg-white border border-indigo-300 px-3 py-2 rounded-lg text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500" onkeypress="if(event.key==='Enter') searchLocation()">
                 <button onclick="searchLocation()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-bold transition shadow-sm whitespace-nowrap">검색</button>
             </div>
-            <p class="text-xs text-slate-500 font-bold mt-2">💡 지도를 줌아웃하면 전국 매장이 보이고, 매장을 <b class="text-indigo-600">클릭</b>하면 그곳 상권을 즉시 분석합니다!</p>
+            <p class="text-xs text-slate-500 font-bold mt-2">💡 지도 위에 둥둥 뜬 <b class="text-indigo-600">상권 이름표</b>나 <b class="text-indigo-600">매장</b>을 클릭하면 즉시 메인 거리를 분석합니다.</p>
         </div>
 
         <div id="gradeBadge" class="mb-4 text-center py-3 rounded-xl bg-gray-100 border border-gray-200 text-gray-500 font-bold text-sm shadow-sm transition-all duration-300">
-            상권을 검색하거나 매장을 클릭하세요.
+            분석 대상을 선택해 주세요.
         </div>
 
         <div class="mb-2 bg-white p-4 rounded-lg border border-slate-200 shadow-sm space-y-3">
@@ -58,17 +62,17 @@
                 <input type="text" id="currentStoreInput" placeholder="비교할 기준 매장" class="w-full bg-slate-50 border border-gray-300 px-3 py-1.5 rounded-md font-semibold text-sm" oninput="updateStoreNames()">
             </div>
             <div>
-                <p class="text-xs text-slate-400 font-bold mb-1">분석 대상 상권 (목적지)</p>
+                <p class="text-xs text-slate-400 font-bold mb-1">분석 대상 상권</p>
                 <input type="text" id="targetLocationInput" value="" class="w-full bg-slate-50 border border-indigo-300 px-3 py-1.5 rounded-md font-extrabold text-indigo-600 text-base" readonly>
             </div>
             
             <div class="bg-indigo-50/80 p-3 rounded-lg border border-indigo-100 space-y-1.5 mt-2">
                 <div class="flex justify-between items-center text-xs font-bold text-slate-700">
-                    <span>⚔️ 분석 반경 내 경쟁 렌즈샵:</span>
+                    <span>⚔️ 상권 반경 내 경쟁 렌즈샵:</span>
                     <span id="comp_count" class="text-sm font-black text-pink-600">0개</span>
                 </div>
                 <div class="flex justify-between items-center text-xs font-bold text-slate-700">
-                    <span>📸 분석 반경 내 핵심 앵커(올/다):</span>
+                    <span>📸 상권 반경 내 앵커(올/다):</span>
                     <span id="anchor_count" class="text-sm font-black text-emerald-600">0개</span>
                 </div>
             </div>
@@ -83,7 +87,7 @@
 
         <div id="tab-map" class="flex-grow w-full h-full relative">
             <div id="statusMessage" class="absolute top-4 left-1/2 transform -translate-x-1/2 z-10 bg-white/95 backdrop-blur-sm px-6 py-2 rounded-full shadow-md text-sm font-bold text-slate-700 border border-slate-200 text-center transition-all">
-                🎯 지도를 움직여 매장을 스캔하고, 분석하고 싶은 매장을 클릭하세요!
+                🎯 지도를 둘러보다가 상권 이름표를 클릭해 보세요!
             </div>
 
             <div class="absolute top-16 left-4 z-10 bg-white/95 backdrop-blur-sm p-4 rounded-xl shadow-lg border border-slate-200 w-56 max-h-[80vh] overflow-y-auto hidden md:block">
@@ -120,11 +124,10 @@
         </div>
     </div>
 
-    <!-- API Keys -->
     <script type="text/javascript" src="//dapi.kakao.com/v2/maps/sdk.js?appkey=c045609510f8b75252389123f086be48&libraries=services"></script>
 
     <script>
-        // 사장님의 진짜 TMAP 열쇠
+        // 사장님의 진짜 TMAP 열쇠 유지
         const TMAP_APP_KEY = "mJJ00gscCg39Y6nR0LhUw2yzrIfr7arY65OwUZYk";
 
         let script = document.createElement('script');
@@ -151,15 +154,13 @@
         let ps = new kakao.maps.services.Places(); 
         
         let mapMarkers = [];
+        let districtOverlays = []; // 상권 이름표 배열
         let tmapRouteLine = null; 
         let tmapRouteBand = null; 
         let coreMarkerOverlay = null;
         let placeCache = new Map();
         
-        // 💡 툴팁 오버레이
-        let tooltipOverlay = new kakao.maps.CustomOverlay({
-            xAnchor: 0.5, yAnchor: 1.5, zIndex: 150
-        });
+        let tooltipOverlay = new kakao.maps.CustomOverlay({ xAnchor: 0.5, yAnchor: 1.5, zIndex: 150 });
 
         const BRAND_CONFIG = {
             f_lensme: { kw: '렌즈미', hex: '%239333ea', icon: '🟣', isComp: true },
@@ -175,7 +176,12 @@
             f_davich: { kw: '다비치안경', hex: '%231d4ed8', icon: '🟦', isOther: true }
         };
 
-        // 💡 투트랙 1: 지도를 움직이면 화면 안의 매장을 실시간으로 스캔해서 핀을 찍어줌 (줌아웃 대비용)
+        // 전역 클릭 함수 (상권 이름표용)
+        window.analyzeDistrict = function(lat, lng, name) {
+            moveToAndAnalyze(new kakao.maps.LatLng(lat, lng), name + " 상권");
+        };
+
+        // 💡 투트랙 1: 화면 이동 시 렌즈샵 스캔 + 상권 이름표(지하철역 기반) 생성
         kakao.maps.event.addListener(map, 'idle', function() {
             scanMarkersInBounds();
         });
@@ -185,8 +191,26 @@
             clearTimeout(searchTimeout);
             searchTimeout = setTimeout(() => {
                 let bounds = map.getBounds();
-                let activeKeys = Object.keys(BRAND_CONFIG).filter(key => document.getElementById(key) && document.getElementById(key).checked);
                 
+                // 상권 이름표 생성 (지하철역 등 주요 거점을 프록시로 사용)
+                districtOverlays.forEach(o => o.setMap(null));
+                districtOverlays = [];
+                ps.keywordSearch("지하철역", function(data, status) {
+                    if (status === kakao.maps.services.Status.OK) {
+                        data.forEach(place => {
+                            let overlay = new kakao.maps.CustomOverlay({
+                                position: new kakao.maps.LatLng(place.y, place.x),
+                                content: `<div class="district-nametag" onclick="analyzeDistrict(${place.y}, ${place.x}, '${place.place_name}')">📍 ${place.place_name}</div>`,
+                                xAnchor: 0.5, yAnchor: 1.5, zIndex: 90
+                            });
+                            overlay.setMap(map);
+                            districtOverlays.push(overlay);
+                        });
+                    }
+                }, { bounds: bounds, size: 10 }); // 화면 내 최대 10개 표시
+
+                // 매장 핀 실시간 생성
+                let activeKeys = Object.keys(BRAND_CONFIG).filter(key => document.getElementById(key) && document.getElementById(key).checked);
                 activeKeys.forEach(key => {
                     ps.keywordSearch(BRAND_CONFIG[key].kw, function(data, status) {
                         if (status === kakao.maps.services.Status.OK) {
@@ -194,10 +218,9 @@
                         }
                     }, { bounds: bounds, size: 15 });
                 });
-            }, 300);
+            }, 400);
         }
 
-        // 검색창 이용 시
         function searchLocation() {
             let q = document.getElementById('searchInput').value.trim();
             if(!q) return;
@@ -210,25 +233,23 @@
         }
 
         function triggerScan() { 
-            placeCache.clear(); // 체크박스 변경 시 핀을 다시 찍어야 하므로 캐시 리셋
+            placeCache.clear(); 
             mapMarkers.forEach(m => m.setMap(null)); mapMarkers = [];
             scanMarkersInBounds();
             runTradeAreaAnalysis(); 
         }
         
-        // 💡 특정 상권으로 이동하고 즉시 분석을 돌리는 만능 함수 (검색 & 클릭 공용)
         function moveToAndAnalyze(latLng, locationName) {
             searchCenter = latLng;
             map.setCenter(searchCenter);
             document.getElementById('targetLocationInput').value = locationName;
             updateStoreNames();
-            runTradeAreaAnalysis(); // 분석 엔진 가동
-            scanMarkersInBounds(); // 핀 스캔 가동
+            runTradeAreaAnalysis(); 
+            scanMarkersInBounds(); 
         }
 
         function processPlaceAndDrawMarker(place, key) {
             if (placeCache.has(place.id)) return false; 
-
             let isDuplicate = false;
             let skipDeduplication = ['f_daiso', 'f_olive', 'f_olive_shop'].includes(key);
 
@@ -251,30 +272,24 @@
             mapMarkers.push(marker);
             placeCache.set(place.id, { brand: key, rawData: place, marker: marker });
             
-            // 💡 잃어버렸던 마우스 오버 말풍선 기능 복구
             kakao.maps.event.addListener(marker, 'mouseover', function() {
                 tooltipOverlay.setContent(`<div class="store-tooltip">${place.place_name}</div>`);
                 tooltipOverlay.setPosition(marker.getPosition());
                 tooltipOverlay.setMap(map);
             });
-
             kakao.maps.event.addListener(marker, 'mouseout', function() {
                 tooltipOverlay.setMap(null);
             });
-
-            // 💡 타겟 마커 클릭 시, 그 지역 상권으로 자동 이동 & 즉시 분석 기능
             kakao.maps.event.addListener(marker, 'click', function() {
                 moveToAndAnalyze(marker.getPosition(), place.place_name);
             });
-            
             return true;
         }
 
-        // 💡 투트랙 2: 고정된 지역(searchCenter) 반경 400m 정밀 상권 분석 엔진
+        // 💡 투트랙 2: 반경 400m 정밀 상권 분석 엔진
         function runTradeAreaAnalysis() {
-            document.getElementById('statusMessage').innerText = "🔎 상권 스캔 및 A급 메인 스트리트 밴드 탐색 중...";
+            document.getElementById('statusMessage').innerText = "🔎 상권 스캔 및 하이브리드 스트리트 탐색 중...";
             
-            // 분석 영역 오버레이만 지움 (전체 핀은 지우지 않음)
             if(tmapRouteLine) { tmapRouteLine.setMap(null); tmapRouteLine = null; }
             if(tmapRouteBand) { tmapRouteBand.setMap(null); tmapRouteBand = null; } 
             if(coreMarkerOverlay) { coreMarkerOverlay.setMap(null); coreMarkerOverlay = null; }
@@ -288,18 +303,18 @@
                     if (status === kakao.maps.services.Status.OK) {
                         data.forEach(place => {
                             let dist = getDistanceMeters(searchCenter.getLat(), searchCenter.getLng(), place.y, place.x);
-                            if(dist <= 400) { // 400m 반경 안에 있는 매장만 골라서 분석
+                            if(dist <= 400) { 
                                 if(key === 'f_olive' || key === 'f_olive_shop') anchorData.olives.push(place);
                                 else if(key === 'f_daiso') anchorData.daisos.push(place);
                                 else if(BRAND_CONFIG[key].isComp) anchorData.comps.push(place);
                                 if(key !== 'f_davich') anchorData.allValidNodes.push(place);
                                 
-                                processPlaceAndDrawMarker(place, key); // 화면에 없는 경우 핀도 찍어줌
+                                processPlaceAndDrawMarker(place, key); 
                             }
                         });
                     }
                     resolve();
-                }, { location: searchCenter, radius: 400, size: 15 }); // 검색 자체를 반경 400m로 제한
+                }, { location: searchCenter, radius: 400, size: 15 });
             }));
 
             Promise.all(searchPromises).then(() => {
@@ -331,6 +346,7 @@
             }
 
             if (anchorData.allValidNodes.length > 2) {
+                // 💡 1. 무게중심 (Center of Gravity) 사거리 타겟팅 알고리즘
                 anchorData.allValidNodes.forEach(node => {
                     let score = 0;
                     anchorData.allValidNodes.forEach(other => {
@@ -339,26 +355,50 @@
                             if(d <= 150) score += (150 - d);
                         }
                     });
-                    node.densityScore = score;
+                    node.densityScore = score || 1; 
                 });
                 
-                let sortedNodes = [...anchorData.allValidNodes].sort((a, b) => b.densityScore - a.densityScore);
-                let coreNode1 = sortedNodes[0];
+                let sumLat = 0, sumLng = 0, weightSum = 0;
+                anchorData.allValidNodes.forEach(n => {
+                    sumLat += parseFloat(n.y) * n.densityScore;
+                    sumLng += parseFloat(n.x) * n.densityScore;
+                    weightSum += n.densityScore;
+                });
                 
-                // 작고 세련된 A급 코어 핀셋 마커
-                drawCoreMarker(new kakao.maps.LatLng(coreNode1.y, coreNode1.x));
+                // 편향되지 않은 진짜 '사거리/길목' 중앙 좌표
+                let cgLat = sumLat / weightSum;
+                let cgLng = sumLng / weightSum;
+                let cgLatLng = new kakao.maps.LatLng(cgLat, cgLng);
+                
+                drawCoreMarker(cgLatLng);
 
-                // A급 메인 라인 연결 
-                let coreNode2 = sortedNodes.find(n => getDistanceMeters(coreNode1.y, coreNode1.x, n.y, n.x) > 80);
-                if (!coreNode2) coreNode2 = sortedNodes[sortedNodes.length - 1]; 
+                // 💡 2. 하이브리드 스트리트 엔진 (항아리형 vs 선형 자동 판단)
+                let sortedNodes = [...anchorData.allValidNodes].sort((a,b) => b.densityScore - a.densityScore);
+                
+                // 무게중심에서 가장 먼 노드 (상권의 한쪽 끝)
+                let end1 = [...anchorData.allValidNodes].sort((a,b) => 
+                    getDistanceMeters(cgLat, cgLng, b.y, b.x) - getDistanceMeters(cgLat, cgLng, a.y, a.x)
+                )[0];
+                
+                // 상권의 반대쪽 끝
+                let end2 = [...anchorData.allValidNodes].sort((a,b) => 
+                    getDistanceMeters(end1.y, end1.x, b.y, b.x) - getDistanceMeters(end1.y, end1.x, a.y, a.x)
+                )[0];
 
-                if (coreNode2) {
-                    await drawTmapPedestrianRoute(
-                        new kakao.maps.LatLng(coreNode1.y, coreNode1.x),
-                        new kakao.maps.LatLng(coreNode2.y, coreNode2.x),
-                        grade
-                    );
+                let maxSpan = getDistanceMeters(end1.y, end1.x, end2.y, end2.x);
+
+                let startLatLng, targetLatLng;
+                if (maxSpan > 250) {
+                    // 선형 상권: 상권 양쪽 끝 앵커를 연결하여 길게 뻗은 대로를 칠함
+                    startLatLng = new kakao.maps.LatLng(end1.y, end1.x);
+                    targetLatLng = new kakao.maps.LatLng(end2.y, end2.x);
+                } else {
+                    // 항아리 상권: 무게중심(사거리)에서 가장 밀집된 외곽 노드로 짧고 굵게 연결
+                    startLatLng = cgLatLng;
+                    targetLatLng = new kakao.maps.LatLng(sortedNodes[1].y, sortedNodes[1].x);
                 }
+
+                await drawTmapPedestrianRoute(startLatLng, targetLatLng, grade);
             }
             
             document.getElementById('statusMessage').innerText = "✅ 클릭한 상권의 분석이 완료되었습니다!";
@@ -370,10 +410,7 @@
                 const url = "https://apis.openapi.sk.com/tmap/routes/pedestrian?version=1&format=json";
                 const response = await fetch(url, {
                     method: 'POST',
-                    headers: {
-                        "appKey": TMAP_APP_KEY,
-                        "Content-Type": "application/json"
-                    },
+                    headers: { "appKey": TMAP_APP_KEY, "Content-Type": "application/json" },
                     body: JSON.stringify({
                         startX: startLatLng.getLng(), startY: startLatLng.getLat(),
                         endX: endLatLng.getLng(), endY: endLatLng.getLat(),
@@ -382,9 +419,7 @@
                     })
                 });
 
-                if(!response.ok) {
-                    throw new Error('TMAP Request Failed');
-                }
+                if(!response.ok) throw new Error('TMAP Request Failed');
                 const data = await response.json();
                 
                 let linePath = [];
@@ -396,42 +431,22 @@
                     }
                 });
 
-                // 스트리트 밴드(두꺼운 형광펜)
+                // 스트리트 밴드 (두꺼운 형광펜 효과)
                 tmapRouteBand = new kakao.maps.Polyline({
-                    path: linePath,
-                    strokeWeight: 45, 
-                    strokeColor: grade === 'A' ? '#fbcfe8' : '#bfdbfe', 
-                    strokeOpacity: 0.6,
-                    strokeStyle: 'solid',
-                    strokeLinecap: 'round',
-                    strokeLinejoin: 'round'
+                    path: linePath, strokeWeight: 45, strokeColor: grade === 'A' ? '#fbcfe8' : '#bfdbfe', strokeOpacity: 0.6, strokeStyle: 'solid', strokeLinecap: 'round', strokeLinejoin: 'round'
                 });
                 tmapRouteBand.setMap(map);
 
-                // 실제 걷는 메인 스트리트 진한 선
+                // 뼈대 중앙 선
                 tmapRouteLine = new kakao.maps.Polyline({
-                    path: linePath,
-                    strokeWeight: 10,
-                    strokeColor: grade === 'A' ? '#ec4899' : '#3b82f6',
-                    strokeOpacity: 0.9,
-                    strokeStyle: 'solid',
-                    strokeLinecap: 'round',
-                    strokeLinejoin: 'round'
+                    path: linePath, strokeWeight: 10, strokeColor: grade === 'A' ? '#ec4899' : '#3b82f6', strokeOpacity: 0.9, strokeStyle: 'solid', strokeLinecap: 'round', strokeLinejoin: 'round'
                 });
                 tmapRouteLine.setMap(map);
 
             } catch(e) {
-                // TMAP 에러 시 직선
-                tmapRouteBand = new kakao.maps.Polyline({
-                    path: [startLatLng, endLatLng],
-                    strokeWeight: 45, strokeColor: '#e2e8f0', strokeOpacity: 0.6
-                });
+                tmapRouteBand = new kakao.maps.Polyline({ path: [startLatLng, endLatLng], strokeWeight: 45, strokeColor: '#e2e8f0', strokeOpacity: 0.6 });
                 tmapRouteBand.setMap(map);
-
-                tmapRouteLine = new kakao.maps.Polyline({
-                    path: [startLatLng, endLatLng],
-                    strokeWeight: 8, strokeColor: '#94a3b8', strokeOpacity: 0.9
-                });
+                tmapRouteLine = new kakao.maps.Polyline({ path: [startLatLng, endLatLng], strokeWeight: 8, strokeColor: '#94a3b8', strokeOpacity: 0.9 });
                 tmapRouteLine.setMap(map);
             }
         }
@@ -439,7 +454,7 @@
         function drawCoreMarker(latlng) {
             coreMarkerOverlay = new kakao.maps.CustomOverlay({
                 position: latlng,
-                content: `<div class="core-marker-container"><div class="core-dot"></div><div class="core-label">🎯 A급 코어</div></div>`,
+                content: `<div class="core-marker-container"><div class="core-dot"></div><div class="core-label">🎯 실제 중심 사거리</div></div>`,
                 xAnchor: 0.5, yAnchor: 0.5
             });
             coreMarkerOverlay.setMap(map);
@@ -477,7 +492,7 @@
             Plotly.newPlot('radarChart', data, { polar: { radialaxis: {visible: true, range: [0, 100]} }, margin: {t:30, b:30}, legend: {orientation: "h", y: -0.2} }, {responsive: true, displayModeBar: false});
         }
 
-        // 초기 시작
+        // 초기 시작 시 기본 로드
         scanMarkersInBounds();
     </script>
 </body>
