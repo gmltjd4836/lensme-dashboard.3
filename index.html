@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>렌즈미 상권 분석 대시보드 (V4.8 - 랭킹 스팟 & 하이브리드 엔진)</title>
+    <title>렌즈미 상권 분석 대시보드 (V4.9 - 즉시 랭킹 & 하이브리드 엔진)</title>
     <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
@@ -27,12 +27,12 @@
         /* 상권 다각형 위에 예쁘게 뜨는 이름표 */
         .poly-nametag { background: rgba(255, 255, 255, 0.95); border: 2px solid #be185d; border-radius: 8px; padding: 4px 10px; color: #be185d; font-size: 13px; font-weight: 900; box-shadow: 0 4px 8px rgba(0,0,0,0.2); cursor: pointer; white-space: nowrap; z-index: 80; pointer-events: none; margin-top:-15px; margin-left: -50%; }
         
-        /* 💡 V4.8 랭킹 마커 스타일 */
+        /* 💡 V4.9 깔끔한 랭킹 마커 스타일 */
         .rank-badge { position: absolute; top: -35px; left: -30px; background: rgba(255,255,255,0.95); border-radius: 8px; padding: 4px 10px; font-size: 14px; font-weight: 900; box-shadow: 0 4px 10px rgba(0,0,0,0.3); white-space: nowrap; pointer-events: none; z-index: 300; }
         .rank-1 { border: 2px solid #eab308; color: #b45309; }
         .rank-2 { border: 2px solid #94a3b8; color: #334155; }
         .rank-3 { border: 2px solid #b45309; color: #78350f; }
-        .rank-dot { width: 18px; height: 18px; border-radius: 50%; border: 3px solid #fff; box-shadow: 0 2px 6px rgba(0,0,0,0.4); margin-left: -9px; margin-top: -9px; position: absolute; z-index: 290; }
+        .rank-dot { width: 22px; height: 22px; border-radius: 50%; border: 3px solid #fff; box-shadow: 0 2px 6px rgba(0,0,0,0.4); margin-left: -11px; margin-top: -11px; position: absolute; z-index: 290; }
         .rank-dot-1 { background: #eab308; animation: pulse-core 1.5s infinite;}
         .rank-dot-2 { background: #94a3b8; }
         .rank-dot-3 { background: #b45309; }
@@ -51,7 +51,7 @@
     <div class="w-full md:w-1/4 bg-white border-r border-gray-200 p-6 flex flex-col shadow-lg z-20 overflow-y-auto">
         <h1 class="text-xl font-extrabold text-slate-800 border-b-4 border-indigo-500 pb-3 mb-4 flex justify-between items-center">
             <span>🗺️ 전국구 상권 관제탑</span>
-            <span class="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded-full font-bold">V4.8 Final</span>
+            <span class="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded-full font-bold">V4.9</span>
         </h1>
         
         <div class="mb-4 bg-slate-50 p-4 rounded-xl border border-slate-200">
@@ -70,7 +70,7 @@
                 <button onclick="cancelDrawing()" id="btnCancelDraw" class="hidden flex-1 bg-slate-500 hover:bg-slate-600 text-white px-3 py-2 rounded-lg text-sm font-bold transition shadow-sm">취소</button>
             </div>
             <div id="savedPolygonTree" class="flex-grow overflow-y-auto space-y-1 bg-white p-2 rounded border border-rose-100 shadow-inner text-sm">
-                <!-- 폴더 트리 렌더링 -->
+                <!-- 폴더 트리 렌더링 영역 -->
             </div>
         </div>
 
@@ -104,10 +104,10 @@
 
         <div id="tab-map" class="flex-grow w-full h-full relative">
             <div id="statusMessage" class="absolute top-4 left-1/2 transform -translate-x-1/2 z-10 bg-white/95 backdrop-blur-sm px-6 py-2 rounded-full shadow-md text-sm font-bold text-slate-700 border border-slate-200 text-center transition-all">
-                🎯 지도를 탐색 중입니다. (영토를 지정해야 입지 순위가 표시됩니다.)
+                🎯 지도를 자유롭게 탐색하세요. 영토를 그리면 입지 순위가 즉시 표시됩니다.
             </div>
 
-            <!-- 브랜드 필터 패널 (수량 카운터 연동) -->
+            <!-- 브랜드 필터 패널 -->
             <div class="absolute top-16 left-4 z-10 bg-white/95 backdrop-blur-sm p-4 rounded-xl shadow-lg border border-slate-200 w-64 max-h-[80vh] overflow-y-auto hidden md:block">
                 <p class="text-xs font-extrabold text-slate-800 mb-2.5 border-b pb-1 flex justify-between"><span>🎯 렌즈 전문 브랜드</span><span class="text-slate-400">전국 누적</span></p>
                 <div class="space-y-2 mb-4">
@@ -171,7 +171,7 @@
         let geocoder = new kakao.maps.services.Geocoder();
         
         let mapMarkers = [];
-        let rankOverlays = []; // 🥇🥈🥉 마커 저장 배열
+        let rankOverlays = []; // 🥇🥈🥉 랭킹 마커 저장
         let placeCache = new Map();
         
         let tooltipOverlay = new kakao.maps.CustomOverlay({ xAnchor: 0.5, yAnchor: 1.5, zIndex: 150 });
@@ -185,26 +185,45 @@
             f_lensvery: { kw: '렌즈베리', hex: '%23eab308', isComp: true },
             f_lenstown: { kw: '렌즈타운', hex: '%23dc2626', isComp: true }, 
             f_olive_hapa: { kw: '올리브영 하파크리스틴', hex: '%230f766e', isAnchor: true }, 
-            f_olive: { kw: '올리브영', hex: '%2316a34a', isAnchor: true },
+            f_olive: { 매장명: '올리브영', kw: '올리브영', hex: '%2316a34a', isAnchor: true },
             f_daiso: { kw: '다이소', hex: '%23e11d48', isAnchor: true },
             f_davich: { kw: '다비치안경', hex: '%231d4ed8', isOther: true }
         };
 
+        // 그리기 관리자 세팅
         let drawingManager = new kakao.maps.drawing.DrawingManager({
             map: map, drawingMode: [kakao.maps.drawing.OverlayType.POLYGON],
             guideTooltip: ['그리기 시작: 클릭', '완료: 더블클릭'],
             polygonOptions: { draggable: false, removable: false, editable: true, strokeColor: '#be185d', strokeWeight: 3, fillColor: '#f43f5e', fillOpacity: 0.2 }
         });
 
-        let savedPolygons = JSON.parse(localStorage.getItem('lensmePolygonsV4_8') || '[]');
+        let savedPolygons = JSON.parse(localStorage.getItem('lensmePolygonsV4_9') || '[]');
         let activePolygonPath = null; 
         let activePolygonId = null;
         let renderedPolygons = {}; 
         let renderedNametags = {};
         let isDrawingMode = false;
+        
+        let tempDrawnPath = null; // 저장 전 임시 분석용 다각형 경로
+
+        // 💡 [핵심 V4.9] 다각형 그리기가 완료(더블클릭)되는 순간, 즉시 서버 통신하여 랭킹 분석 실행
+        drawingManager.addListener('drawend', function(data) {
+            if (data.overlayType === kakao.maps.drawing.OverlayType.POLYGON) {
+                tempDrawnPath = data.target.getPath();
+                
+                document.getElementById('btnStartDraw').classList.add('hidden');
+                document.getElementById('btnSaveDraw').classList.remove('hidden');
+                document.getElementById('btnCancelDraw').classList.remove('hidden');
+                
+                // 저장 안 해도 즉시 다이렉트 분석 쏴버림!
+                runDirectDeepScan(tempDrawnPath);
+            }
+        });
 
         function startDrawing() {
             isDrawingMode = true;
+            tempDrawnPath = null;
+            clearActivePolygon(); // 기존 선택 해제
             document.getElementById('btnStartDraw').classList.add('hidden');
             document.getElementById('btnSaveDraw').classList.remove('hidden');
             document.getElementById('btnCancelDraw').classList.remove('hidden');
@@ -214,27 +233,27 @@
 
         function cancelDrawing() {
             isDrawingMode = false;
-            drawingManager.cancel();
+            tempDrawnPath = null;
+            drawingManager.clear(); // 그려진 객체 삭제
+            clearRankMarkers(); // 랭킹 마커도 즉시 삭제
+            
             document.getElementById('btnStartDraw').classList.remove('hidden');
             document.getElementById('btnSaveDraw').classList.add('hidden');
             document.getElementById('btnCancelDraw').classList.add('hidden');
-            document.getElementById('statusMessage').innerText = "지도를 탐색 중입니다.";
+            document.getElementById('statusMessage').innerText = "지도를 자유롭게 탐색하세요.";
         }
 
         function saveDrawing() {
-            let data = drawingManager.getData();
-            if (data[kakao.maps.drawing.OverlayType.POLYGON].length === 0) {
-                alert("그려진 다각형이 없습니다."); return;
-            }
-            let coords = data[kakao.maps.drawing.OverlayType.POLYGON][0].points;
-            let name = prompt("이 상권 영토의 이름을 입력하세요:", "새 상권");
+            if (!tempDrawnPath) { alert("그려진 다각형이 없습니다."); return; }
             
+            let name = prompt("이 상권 영토의 이름을 입력하세요:", "새 상권");
             if (name) {
                 let sumLat = 0, sumLng = 0;
-                coords.forEach(p => { sumLat += p.y; sumLng += p.x; });
-                let centerLat = sumLat / coords.length;
-                let centerLng = sumLng / coords.length;
+                tempDrawnPath.forEach(p => { sumLat += p.getLat(); sumLng += p.getLng(); });
+                let centerLat = sumLat / tempDrawnPath.length;
+                let centerLng = sumLng / tempDrawnPath.length;
 
+                // 시/구/동 주소 자동 추출 후 저장
                 geocoder.coord2RegionCode(centerLng, centerLat, function(result, status) {
                     let si = "기타", gu = "기타", dong = "기타";
                     if (status === kakao.maps.services.Status.OK) {
@@ -244,20 +263,28 @@
                         dong = addr.region_3depth_name;
                     }
                     
+                    // JSON 직렬화를 위해 x,y 좌표 배열로 변환
+                    let coords = tempDrawnPath.map(p => ({ x: p.getLng(), y: p.getLat() }));
+                    
                     let id = 'poly_' + Date.now();
                     savedPolygons.push({ id: id, name: name, path: coords, si: si, gu: gu, dong: dong, centerLat: centerLat, centerLng: centerLng });
-                    localStorage.setItem('lensmePolygonsV4_8', JSON.stringify(savedPolygons));
+                    localStorage.setItem('lensmePolygonsV4_9', JSON.stringify(savedPolygons));
                     
                     drawingManager.clear();
-                    cancelDrawing();
+                    isDrawingMode = false;
+                    document.getElementById('btnStartDraw').classList.remove('hidden');
+                    document.getElementById('btnSaveDraw').classList.add('hidden');
+                    document.getElementById('btnCancelDraw').classList.add('hidden');
+                    
                     renderPolygonTree();
-                    selectSavedPolygon(id); 
+                    selectSavedPolygon(id); // 저장된 영토 바로 활성화
                 });
             } else {
-                drawingManager.clear(); cancelDrawing();
+                cancelDrawing();
             }
         }
 
+        // 트리형 폴더 렌더링
         function renderPolygonTree() {
             let treeEl = document.getElementById('savedPolygonTree');
             treeEl.innerHTML = '';
@@ -327,7 +354,7 @@
         function deletePolygon(id) {
             if(!confirm("이 영토를 삭제하시겠습니까?")) return;
             savedPolygons = savedPolygons.filter(p => p.id !== id);
-            localStorage.setItem('lensmePolygonsV4_8', JSON.stringify(savedPolygons));
+            localStorage.setItem('lensmePolygonsV4_9', JSON.stringify(savedPolygons));
             if(activePolygonId === id) clearActivePolygon();
             renderPolygonTree();
         }
@@ -352,12 +379,13 @@
             Object.values(renderedNametags).forEach(n => n.setZIndex(80));
             renderedNametags[id].setZIndex(90);
 
-            runTradeAreaAnalysis(); 
+            runDirectDeepScan(activePolygonPath); 
         }
 
         function clearActivePolygon() {
             activePolygonId = null;
             activePolygonPath = null;
+            tempDrawnPath = null;
             document.getElementById('targetLocationInput').innerText = "선택 없음 (자유 탐색)";
             document.getElementById('btnClearPolygon').classList.add('hidden');
             
@@ -365,7 +393,13 @@
             document.getElementById('anchor_count').innerText = "-개";
 
             Object.values(renderedPolygons).forEach(p => p.setOptions({ fillColor: '#f43f5e', fillOpacity: 0.1, strokeWeight: 2 }));
+            clearRankMarkers(); // 자유 탐색 모드 전환 시 마커 싹 지움
             triggerScan();
+        }
+
+        function clearRankMarkers() {
+            rankOverlays.forEach(o => o.setMap(null)); 
+            rankOverlays = [];
         }
 
         function isPointInPolygon(lat, lng, polygonPath) {
@@ -414,11 +448,9 @@
         }
 
         function triggerScan() { 
-            // 맵 마커는 지우고 다시 그립니다.
             placeCache.clear(); 
             mapMarkers.forEach(m => m.setMap(null)); mapMarkers = [];
             scanMarkersInBounds();
-            runTradeAreaAnalysis(); 
         }
 
         function processPlaceAndDrawMarker(place, key) {
@@ -455,89 +487,127 @@
             return true;
         }
 
-        // 💡 V4.8 하이브리드 엔진 & 랭킹 마커 전용 로직
-        function runTradeAreaAnalysis() {
-            // 랭킹 마커 및 툴팁 초기화
-            rankOverlays.forEach(o => o.setMap(null)); 
-            rankOverlays = [];
-            tooltipOverlay.setMap(null);
-
-            // 다각형이 활성화되지 않았다면 분석 중단 (마커만 놔둠)
-            if (!activePolygonPath) {
-                document.getElementById('statusMessage').innerText = "🎯 지도를 탐색 중입니다. (영토를 지정해야 입지 순위가 표시됩니다.)";
-                return; 
-            }
-
-            document.getElementById('statusMessage').innerText = "🔎 영토 내부 가두리 정밀 분석 중 (3단계 하이브리드 엔진)...";
+        // 💡 [핵심 V4.9] 화면 15개 제한 박살! 다각형 반경으로 API를 다이렉트 딥스캔하여 진짜 데이터를 강제로 가져옵니다.
+        function runDirectDeepScan(targetPath) {
+            clearRankMarkers();
+            document.getElementById('statusMessage').innerText = "🔎 [딥 스캔] 다각형 내부 상업 시설을 직접 수집하여 입지 순위를 계산 중입니다...";
+            
+            let bounds = new kakao.maps.LatLngBounds();
+            targetPath.forEach(p => bounds.extend(p));
             
             let activeKeys = Object.keys(BRAND_CONFIG).filter(key => document.getElementById(key) && document.getElementById(key).checked);
-            let anchorData = { olives: [], daisos: [], comps: [], allValidNodes: [] };
+            
+            let fetchPromises = [];
+            let allScannedNodes = [];
+            let targetStats = { comp: 0, anchor: 0 };
 
-            // 영토 내 핀 필터링
-            placeCache.forEach((item) => {
-                let place = item.rawData;
-                let key = item.brand;
-                if (activeKeys.includes(key)) {
-                    if (isPointInPolygon(parseFloat(place.y), parseFloat(place.x), activePolygonPath)) {
-                        if(key === 'f_olive' || key === 'f_olive_hapa') anchorData.olives.push(place);
-                        else if(key === 'f_daiso') anchorData.daisos.push(place);
-                        else if(BRAND_CONFIG[key].isComp) anchorData.comps.push(place);
-                        if(key !== 'f_davich') anchorData.allValidNodes.push(place);
-                    }
-                }
+            // 1. 타겟 브랜드(올영, 렌즈 등) 다이렉트 검색 요청
+            activeKeys.forEach(key => {
+                fetchPromises.push(new Promise(resolve => {
+                    ps.keywordSearch(BRAND_CONFIG[key].kw, function(data, status) {
+                        if (status === kakao.maps.services.Status.OK) {
+                            data.forEach(place => {
+                                if (isPointInPolygon(parseFloat(place.y), parseFloat(place.x), targetPath)) {
+                                    place.isTarget = true;
+                                    allScannedNodes.push(place);
+                                    if(BRAND_CONFIG[key].isComp) targetStats.comp++;
+                                    else if(BRAND_CONFIG[key].isAnchor) targetStats.anchor++;
+                                    
+                                    // 화면에 마커도 예쁘게 찍어줌
+                                    processPlaceAndDrawMarker(place, key);
+                                }
+                            });
+                        }
+                        resolve();
+                    }, { bounds: bounds, size: 15 });
+                }));
             });
 
-            // 카운트 UI 업데이트
-            document.getElementById('comp_count').innerText = anchorData.comps.length + '개';
-            document.getElementById('anchor_count').innerText = (anchorData.olives.length + anchorData.daisos.length) + '개';
-            drawRadarChart(anchorData.comps.length, (anchorData.olives.length + anchorData.daisos.length));
-
-            // [1단계] 타겟 매장이 3개 이상이면 바로 랭킹 산출
-            if (anchorData.allValidNodes.length >= 3) {
-                calculateTop3Spots(anchorData.allValidNodes, "타겟 매장 밀집도 기준");
-            } 
-            // [2, 3단계] 타겟 매장이 부족하면 F&B 데이터를 호출하여 혼합 분석
-            else {
-                let bounds = new kakao.maps.LatLngBounds();
-                activePolygonPath.forEach(p => bounds.extend(p));
-
-                Promise.all([
-                    new Promise(res => ps.categorySearch('CE7', (data, st) => res(st===kakao.maps.services.Status.OK ? data : []), {bounds: bounds, size:15})),
-                    new Promise(res => ps.categorySearch('CS2', (data, st) => res(st===kakao.maps.services.Status.OK ? data : []), {bounds: bounds, size:15}))
-                ]).then(results => {
-                    let fnbNodes = [...results[0], ...results[1]].filter(place => isPointInPolygon(parseFloat(place.y), parseFloat(place.x), activePolygonPath));
-                    
-                    // 타겟 노드와 F&B 노드 병합 (중복 제거)
-                    let combinedNodes = [...anchorData.allValidNodes, ...fnbNodes];
-                    let uniqueNodes = Array.from(new Map(combinedNodes.map(item => [item.id, item])).values());
-                    
-                    if (uniqueNodes.length > 0) {
-                        calculateTop3Spots(uniqueNodes, anchorData.allValidNodes.length > 0 ? "타겟+유동인구 혼합 기준" : "유동인구(F&B) 기준");
-                    } else {
-                        document.getElementById('statusMessage').innerText = "⚠️ 해당 영토 안에는 상업 시설 데이터가 전무합니다.";
+            // 2. 카페(CE7), 편의점(CS2) 다이렉트 카테고리 검색 요청
+            fetchPromises.push(new Promise(resolve => {
+                ps.categorySearch('CE7', function(data, status) {
+                    if (status === kakao.maps.services.Status.OK) {
+                        data.forEach(place => {
+                            if (isPointInPolygon(parseFloat(place.y), parseFloat(place.x), targetPath)) {
+                                place.isFnb = true;
+                                allScannedNodes.push(place);
+                            }
+                        });
                     }
-                });
-            }
+                    resolve();
+                }, { bounds: bounds, size: 15 });
+            }));
+            fetchPromises.push(new Promise(resolve => {
+                ps.categorySearch('CS2', function(data, status) {
+                    if (status === kakao.maps.services.Status.OK) {
+                        data.forEach(place => {
+                            if (isPointInPolygon(parseFloat(place.y), parseFloat(place.x), targetPath)) {
+                                place.isFnb = true;
+                                allScannedNodes.push(place);
+                            }
+                        });
+                    }
+                    resolve();
+                }, { bounds: bounds, size: 15 });
+            }));
+
+            // 모든 검색 완료 후 하이브리드 엔진 실행
+            Promise.all(fetchPromises).then(() => {
+                // UI 카운트 업데이트
+                document.getElementById('comp_count').innerText = targetStats.comp + '개';
+                document.getElementById('anchor_count').innerText = targetStats.anchor + '개';
+                drawRadarChart(targetStats.comp, targetStats.anchor);
+
+                // 중복 데이터 병합
+                let uniqueNodes = Array.from(new Map(allScannedNodes.map(item => [item.id, item])).values());
+                let pureTargets = uniqueNodes.filter(n => n.isTarget);
+                let allNodes = uniqueNodes; 
+
+                if (pureTargets.length >= 3) {
+                    // [1단계] 타겟 매장이 3개 이상이면 퓨어 타겟만으로 랭킹 산출
+                    calculateTop3Spots(pureTargets, "타겟 매장 밀집도");
+                } 
+                else if (allNodes.length > 0) {
+                    // [2, 3단계] 타겟이 부족하거나 아예 없으면 타겟+F&B 혼합 데이터로 랭킹 산출
+                    calculateTop3Spots(allNodes, pureTargets.length > 0 ? "타겟+유동인구(F&B) 혼합" : "유동인구(F&B) 단독");
+                } 
+                else {
+                    // 사막 한가운데 (진짜 아무것도 없을 때) 기하학적 중앙 표시
+                    let sumLat = 0, sumLng = 0;
+                    targetPath.forEach(p => { sumLat += p.getLat(); sumLng += p.getLng(); });
+                    let cgLat = sumLat / targetPath.length;
+                    let cgLng = sumLng / targetPath.length;
+                    
+                    let overlay = new kakao.maps.CustomOverlay({
+                        position: new kakao.maps.LatLng(cgLat, cgLng),
+                        content: `<div class="rank-badge rank-2">📍 영토 지리적 중심</div><div class="rank-dot rank-dot-2"></div>`,
+                        xAnchor: 0.5, yAnchor: 0.5, zIndex: 300
+                    });
+                    overlay.setMap(map);
+                    rankOverlays.push(overlay);
+                    document.getElementById('statusMessage').innerText = "⚠️ 상업 시설 데이터가 전무하여 영토의 중앙을 표시합니다.";
+                }
+            });
         }
 
         // 🥇 🥈 🥉 랭킹 스팟 계산 및 마커 표시 함수
         function calculateTop3Spots(nodes, messageContext) {
-            // 1. 밀집도(Density Score) 점수 계산
+            // 밀집도 점수 계산 (주변 200m 기준)
             nodes.forEach(node => {
                 let score = 0;
                 nodes.forEach(other => {
                     if (node.id !== other.id) {
                         let d = getDistanceMeters(parseFloat(node.y), parseFloat(node.x), parseFloat(other.y), parseFloat(other.x));
-                        if (d <= 200) score += (200 - d); // 200m 이내 가중치
+                        if (d <= 200) score += (200 - d); 
                     }
                 });
                 node.densityScore = score || 1; 
             });
 
-            // 2. 점수 높은 순 정렬
+            // 점수 높은 순 정렬
             let sortedNodes = [...nodes].sort((a, b) => b.densityScore - a.densityScore);
             
-            // 3. 거리 필터링을 통해 너무 붙어있지 않은 TOP 3 추출
+            // 너무 가까운 스팟(30m 이내)은 쳐내면서 TOP 3 추출
             let topSpots = [];
             for (let i = 0; i < sortedNodes.length; i++) {
                 let candidate = sortedNodes[i];
@@ -555,7 +625,7 @@
                 if (topSpots.length >= 3) break;
             }
 
-            // 4. 지도 위에 랭킹 마커 표시
+            // 지도 위에 금, 은, 동 마커 표시
             const rankStyles = [
                 { title: '🥇 1급지', cls: 'rank-1', dotCls: 'rank-dot-1' },
                 { title: '🥈 2급지', cls: 'rank-2', dotCls: 'rank-dot-2' },
@@ -572,10 +642,9 @@
                 rankOverlays.push(overlay);
             });
 
-            document.getElementById('statusMessage').innerText = `✅ [${messageContext}] 영토 내 1, 2, 3위 입지 추출 완료!`;
+            document.getElementById('statusMessage').innerText = `✅ [${messageContext} 기준] 펜스 내 1, 2, 3위 입지 추출 완료!`;
         }
 
-        // 거리 계산 유틸리티
         function getDistanceMeters(lat1, lon1, lat2, lon2) {
             let R = 6371000; 
             let dLat = (lat2-lat1)*(Math.PI/180), dLon = (lon2-lon1)*(Math.PI/180);
@@ -583,7 +652,6 @@
             return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
         }
 
-        // 탭 전환 유틸리티
         function switchTab(tabId) {
             document.getElementById('tab-map').classList.add('hidden'); document.getElementById('tab-radar').classList.add('hidden');
             document.getElementById('btn-map').classList.remove('active'); document.getElementById('btn-radar').classList.remove('active');
@@ -592,17 +660,15 @@
             else if (tabId === 'radar') Plotly.Plots.resize(document.getElementById('radarChart')); 
         }
 
-        // 방사형 차트
         function drawRadarChart(compCount=0, anchorScoreRaw=0) {
             let compScore = Math.max(10, 100 - (compCount * 8)); 
             let anchorScore = Math.min(100, 30 + (anchorScoreRaw * 15));
             let data = [
-                { type: 'scatterpolar', r: [anchorScore+5, anchorScore, compScore, 65, anchorScore+5, anchorScore+5], theta: ['1030 유동인구', '타겟밀집', '경쟁강도', '임대료가성비', '상권활력', '1030 유동인구'], fill: 'toself', name: document.getElementById('targetLocationInput').innerText, line: {color: '#ec4899'}, fillcolor: 'rgba(236,72,153,0.4)' }
+                { type: 'scatterpolar', r: [anchorScore+5, anchorScore, compScore, 65, anchorScore+5, anchorScore+5], theta: ['1030 유동인구', '타겟밀집', '경쟁강도', '임대료가성비', '상권활력', '1030 유동인구'], fill: 'toself', name: document.getElementById('targetLocationInput').innerText.replace(' (자유 탐색)',''), line: {color: '#ec4899'}, fillcolor: 'rgba(236,72,153,0.4)' }
             ];
             Plotly.newPlot('radarChart', data, { polar: { radialaxis: {visible: true, range: [0, 100]} }, margin: {t:30, b:30}, legend: {orientation: "h", y: -0.2} }, {responsive: true, displayModeBar: false});
         }
 
-        // 초기 세팅
         renderPolygonTree();
         triggerScan();
     </script>
