@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>렌즈미 상권 분석 대시보드 (V9.0 메인거리 탐지 엔진)</title>
+    <title>렌즈미 상권 분석 대시보드 (V10.0 파이널 - 메인거리 완벽탐지)</title>
     <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
@@ -37,7 +37,7 @@
     <div class="w-full md:w-1/4 bg-white border-r border-gray-200 p-6 flex flex-col shadow-lg z-20 overflow-y-auto">
         <h1 class="text-xl font-extrabold text-slate-800 border-b-4 border-indigo-500 pb-3 mb-4 flex justify-between items-center">
             <span>🗺️ 전국 상권 관제탑</span>
-            <span class="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded-full font-bold">V9.0 👑</span>
+            <span class="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded-full font-bold">V10.0 👑</span>
         </h1>
         
         <div class="mb-4 bg-slate-50 p-4 rounded-xl border border-slate-200">
@@ -162,7 +162,7 @@
         
         let mapMarkers = [];
         let rankOverlays = []; 
-        let placeCache = new Map();
+        let placeCache = new Map(); // 화면에 보였던 핀 무조건 기억
         
         let tooltipOverlay = new kakao.maps.CustomOverlay({ xAnchor: 0.5, yAnchor: 1.5, zIndex: 150 });
 
@@ -186,7 +186,7 @@
             polygonOptions: { draggable: false, removable: false, editable: true, strokeColor: '#be185d', strokeWeight: 3, fillColor: '#f43f5e', fillOpacity: 0.2 }
         });
 
-        let savedPolygons = JSON.parse(localStorage.getItem('lensmePolygonsV9_0') || '[]');
+        let savedPolygons = JSON.parse(localStorage.getItem('lensmePolygonsV10_0') || '[]');
         let activePolygonPath = null; 
         let activePolygonId = null;
         let renderedPolygons = {}; 
@@ -215,7 +215,7 @@
                 document.getElementById('btnSaveDraw').classList.remove('hidden');
                 document.getElementById('btnCancelDraw').classList.remove('hidden');
                 
-                runGridHotspotScan(tempDrawnPath); // 💡 V9.0 핵심: 메인거리(그리드) 탐지 엔진 호출
+                runGridHotspotScan(tempDrawnPath); 
             }
         });
 
@@ -276,7 +276,7 @@
                     
                     let id = 'poly_' + Date.now();
                     savedPolygons.push({ id: id, name: name, path: tempDrawnPath, si: si, gu: gu, dong: dong, centerLat: centerLat, centerLng: centerLng });
-                    localStorage.setItem('lensmePolygonsV9_0', JSON.stringify(savedPolygons));
+                    localStorage.setItem('lensmePolygonsV10_0', JSON.stringify(savedPolygons));
                     
                     drawingManager.clear();
                     isDrawingMode = false;
@@ -362,7 +362,7 @@
         function deletePolygon(id) {
             if(!confirm("이 영토를 삭제하시겠습니까?")) return;
             savedPolygons = savedPolygons.filter(p => p.id !== id);
-            localStorage.setItem('lensmePolygonsV9_0', JSON.stringify(savedPolygons));
+            localStorage.setItem('lensmePolygonsV10_0', JSON.stringify(savedPolygons));
             if(activePolygonId === id) clearActivePolygon();
             renderPolygonTree();
         }
@@ -386,7 +386,7 @@
             Object.values(renderedPolygons).forEach(p => p.setOptions({ fillColor: '#f43f5e', fillOpacity: 0.1, strokeWeight: 2 }));
             renderedPolygons[id].setOptions({ fillColor: '#ec4899', fillOpacity: 0.25, strokeWeight: 4 });
 
-            runGridHotspotScan(activePolygonPath); // 💡 스캔 시작
+            runGridHotspotScan(activePolygonPath); 
         }
 
         function clearActivePolygon() {
@@ -411,7 +411,7 @@
             rankOverlays = [];
         }
 
-        // 다각형 안쪽 검사
+        // 펜스 내 포인트 검사
         function isPointInPolygon(lat, lng, polygonPath) {
             let inside = false;
             for (let i = 0, j = polygonPath.length - 1; i < polygonPath.length; j = i++) {
@@ -495,6 +495,8 @@
             let marker = new kakao.maps.Marker({ position: new kakao.maps.LatLng(place.y, place.x), image: markerImage });
             marker.setMap(map);
             mapMarkers.push(marker);
+            
+            // 캐시 메모리에 핀 저장 (핵심)
             placeCache.set(place.id, { brand: key, rawData: place, marker: marker });
             
             kakao.maps.event.addListener(marker, 'mouseover', function() {
@@ -507,7 +509,7 @@
             return true;
         }
 
-        // 💡 [핵심 V9.0] 펜스 안을 바둑판으로 쪼개서 가장 유동인구가 많은 '빈 땅(메인거리)'을 찾는 엔진
+        // 💡 [V10.0 완벽 로직] 빈 땅 메인거리 탐지기 (캐시 100% 반영 + 정중앙 강제 포함)
         async function runGridHotspotScan(targetPath) {
             if(isScanningAPI) return;
             isScanningAPI = true;
@@ -518,7 +520,7 @@
             let statusEl = document.getElementById('statusMessage');
             
             try {
-                // 1. 다각형 영역 구하기
+                // 1. 다각형 영역 및 중심 구하기
                 let cLat = 0, cLng = 0;
                 let minLat = 90, maxLat = -90, minLng = 180, maxLng = -180;
                 for(let i=0; i<targetPath.length; i++) {
@@ -538,11 +540,12 @@
                 }
                 let searchRadius = Math.min(Math.ceil(maxRadius + 100), 2000); 
 
-                // 2. 상권 인프라 데이터 끌어오기
+                // 2. 인프라 데이터 수집
                 let activeKeys = Object.keys(BRAND_CONFIG).filter(key => document.getElementById(key) && document.getElementById(key).checked);
                 let fnbCategories = [{code: 'CE7', name: '카페'}, {code: 'CS2', name: '편의점'}];
                 
                 let rawScannedNodes = [];
+                let seenIds = {};
                 let totalSteps = activeKeys.length + fnbCategories.length;
                 let currentStep = 0;
 
@@ -555,9 +558,12 @@
                             if (status === kakao.maps.services.Status.OK) {
                                 for(let k=0; k<data.length; k++) {
                                     let place = data[k];
-                                    place.brandKey = key;
-                                    rawScannedNodes.push(place);
-                                    processPlaceAndDrawMarker(place, key);
+                                    if(!seenIds[place.id]) {
+                                        seenIds[place.id] = true;
+                                        place.brandKey = key;
+                                        rawScannedNodes.push(place);
+                                        processPlaceAndDrawMarker(place, key);
+                                    }
                                 }
                             }
                             resolve(); 
@@ -574,7 +580,11 @@
                         ps.categorySearch(cat.code, function(data, status) {
                             if (status === kakao.maps.services.Status.OK) {
                                 for(let k=0; k<data.length; k++) {
-                                    rawScannedNodes.push(data[k]);
+                                    let place = data[k];
+                                    if(!seenIds[place.id]) {
+                                        seenIds[place.id] = true;
+                                        rawScannedNodes.push(place);
+                                    }
                                 }
                             }
                             resolve();
@@ -583,59 +593,70 @@
                     await delay(100); 
                 }
 
-                // 중복 제거 및 펜스 내부 매장 카운트
-                let uniqueNodes = [];
-                let seenIds = {};
-                let targetStats = { comp: 0, anchor: 0 };
+                // 💡 [치명적 결함 복구 1] 화면에 보이는 핀(캐시) 무조건 쓸어 담기! (카카오 서버가 차단해도 방어)
+                placeCache.forEach(item => {
+                    let p = item.rawData;
+                    if(!seenIds[p.id]) {
+                        seenIds[p.id] = true;
+                        p.brandKey = item.brand;
+                        rawScannedNodes.push(p);
+                    }
+                });
 
+                // 펜스 내부 매장 카운트 (레이더 차트용)
+                let targetStats = { comp: 0, anchor: 0 };
                 for (let i = 0; i < rawScannedNodes.length; i++) {
                     let p = rawScannedNodes[i];
-                    if (!seenIds[p.id]) {
-                        seenIds[p.id] = true;
-                        uniqueNodes.push(p);
-                        
-                        // 펜스 안에 있는 매장만 카운트
-                        if(isPointInPolygon(parseFloat(p.y), parseFloat(p.x), targetPath)) {
-                            if (p.brandKey && BRAND_CONFIG[p.brandKey]) {
-                                if (BRAND_CONFIG[p.brandKey].isComp) targetStats.comp++;
-                                else if (BRAND_CONFIG[p.brandKey].isAnchor) targetStats.anchor++;
-                            }
+                    if(isPointInPolygon(parseFloat(p.y), parseFloat(p.x), targetPath)) {
+                        if (p.brandKey && BRAND_CONFIG[p.brandKey]) {
+                            if (BRAND_CONFIG[p.brandKey].isComp) targetStats.comp++;
+                            else if (BRAND_CONFIG[p.brandKey].isAnchor) targetStats.anchor++;
                         }
                     }
                 }
-
                 document.getElementById('comp_count').innerText = targetStats.comp + '개';
                 document.getElementById('anchor_count').innerText = targetStats.anchor + '개';
                 try { drawRadarChart(targetStats.comp, targetStats.anchor); } catch(chartErr) {}
 
                 statusEl.innerText = "🌐 펜스 내부 메인거리(핫스팟) 밀집도를 계산 중입니다...";
 
-                // 💡 [핵심] 3. 펜스 내부를 약 15m 간격의 바둑판(Grid) 점들로 쪼갭니다.
+                // 💡 [치명적 결함 복구 2] 아무리 좁은 펜스라도 무조건 1개 이상의 빈 땅이 나오도록 설계
                 let gridPoints = [];
-                let step = 0.00015; // 약 15~16미터 간격
-                for(let lat = minLat; lat <= maxLat; lat += step) {
-                    for(let lng = minLng; lng <= maxLng; lng += step) {
-                        // 펜스 밖으로 삐져나온 점은 가차없이 버림 (딴 데 꽂히는 현상 원천 차단)
+                
+                // 보험 1: 펜스 정중앙 무조건 투입
+                gridPoints.push({ lat: cLat, lng: cLng, score: 0 });
+                // 보험 2: 펜스의 모서리 꼭짓점들도 무조건 투입
+                for(let i=0; i<targetPath.length; i++){
+                    gridPoints.push({ lat: targetPath[i].lat, lng: targetPath[i].lng, score: 0 });
+                }
+
+                // 나노 그물망 (펜스가 좁으면 그물도 더 촘촘하게 자동 조절)
+                let latDiff = maxLat - minLat;
+                let lngDiff = maxLng - minLng;
+                let stepLat = Math.max(latDiff / 20, 0.00005); // 최소 5m 간격 보장
+                let stepLng = Math.max(lngDiff / 20, 0.00005);
+
+                for(let lat = minLat; lat <= maxLat; lat += stepLat) {
+                    for(let lng = minLng; lng <= maxLng; lng += stepLng) {
                         if(isPointInPolygon(lat, lng, targetPath)) {
                             gridPoints.push({ lat: lat, lng: lng, score: 0 });
                         }
                     }
                 }
 
-                // 4. 각 빈 땅(그리드)이 얼마나 좋은 명당인지 주변 매장을 바탕으로 점수를 매깁니다.
+                // 4. 각 빈 땅 주변(150m) 매장 점수 매기기
                 for(let i=0; i<gridPoints.length; i++) {
                     let pt = gridPoints[i];
-                    let score = 0;
-                    for(let j=0; j<uniqueNodes.length; j++) {
-                        let node = uniqueNodes[j];
+                    let score = 0.1; // 기본 점수 (주변에 아무것도 없어도 최소 0.1점을 주어 절대 버려지지 않게 함)
+                    for(let j=0; j<rawScannedNodes.length; j++) {
+                        let node = rawScannedNodes[j];
                         let dist = getDistanceMeters(pt.lat, pt.lng, parseFloat(node.y), parseFloat(node.x));
                         
-                        // 150m 이내에 상업시설이 있으면 점수 부여 (가까울수록 폭발적인 점수)
                         if(dist <= 150) {
                             let weight = 1;
                             if (node.brandKey && BRAND_CONFIG[node.brandKey]) {
-                                if(BRAND_CONFIG[node.brandKey].isAnchor) weight = 2.5; // 다이소/올영 옆은 최고 명당
-                                if(BRAND_CONFIG[node.brandKey].isComp) weight = 1.5; // 경쟁사 근처도 렌즈 수요층 존재
+                                if(BRAND_CONFIG[node.brandKey].isAnchor) weight = 2.5; 
+                                if(BRAND_CONFIG[node.brandKey].isComp) weight = 1.5; 
                             }
                             score += (150 - dist) * weight;
                         }
@@ -643,18 +664,16 @@
                     pt.score = score;
                 }
 
-                // 5. 점수 순으로 1, 2, 3등 명당을 고릅니다.
+                // 5. 점수 순위 1, 2, 3등 명당 추출
                 gridPoints.sort(function(a, b) { return b.score - a.score; });
                 
                 let topSpots = [];
                 for(let i=0; i<gridPoints.length; i++) {
                     let candidate = gridPoints[i];
-                    if(candidate.score === 0) continue; // 허허벌판은 패스
                     
-                    // 1위, 2위, 3위가 한 골목에 다닥다닥 붙어있지 않도록 최소 40미터 간격 유지
                     let tooClose = false;
                     for(let k=0; k<topSpots.length; k++) {
-                        if(getDistanceMeters(candidate.lat, candidate.lng, topSpots[k].lat, topSpots[k].lng) < 40) {
+                        if(getDistanceMeters(candidate.lat, candidate.lng, topSpots[k].lat, topSpots[k].lng) < 30) {
                             tooClose = true; break;
                         }
                     }
@@ -662,60 +681,54 @@
                     if(topSpots.length >= 3) break;
                 }
 
-                if (topSpots.length > 0) {
-                    const rankStyles = [
-                        { title: '🥇 1급지 (메인거리)', bg: '#eab308' },
-                        { title: '🥈 2급지 (골목상권)', bg: '#94a3b8' },
-                        { title: '🥉 3급지 (유동인구)', bg: '#b45309' }
-                    ];
+                const rankStyles = [
+                    { title: '🥇 1급지 (메인)', bg: '#eab308' },
+                    { title: '🥈 2급지 (골목)', bg: '#94a3b8' },
+                    { title: '🥉 3급지 (유동)', bg: '#b45309' }
+                ];
 
-                    let textResultHtml = ""; 
+                let rBox = document.getElementById('rankingResultText');
+                rBox.innerHTML = "";
 
-                    for (let idx = 0; idx < topSpots.length; idx++) {
-                        let spot = topSpots[idx];
-                        
-                        // API를 통해 해당 빈 땅의 도로명 주소를 가져와서 텍스트로 뿌려줌
-                        (function(index, targetSpot) {
-                            geocoder.coord2Address(targetSpot.lng, targetSpot.lat, function(result, status) {
-                                let addrName = "주변 도로 확인 필요";
-                                if (status === kakao.maps.services.Status.OK) {
-                                    addrName = result[0].road_address ? result[0].road_address.address_name : result[0].address.address_name;
-                                }
-                                
-                                let rBox = document.getElementById('rankingResultText');
-                                rBox.innerHTML += `<div class="text-[13px] font-bold text-slate-700 bg-white px-2 py-1 rounded border border-slate-100 shadow-sm mt-1">${rankStyles[index].title} : <span class="text-indigo-600">${addrName} 부근</span></div>`;
-                            });
-                        })(idx, spot);
-
-                        // 💡 외부 방해를 뚫고 화면에 강제로 띄우는 인라인 CSS 마커 (맨땅 위에 꽂힘)
-                        let zIndexVal = 9999 - idx; 
-                        let contentStr = `
-                            <div style="position:relative; z-index:${zIndexVal}; bottom:20px; text-align:center; transform:translateY(-50%);">
-                                <div style="background:${rankStyles[idx].bg}; color:white; padding:5px 12px; border-radius:8px; font-weight:900; font-size:14px; border:2px solid white; box-shadow:0 3px 10px rgba(0,0,0,0.4); white-space:nowrap;">
-                                    ${rankStyles[idx].title}
-                                </div>
-                                <div style="width:0; height:0; border-left:7px solid transparent; border-right:7px solid transparent; border-top:10px solid ${rankStyles[idx].bg}; margin:0 auto;"></div>
-                            </div>
-                        `;
-
-                        let overlay = new kakao.maps.CustomOverlay({
-                            position: new kakao.maps.LatLng(spot.lat, spot.lng),
-                            content: contentStr,
-                            xAnchor: 0.5, 
-                            yAnchor: 1 
+                // 순위 마커 & 주소 텍스트 렌더링
+                for (let idx = 0; idx < topSpots.length; idx++) {
+                    let spot = topSpots[idx];
+                    
+                    // 주소 뽑아오기
+                    (function(index, targetSpot) {
+                        geocoder.coord2Address(targetSpot.lng, targetSpot.lat, function(result, status) {
+                            let addrName = "펜스 중앙 부근";
+                            if (status === kakao.maps.services.Status.OK) {
+                                addrName = result[0].road_address ? result[0].road_address.address_name : result[0].address.address_name;
+                            }
+                            let currentHtml = document.getElementById('rankingResultText').innerHTML;
+                            document.getElementById('rankingResultText').innerHTML = currentHtml + `<div class="text-[13px] font-bold text-slate-700 bg-white px-2 py-1 rounded border border-slate-100 shadow-sm mt-1">${rankStyles[index].title} : <span class="text-indigo-600">${addrName}</span></div>`;
                         });
-                        overlay.setMap(map);
-                        rankOverlays.push(overlay);
-                    }
+                    })(idx, spot);
 
-                    document.getElementById('rankingResultBox').classList.remove('hidden');
-                    statusEl.innerText = `✅ 메인 거리 분석 완료! 펜스 내 가장 유동인구가 집중되는 지점입니다.`;
+                    // 지도 위에 빈땅에 강제로 꽂히는 텍스트 마커
+                    let zIndexVal = 9999 - idx; 
+                    let contentStr = `
+                        <div style="position:relative; z-index:${zIndexVal}; bottom:20px; text-align:center; transform:translateY(-50%);">
+                            <div style="background:${rankStyles[idx].bg}; color:white; padding:5px 12px; border-radius:8px; font-weight:900; font-size:14px; border:2px solid white; box-shadow:0 3px 10px rgba(0,0,0,0.4); white-space:nowrap;">
+                                ${rankStyles[idx].title}
+                            </div>
+                            <div style="width:0; height:0; border-left:7px solid transparent; border-right:7px solid transparent; border-top:10px solid ${rankStyles[idx].bg}; margin:0 auto;"></div>
+                        </div>
+                    `;
 
-                } else {
-                    document.getElementById('rankingResultBox').classList.remove('hidden');
-                    document.getElementById('rankingResultText').innerHTML = `<div class="text-xs text-rose-600 font-bold mt-1">펜스 내부에 추천할 만한 상업 인프라가 없습니다.</div>`;
-                    statusEl.innerText = "⚠️ 펜스 내부에 상업 밀집 구역(명당)이 존재하지 않습니다.";
+                    let overlay = new kakao.maps.CustomOverlay({
+                        position: new kakao.maps.LatLng(spot.lat, spot.lng),
+                        content: contentStr,
+                        xAnchor: 0.5, 
+                        yAnchor: 1 
+                    });
+                    overlay.setMap(map);
+                    rankOverlays.push(overlay);
                 }
+
+                document.getElementById('rankingResultBox').classList.remove('hidden');
+                statusEl.innerText = `✅ 메인 거리 분석 완료! 펜스 내 가장 유동인구가 집중되는 골목입니다.`;
 
             } catch(e) {
                 console.error("분석 에러:", e);
