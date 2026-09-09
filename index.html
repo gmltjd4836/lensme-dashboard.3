@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>렌즈미 상권 분석 대시보드 (V8.1 끝판왕 - 마커 렌더링 완벽 방어)</title>
+    <title>렌즈미 상권 분석 대시보드 (V8.2 마커 강제 출력)</title>
     <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
@@ -25,11 +25,11 @@
 
         .poly-nametag { background: rgba(255, 255, 255, 0.95); border: 2px solid #be185d; border-radius: 8px; padding: 4px 10px; color: #be185d; font-size: 13px; font-weight: 900; box-shadow: 0 4px 8px rgba(0,0,0,0.2); cursor: pointer; white-space: nowrap; pointer-events: none; margin-top:-15px; margin-left: -50%; }
         
-        .rank-badge { position: absolute; top: -35px; left: -30px; background: rgba(255,255,255,0.95); border-radius: 8px; padding: 4px 10px; font-size: 14px; font-weight: 900; box-shadow: 0 4px 10px rgba(0,0,0,0.3); white-space: nowrap; pointer-events: none; z-index: 300; }
+        .rank-badge { position: absolute; top: -35px; left: -30px; background: rgba(255,255,255,0.95); border-radius: 8px; padding: 4px 10px; font-size: 14px; font-weight: 900; box-shadow: 0 4px 10px rgba(0,0,0,0.3); white-space: nowrap; pointer-events: none; }
         .rank-1 { border: 2px solid #eab308; color: #b45309; }
         .rank-2 { border: 2px solid #94a3b8; color: #334155; }
         .rank-3 { border: 2px solid #b45309; color: #78350f; }
-        .rank-dot { width: 22px; height: 22px; border-radius: 50%; border: 3px solid #fff; box-shadow: 0 2px 6px rgba(0,0,0,0.4); margin-left: -11px; margin-top: -11px; position: absolute; z-index: 290; }
+        .rank-dot { width: 22px; height: 22px; border-radius: 50%; border: 3px solid #fff; box-shadow: 0 2px 6px rgba(0,0,0,0.4); margin-left: -11px; margin-top: -11px; position: absolute; }
         .rank-dot-1 { background: #eab308; animation: pulse-core 1.5s infinite;}
         .rank-dot-2 { background: #94a3b8; }
         .rank-dot-3 { background: #b45309; }
@@ -47,7 +47,7 @@
     <div class="w-full md:w-1/4 bg-white border-r border-gray-200 p-6 flex flex-col shadow-lg z-20 overflow-y-auto">
         <h1 class="text-xl font-extrabold text-slate-800 border-b-4 border-indigo-500 pb-3 mb-4 flex justify-between items-center">
             <span>🗺️ 전국구 상권 관제탑</span>
-            <span class="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded-full font-bold">V8.1 🥇</span>
+            <span class="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded-full font-bold">V8.2 🏆</span>
         </h1>
         
         <div class="mb-4 bg-slate-50 p-4 rounded-xl border border-slate-200">
@@ -190,7 +190,7 @@
             polygonOptions: { draggable: false, removable: false, editable: true, strokeColor: '#be185d', strokeWeight: 3, fillColor: '#f43f5e', fillOpacity: 0.2 }
         });
 
-        let savedPolygons = JSON.parse(localStorage.getItem('lensmePolygonsV8_1') || '[]');
+        let savedPolygons = JSON.parse(localStorage.getItem('lensmePolygonsV8_2') || '[]');
         let activePolygonPath = null; 
         let activePolygonId = null;
         let renderedPolygons = {}; 
@@ -280,7 +280,7 @@
                     
                     let id = 'poly_' + Date.now();
                     savedPolygons.push({ id: id, name: name, path: tempDrawnPath, si: si, gu: gu, dong: dong, centerLat: centerLat, centerLng: centerLng });
-                    localStorage.setItem('lensmePolygonsV8_1', JSON.stringify(savedPolygons));
+                    localStorage.setItem('lensmePolygonsV8_2', JSON.stringify(savedPolygons));
                     
                     drawingManager.clear();
                     isDrawingMode = false;
@@ -346,15 +346,12 @@
                             kakao.maps.event.addListener(polygon, 'click', function() { selectSavedPolygon(poly.id); });
                             renderedPolygons[poly.id] = polygon;
 
-                            // 💡 네임태그 안전 DOM 감싸기
-                            let nameWrap = document.createElement('div');
-                            nameWrap.style.position = 'relative';
-                            nameWrap.innerHTML = `<div class="poly-nametag">${poly.name}</div>`;
-
+                            // 네임태그도 String 방식으로 완벽 호환
+                            let nameStr = `<div style="position:relative; z-index:80;"><div class="poly-nametag">${poly.name}</div></div>`;
                             let nametag = new kakao.maps.CustomOverlay({
                                 position: new kakao.maps.LatLng(poly.centerLat, poly.centerLng),
-                                content: nameWrap,
-                                xAnchor: 0.5, yAnchor: 0.5, zIndex: 80
+                                content: nameStr,
+                                xAnchor: 0.5, yAnchor: 0.5
                             });
                             nametag.setMap(map);
                             renderedNametags[poly.id] = nametag;
@@ -370,7 +367,7 @@
         function deletePolygon(id) {
             if(!confirm("이 영토를 삭제하시겠습니까?")) return;
             savedPolygons = savedPolygons.filter(p => p.id !== id);
-            localStorage.setItem('lensmePolygonsV8_1', JSON.stringify(savedPolygons));
+            localStorage.setItem('lensmePolygonsV8_2', JSON.stringify(savedPolygons));
             if(activePolygonId === id) clearActivePolygon();
             renderPolygonTree();
         }
@@ -393,8 +390,6 @@
 
             Object.values(renderedPolygons).forEach(p => p.setOptions({ fillColor: '#f43f5e', fillOpacity: 0.1, strokeWeight: 2 }));
             renderedPolygons[id].setOptions({ fillColor: '#ec4899', fillOpacity: 0.25, strokeWeight: 4 });
-            Object.values(renderedNametags).forEach(n => n.setZIndex(80));
-            renderedNametags[id].setZIndex(90);
 
             runDirectDeepScan(activePolygonPath); 
         }
@@ -629,7 +624,7 @@
                             else if (BRAND_CONFIG[p.brandKey].isAnchor) targetStats.anchor++;
                         }
                     }
-                    statusEl.innerText = "🧲 펜스를 빗겨쳐서 주변의 가장 가까운 매장을 강제로 흡수했습니다!";
+                    statusEl.innerText = "🧲 펜스를 빗겨쳐서 주변의 매장을 강제로 흡수했습니다!";
                 }
 
                 document.getElementById('comp_count').innerText = targetStats.comp + '개';
@@ -651,15 +646,12 @@
                     calculateTop3Spots(insideNodes, "유동인구 단독");
                 } 
                 else {
-                    // 💡 화면 렌더링 충돌 완벽 방어 (단일 DOM 감싸기)
-                    let emptyWrap = document.createElement('div');
-                    emptyWrap.style.position = 'relative';
-                    emptyWrap.innerHTML = `<div class="rank-badge rank-2">📍 영토 지리적 중앙</div><div class="rank-dot rank-dot-2"></div>`;
-
+                    // 💡 화면 렌더링 충돌 완벽 방어 (HTML 텍스트 삽입)
+                    let contentStr = `<div style="position:relative; z-index:9999;"><div class="rank-badge rank-2">📍 영토 지리적 중앙</div><div class="rank-dot rank-dot-2"></div></div>`;
                     let overlay = new kakao.maps.CustomOverlay({
                         position: new kakao.maps.LatLng(cLat, cLng),
-                        content: emptyWrap,
-                        xAnchor: 0.5, yAnchor: 0.5, zIndex: 300
+                        content: contentStr,
+                        xAnchor: 0.5, yAnchor: 0.5
                     });
                     overlay.setMap(map);
                     rankOverlays.push(overlay);
@@ -716,15 +708,14 @@
             for (let idx = 0; idx < topSpots.length; idx++) {
                 let spot = topSpots[idx];
                 
-                // 💡 핵심 수술 부위: 마커를 쪼개서 던지지 않고, 튼튼한 투명 상자(DOM) 안에 넣어서 렌더링
-                let wrap = document.createElement('div');
-                wrap.style.position = 'relative';
-                wrap.innerHTML = `<div class="rank-badge ${rankStyles[idx].cls}">${rankStyles[idx].title}</div><div class="rank-dot ${rankStyles[idx].dotCls}"></div>`;
+                // 💡 핵심 수술 부위: 카카오맵이 무조건 화면에 띄우는 순수 HTML 텍스트 방식 (Z-index 9999)
+                let zIndexVal = 9999 - idx; 
+                let contentStr = `<div style="position:relative; z-index:${zIndexVal};"><div class="rank-badge ${rankStyles[idx].cls}">${rankStyles[idx].title}</div><div class="rank-dot ${rankStyles[idx].dotCls}"></div></div>`;
 
                 let overlay = new kakao.maps.CustomOverlay({
                     position: new kakao.maps.LatLng(parseFloat(spot.y), parseFloat(spot.x)),
-                    content: wrap,
-                    xAnchor: 0.5, yAnchor: 0.5, zIndex: 300 - idx
+                    content: contentStr,
+                    xAnchor: 0.5, yAnchor: 0.5
                 });
                 overlay.setMap(map);
                 rankOverlays.push(overlay);
