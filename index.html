@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>렌즈미 상권 분석 대시보드 (V8.2 마커 강제 출력)</title>
+    <title>렌즈미 상권 분석 대시보드 (V8.3 팩트 기반 결과 출력)</title>
     <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
@@ -24,16 +24,6 @@
         .store-tooltip::after { content: ''; position: absolute; bottom: -6px; left: 50%; transform: translateX(-50%); border-width: 6px 6px 0; border-style: solid; border-color: #334155 transparent transparent transparent; }
 
         .poly-nametag { background: rgba(255, 255, 255, 0.95); border: 2px solid #be185d; border-radius: 8px; padding: 4px 10px; color: #be185d; font-size: 13px; font-weight: 900; box-shadow: 0 4px 8px rgba(0,0,0,0.2); cursor: pointer; white-space: nowrap; pointer-events: none; margin-top:-15px; margin-left: -50%; }
-        
-        .rank-badge { position: absolute; top: -35px; left: -30px; background: rgba(255,255,255,0.95); border-radius: 8px; padding: 4px 10px; font-size: 14px; font-weight: 900; box-shadow: 0 4px 10px rgba(0,0,0,0.3); white-space: nowrap; pointer-events: none; }
-        .rank-1 { border: 2px solid #eab308; color: #b45309; }
-        .rank-2 { border: 2px solid #94a3b8; color: #334155; }
-        .rank-3 { border: 2px solid #b45309; color: #78350f; }
-        .rank-dot { width: 22px; height: 22px; border-radius: 50%; border: 3px solid #fff; box-shadow: 0 2px 6px rgba(0,0,0,0.4); margin-left: -11px; margin-top: -11px; position: absolute; }
-        .rank-dot-1 { background: #eab308; animation: pulse-core 1.5s infinite;}
-        .rank-dot-2 { background: #94a3b8; }
-        .rank-dot-3 { background: #b45309; }
-        @keyframes pulse-core { 0% { box-shadow: 0 0 0 0 rgba(234, 179, 8, 0.7); } 70% { box-shadow: 0 0 0 15px rgba(234, 179, 8, 0); } 100% { box-shadow: 0 0 0 0 rgba(234, 179, 8, 0); } }
 
         details > summary { list-style: none; cursor: pointer; font-weight: 800; color: #334155; padding: 4px 0; font-size: 14px;}
         details > summary::-webkit-details-marker { display: none; }
@@ -47,7 +37,7 @@
     <div class="w-full md:w-1/4 bg-white border-r border-gray-200 p-6 flex flex-col shadow-lg z-20 overflow-y-auto">
         <h1 class="text-xl font-extrabold text-slate-800 border-b-4 border-indigo-500 pb-3 mb-4 flex justify-between items-center">
             <span>🗺️ 전국구 상권 관제탑</span>
-            <span class="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded-full font-bold">V8.2 🏆</span>
+            <span class="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded-full font-bold">V8.3 📊</span>
         </h1>
         
         <div class="mb-4 bg-slate-50 p-4 rounded-xl border border-slate-200">
@@ -58,7 +48,7 @@
             </div>
         </div>
 
-        <div class="mb-4 bg-rose-50 p-4 rounded-xl border border-rose-200 flex-grow flex flex-col min-h-[300px]">
+        <div class="mb-4 bg-rose-50 p-4 rounded-xl border border-rose-200 flex-grow flex flex-col min-h-[250px]">
             <label class="block text-sm font-extrabold text-rose-700 mb-2">💾 내 상권 보관함 (전국)</label>
             <div class="flex gap-2 mb-3" id="drawControls">
                 <button onclick="startDrawing()" id="btnStartDraw" class="w-full bg-rose-500 hover:bg-rose-600 text-white px-3 py-2 rounded-lg text-sm font-bold transition shadow-sm">➕ 상권 영토 그리기</button>
@@ -74,7 +64,7 @@
                 <p class="text-xs text-slate-400 font-bold mb-1">현재 분석 타겟</p>
                 <div class="flex justify-between items-center bg-slate-50 border border-indigo-300 rounded-md px-3 py-1.5">
                     <span id="targetLocationInput" class="font-extrabold text-indigo-600 text-sm truncate">선택 없음 (자유 탐색)</span>
-                    <button onclick="clearActivePolygon()" id="btnClearPolygon" class="hidden text-xs bg-slate-200 text-slate-600 px-2 py-1 rounded font-bold hover:bg-slate-300 whitespace-nowrap ml-2">영토 해제</button>
+                    <button onclick="clearActivePolygon()" id="btnClearPolygon" class="hidden text-xs bg-slate-200 text-slate-600 px-2 py-1 rounded font-bold hover:bg-slate-300 whitespace-nowrap ml-2">해제</button>
                 </div>
             </div>
             
@@ -86,6 +76,12 @@
                 <div class="flex justify-between items-center text-xs font-bold text-slate-700">
                     <span>📸 흡수된 앵커(올영/다이소):</span>
                     <span id="anchor_count" class="text-sm font-black text-emerald-600">-개</span>
+                </div>
+
+                <!-- 💡 [팩트 해결책] 지도 마커에 의존하지 않고 결과 텍스트를 무조건 출력하는 영역 -->
+                <div id="rankingResultBox" class="mt-3 pt-3 border-t border-indigo-200 hidden">
+                    <p class="text-xs text-indigo-800 font-extrabold mb-2">👑 입지 랭킹 결과</p>
+                    <div id="rankingResultText" class="space-y-1"></div>
                 </div>
             </div>
         </div>
@@ -140,7 +136,7 @@
             if (typeof GLOBAL_COUNTS !== 'undefined') {
                 const idMap = { 
                     'lensme': 'cnt_lensme', 'olens': 'cnt_olens', 'hapa': 'cnt_hapa',
-                    'winc': 'cnt_winc', 'withlens': 'cnt_withlens', 'lensvery': 'cnt_lensvery', 'lenstown': 'cnt_lenstown',
+                    'winc': 'cnt_winc', 'withlens': 'withlens', 'lensvery': 'cnt_lensvery', 'lenstown': 'cnt_lenstown',
                     'davich': 'cnt_davich', 'olive': 'cnt_olive', 'daiso': 'cnt_daiso', 'olive_hapa': 'cnt_olive_hapa' 
                 };
                 for(let key in idMap) {
@@ -190,7 +186,7 @@
             polygonOptions: { draggable: false, removable: false, editable: true, strokeColor: '#be185d', strokeWeight: 3, fillColor: '#f43f5e', fillOpacity: 0.2 }
         });
 
-        let savedPolygons = JSON.parse(localStorage.getItem('lensmePolygonsV8_2') || '[]');
+        let savedPolygons = JSON.parse(localStorage.getItem('lensmePolygonsV8_3') || '[]');
         let activePolygonPath = null; 
         let activePolygonId = null;
         let renderedPolygons = {}; 
@@ -280,7 +276,7 @@
                     
                     let id = 'poly_' + Date.now();
                     savedPolygons.push({ id: id, name: name, path: tempDrawnPath, si: si, gu: gu, dong: dong, centerLat: centerLat, centerLng: centerLng });
-                    localStorage.setItem('lensmePolygonsV8_2', JSON.stringify(savedPolygons));
+                    localStorage.setItem('lensmePolygonsV8_3', JSON.stringify(savedPolygons));
                     
                     drawingManager.clear();
                     isDrawingMode = false;
@@ -346,7 +342,6 @@
                             kakao.maps.event.addListener(polygon, 'click', function() { selectSavedPolygon(poly.id); });
                             renderedPolygons[poly.id] = polygon;
 
-                            // 네임태그도 String 방식으로 완벽 호환
                             let nameStr = `<div style="position:relative; z-index:80;"><div class="poly-nametag">${poly.name}</div></div>`;
                             let nametag = new kakao.maps.CustomOverlay({
                                 position: new kakao.maps.LatLng(poly.centerLat, poly.centerLng),
@@ -367,7 +362,7 @@
         function deletePolygon(id) {
             if(!confirm("이 영토를 삭제하시겠습니까?")) return;
             savedPolygons = savedPolygons.filter(p => p.id !== id);
-            localStorage.setItem('lensmePolygonsV8_2', JSON.stringify(savedPolygons));
+            localStorage.setItem('lensmePolygonsV8_3', JSON.stringify(savedPolygons));
             if(activePolygonId === id) clearActivePolygon();
             renderPolygonTree();
         }
@@ -403,6 +398,8 @@
             
             document.getElementById('comp_count').innerText = "-개";
             document.getElementById('anchor_count').innerText = "-개";
+            document.getElementById('rankingResultBox').classList.add('hidden');
+            document.getElementById('rankingResultText').innerHTML = '';
 
             Object.values(renderedPolygons).forEach(p => p.setOptions({ fillColor: '#f43f5e', fillOpacity: 0.1, strokeWeight: 2 }));
             clearRankMarkers(); 
@@ -513,6 +510,8 @@
             if(isScanningAPI) return;
             isScanningAPI = true;
             clearRankMarkers();
+            document.getElementById('rankingResultBox').classList.add('hidden');
+            document.getElementById('rankingResultText').innerHTML = '';
             
             let statusEl = document.getElementById('statusMessage');
             
@@ -646,15 +645,9 @@
                     calculateTop3Spots(insideNodes, "유동인구 단독");
                 } 
                 else {
-                    // 💡 화면 렌더링 충돌 완벽 방어 (HTML 텍스트 삽입)
-                    let contentStr = `<div style="position:relative; z-index:9999;"><div class="rank-badge rank-2">📍 영토 지리적 중앙</div><div class="rank-dot rank-dot-2"></div></div>`;
-                    let overlay = new kakao.maps.CustomOverlay({
-                        position: new kakao.maps.LatLng(cLat, cLng),
-                        content: contentStr,
-                        xAnchor: 0.5, yAnchor: 0.5
-                    });
-                    overlay.setMap(map);
-                    rankOverlays.push(overlay);
+                    document.getElementById('rankingResultBox').classList.remove('hidden');
+                    document.getElementById('rankingResultText').innerHTML = `<div class="text-xs text-rose-600 font-bold">반경 내에 비교할 상업 시설이 없습니다.</div>`;
+                    
                     statusEl.innerText = "⚠️ 해당 구역 반경 내에 상업 시설이 단 한 개도 없습니다.";
                 }
 
@@ -700,26 +693,43 @@
             }
 
             const rankStyles = [
-                { title: '🥇 1급지', cls: 'rank-1', dotCls: 'rank-dot-1' },
-                { title: '🥈 2급지', cls: 'rank-2', dotCls: 'rank-dot-2' },
-                { title: '🥉 3급지', cls: 'rank-3', dotCls: 'rank-dot-3' }
+                { title: '🥇 1급지', bg: '#eab308' },
+                { title: '🥈 2급지', bg: '#94a3b8' },
+                { title: '🥉 3급지', bg: '#b45309' }
             ];
+
+            let textResultHtml = ""; // 💡 좌측 텍스트 패널용 데이터
 
             for (let idx = 0; idx < topSpots.length; idx++) {
                 let spot = topSpots[idx];
+                let placeName = spot.place_name || "유동인구 집중포인트";
                 
-                // 💡 핵심 수술 부위: 카카오맵이 무조건 화면에 띄우는 순수 HTML 텍스트 방식 (Z-index 9999)
-                let zIndexVal = 9999 - idx; 
-                let contentStr = `<div style="position:relative; z-index:${zIndexVal};"><div class="rank-badge ${rankStyles[idx].cls}">${rankStyles[idx].title}</div><div class="rank-dot ${rankStyles[idx].dotCls}"></div></div>`;
+                // 1. 좌측 텍스트 패널에 결과 생성
+                textResultHtml += `<div class="text-[13px] font-bold text-slate-700 bg-white px-2 py-1 rounded border border-slate-100 shadow-sm">${rankStyles[idx].title} : <span class="text-indigo-600">${placeName}</span></div>`;
+
+                // 2. 외부 CSS 충돌을 완전히 피하는 강제 인라인 스타일 마커 생성
+                let contentStr = `
+                    <div style="position:relative; bottom:20px; text-align:center; transform:translateY(-50%);">
+                        <div style="background:${rankStyles[idx].bg}; color:white; padding:4px 10px; border-radius:6px; font-weight:bold; font-size:14px; border:2px solid white; box-shadow:0 2px 6px rgba(0,0,0,0.3); white-space:nowrap;">
+                            ${rankStyles[idx].title}
+                        </div>
+                        <div style="width:0; height:0; border-left:6px solid transparent; border-right:6px solid transparent; border-top:8px solid ${rankStyles[idx].bg}; margin:0 auto;"></div>
+                    </div>
+                `;
 
                 let overlay = new kakao.maps.CustomOverlay({
                     position: new kakao.maps.LatLng(parseFloat(spot.y), parseFloat(spot.x)),
                     content: contentStr,
-                    xAnchor: 0.5, yAnchor: 0.5
+                    xAnchor: 0.5, 
+                    yAnchor: 1 // 마커의 아래쪽 뾰족한 부분이 좌표에 정확히 꽂히도록 설정
                 });
                 overlay.setMap(map);
                 rankOverlays.push(overlay);
             }
+
+            // 좌측 패널에 결과 강제 렌더링
+            document.getElementById('rankingResultText').innerHTML = textResultHtml;
+            document.getElementById('rankingResultBox').classList.remove('hidden');
 
             if(document.getElementById('statusMessage').innerText.indexOf("자석") === -1) {
                 document.getElementById('statusMessage').innerText = `✅ 분석 완료! [${messageContext}] 1~3위 입지 추출`;
