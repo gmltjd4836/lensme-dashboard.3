@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>렌즈미 상권 분석 대시보드 (V15.0 스텔스 명당 엔진)</title>
+    <title>렌즈미 상권 분석 대시보드 (V16.0 최종 황금배점 엔진)</title>
     <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
@@ -37,7 +37,7 @@
     <div class="w-full md:w-1/4 bg-white border-r border-gray-200 p-6 flex flex-col shadow-lg z-20 overflow-y-auto">
         <h1 class="text-xl font-extrabold text-slate-800 border-b-4 border-indigo-500 pb-3 mb-4 flex justify-between items-center">
             <span>🗺️ 전국 상권 관제탑</span>
-            <span class="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded-full font-bold">V15.0 🎯</span>
+            <span class="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded-full font-bold">V16.0 👑</span>
         </h1>
         
         <div class="mb-4 bg-slate-50 p-4 rounded-xl border border-slate-200">
@@ -78,9 +78,8 @@
                     <span id="anchor_count" class="text-sm font-black text-emerald-600">-개</span>
                 </div>
 
-                <!-- 메인 거리 텍스트 결과창 -->
                 <div id="rankingResultBox" class="mt-3 pt-3 border-t border-indigo-200 hidden">
-                    <p class="text-xs text-indigo-800 font-extrabold mb-2">👑 신규 출점 입지 평가</p>
+                    <p class="text-xs text-indigo-800 font-extrabold mb-2">👑 신규 출점 입지 평가 (10-8-7-5-1 적용)</p>
                     <div id="rankingResultText" class="space-y-1"></div>
                 </div>
             </div>
@@ -95,10 +94,10 @@
 
         <div id="tab-map" class="flex-grow w-full h-full relative">
             <div id="statusMessage" class="absolute top-4 left-1/2 transform -translate-x-1/2 z-10 bg-white/95 backdrop-blur-sm px-6 py-2 rounded-full shadow-md text-sm font-bold text-slate-700 border border-slate-200 text-center transition-all">
-                🎯 펜스를 그리면 [지하철 동선]과 [대로변 코너/MZ핫플]을 몰래 추적해 S급지를 찾습니다!
+                🎯 펜스를 치면 [대로변 자석]과 [렌즈 타겟 동선]을 분석하여 S급지를 찾습니다!
             </div>
 
-            <!-- UI 클린업 & 카운트 복구 -->
+            <!-- UI 클린업 (다비치 제외, 카운트 포함) -->
             <div class="absolute top-16 left-4 z-10 bg-white/95 backdrop-blur-sm p-4 rounded-xl shadow-lg border border-slate-200 w-64 max-h-[80vh] overflow-y-auto hidden md:block">
                 <p class="text-xs font-extrabold text-slate-800 mb-2.5 border-b pb-1 flex justify-between"><span>🎯 렌즈 전문 브랜드</span><span class="text-slate-400">전국 누적</span></p>
                 <div class="space-y-2 mb-4">
@@ -115,7 +114,6 @@
                     <label class="flex items-center space-x-2 cursor-pointer"><input type="checkbox" id="f_olive_hapa" checked onchange="triggerScan()" class="chk-green"><span class="text-[13px] font-bold text-teal-700 flex-grow">🌿 올영(하파크리스틴)</span><span id="cnt_olive_hapa" class="text-[12px] font-bold text-slate-500"></span></label>
                     <label class="flex items-center space-x-2 cursor-pointer"><input type="checkbox" id="f_olive" checked onchange="triggerScan()" class="chk-green"><span class="text-[13px] font-bold text-green-600 flex-grow">🟩 일반 올리브영</span><span id="cnt_olive" class="text-[12px] font-bold text-slate-500"></span></label>
                     <label class="flex items-center space-x-2 cursor-pointer"><input type="checkbox" id="f_daiso" checked onchange="triggerScan()" class="chk-red"><span class="text-[13px] font-bold text-rose-600 flex-grow">🟥 다이소</span><span id="cnt_daiso" class="text-[12px] font-bold text-slate-500"></span></label>
-                    <label class="flex items-center space-x-2 cursor-pointer"><input type="checkbox" id="f_davich" checked onchange="triggerScan()" class="chk-blue"><span class="text-[13px] font-bold text-blue-700 flex-grow">🟦 다비치안경</span><span id="cnt_davich" class="text-[12px] font-bold text-slate-500"></span></label>
                 </div>
             </div>
 
@@ -138,7 +136,7 @@
                 const idMap = { 
                     'lensme': 'cnt_lensme', 'olens': 'cnt_olens', 'hapa': 'cnt_hapa',
                     'winc': 'cnt_winc', 'withlens': 'cnt_withlens', 'lensvery': 'cnt_lensvery', 'lenstown': 'cnt_lenstown',
-                    'davich': 'cnt_davich', 'olive': 'cnt_olive', 'daiso': 'cnt_daiso', 'olive_hapa': 'cnt_olive_hapa' 
+                    'olive': 'cnt_olive', 'daiso': 'cnt_daiso', 'olive_hapa': 'cnt_olive_hapa' 
                 };
                 for(let key in idMap) {
                     let el = document.getElementById(idMap[key]);
@@ -168,29 +166,35 @@
         
         let tooltipOverlay = new kakao.maps.CustomOverlay({ xAnchor: 0.5, yAnchor: 1.5, zIndex: 150 });
 
-        // 화면에 그려질 핵심 브랜드 (마라탕/네컷 삭제됨)
+        // 화면 표출 타겟 (다비치 삭제)
         const BRAND_CONFIG = {
             f_lensme: { kw: '렌즈미', hex: '%239333ea', isComp: true },
             f_olens: { kw: '오렌즈', hex: '%23f97316', isComp: true },
             f_hapa: { kw: '하파크리스틴', hex: '%23f472b6', isComp: true },
             f_winc: { kw: '윙크 렌즈', hex: '%233b82f6', isComp: true },
             f_withlens: { kw: '위드렌즈', hex: '%23059669', isComp: true },
-            f_lensvery: { 스kw: '렌즈베리', hex: '%23eab308', isComp: true },
+            f_lensvery: { kw: '렌즈베리', hex: '%23eab308', isComp: true },
             f_lenstown: { kw: '렌즈타운', hex: '%23dc2626', isComp: true }, 
             f_olive_hapa: { kw: '올리브영 하파크리스틴', hex: '%230f766e', isAnchor: true }, 
             f_olive: { kw: '올리브영', hex: '%2316a34a', isAnchor: true },
-            f_daiso: { kw: '다이소', hex: '%23e11d48', isAnchor: true },
-            f_davich: { kw: '다비치안경', hex: '%231d4ed8', isOther: true }
+            f_daiso: { kw: '다이소', hex: '%23e11d48', isAnchor: true }
         };
 
-        // 💡 [V15.0 스텔스 엔진] 백그라운드에서 좌표만 몰래 수집할 키워드 (지도 표시 안함)
+        // 💡 [V16.0 최종 스텔스 배점 엔진] 
+        // 1티어: 휴대폰(10) / 4티어: 네컷/가챠(5)
         const STEALTH_KEYWORDS = [
-            { kw: '셀프사진관', weight: 1.5, radius: 80 }, 
-            { kw: '포토이즘', weight: 1.5, radius: 80 },
-            { kw: '가챠샵', weight: 1.5, radius: 80 },   // 사장님 요청: 1020 놀이 동선
-            { kw: '뽑기방', weight: 1.5, radius: 80 },   
-            { kw: '휴대폰대리점', weight: 2.5, radius: 60 }, // 사장님 요청: 대로변/메인코너 멱살잡이 
-            { kw: '이동통신', weight: 2.5, radius: 60 }
+            { kw: '휴대폰대리점', weight: 10.0, radius: 80 }, 
+            { kw: '이동통신', weight: 10.0, radius: 80 },
+            { kw: '셀프사진관', weight: 5.0, radius: 80 }, 
+            { kw: '포토이즘', weight: 5.0, radius: 80 },
+            { kw: '가챠샵', weight: 5.0, radius: 80 },
+            { kw: '뽑기방', weight: 5.0, radius: 80 }
+        ];
+
+        // 5티어: 카페/편의점(1)
+        const FNB_CATEGORIES = [
+            { code: 'CE7', weight: 1.0, radius: 50 },
+            { code: 'CS2', weight: 1.0, radius: 50 }
         ];
 
         let drawingManager = new kakao.maps.drawing.DrawingManager({
@@ -199,7 +203,7 @@
             polygonOptions: { draggable: false, removable: false, editable: true, strokeColor: '#be185d', strokeWeight: 3, fillColor: '#f43f5e', fillOpacity: 0.2 }
         });
 
-        let savedPolygons = JSON.parse(localStorage.getItem('lensmePolygonsV15_0') || '[]');
+        let savedPolygons = JSON.parse(localStorage.getItem('lensmePolygonsV16_0') || '[]');
         let activePolygonPath = null; 
         let activePolygonId = null;
         let renderedPolygons = {}; 
@@ -281,7 +285,7 @@
                     
                     let id = 'poly_' + Date.now();
                     savedPolygons.push({ id: id, name: name, path: tempDrawnPath, si: si, gu: gu, dong: dong, centerLat: centerLat, centerLng: centerLng });
-                    localStorage.setItem('lensmePolygonsV15_0', JSON.stringify(savedPolygons));
+                    localStorage.setItem('lensmePolygonsV16_0', JSON.stringify(savedPolygons));
                     
                     drawingManager.clear();
                     isDrawingMode = false;
@@ -367,7 +371,7 @@
         function deletePolygon(id) {
             if(!confirm("이 영토를 삭제하시겠습니까?")) return;
             savedPolygons = savedPolygons.filter(p => p.id !== id);
-            localStorage.setItem('lensmePolygonsV15_0', JSON.stringify(savedPolygons));
+            localStorage.setItem('lensmePolygonsV16_0', JSON.stringify(savedPolygons));
             if(activePolygonId === id) clearActivePolygon();
             renderPolygonTree();
         }
@@ -483,7 +487,6 @@
         }
 
         async function triggerScan() { 
-            // 뷰티/렌즈 관련 핀만 캐싱 및 그리기 (스텔스 마커는 여기서 초기화 및 무시)
             placeCache.clear(); 
             mapMarkers.forEach(m => m.setMap(null)); mapMarkers = [];
             await scanMarkersInBoundsSequential();
@@ -524,7 +527,7 @@
             return true;
         }
 
-        // 💡 [V15.0 스텔스 핫스팟 엔진] 
+        // 💡 [V16.0] 10-8-7-5-1 황금 배점 적용 엔진
         async function runGridHotspotScan(targetPath) {
             if(isScanningAPI) return;
             isScanningAPI = true;
@@ -547,8 +550,7 @@
                 cLat /= targetPath.length; cLng /= targetPath.length;
                 let centerPos = new kakao.maps.LatLng(cLat, cLng);
 
-                // 1. 광역 지하철역 추적 (수원지)
-                statusEl.innerText = `🚇 주변 광역 유입로(지하철역)를 탐색 중입니다...`;
+                // 광역 역세권 거시 분석
                 let nearestSubway = null;
                 await new Promise(resolve => {
                     ps.categorySearch('SW8', function(data, status) {
@@ -581,11 +583,11 @@
                 let rawScannedNodes = [];
                 let seenIds = {};
 
-                // 2. 화면에 보이는(UI) 핵심 타겟 인프라 수집
+                // 1. 시각화 대상 앵커/경쟁사 스캔
                 let activeKeys = Object.keys(BRAND_CONFIG).filter(key => document.getElementById(key) && document.getElementById(key).checked);
                 for (let i = 0; i < activeKeys.length; i++) {
                     let key = activeKeys[i];
-                    statusEl.innerText = `🎯 렌즈/뷰티 앵커 조사 중... [${BRAND_CONFIG[key].kw}]`;
+                    statusEl.innerText = `🎯 인프라 조사 중... [${BRAND_CONFIG[key].kw}]`;
                     await new Promise(resolve => {
                         ps.keywordSearch(BRAND_CONFIG[key].kw, function(data, status) {
                             if (status === kakao.maps.services.Status.OK) {
@@ -604,10 +606,10 @@
                     await delay(100); 
                 }
 
-                // 💡 3. 스텔스 인프라(가챠샵/휴대폰/네컷) 몰래 수집 (마커 안 그림)
+                // 2. 스텔스 키워드 (1티어 폰, 4티어 가챠/네컷)
                 for(let i = 0; i < STEALTH_KEYWORDS.length; i++) {
                     let stealth = STEALTH_KEYWORDS[i];
-                    statusEl.innerText = `🕵️ 대로변 코너 및 1020 핫플 탐지 중... [${stealth.kw}]`;
+                    statusEl.innerText = `🕵️ 백그라운드 탐지 중... [${stealth.kw}]`;
                     await new Promise(resolve => {
                         ps.keywordSearch(stealth.kw, function(data, status) {
                             if (status === kakao.maps.services.Status.OK) {
@@ -616,7 +618,7 @@
                                     if(!seenIds[place.id]) {
                                         seenIds[place.id] = true;
                                         place.isStealth = true;
-                                        place.stealthData = stealth; // 가중치 부여용 데이터
+                                        place.stealthData = stealth; 
                                         rawScannedNodes.push(place);
                                     }
                                 }
@@ -627,7 +629,29 @@
                     await delay(100); 
                 }
 
-                // UI 캐시 연동 (렌즈/올영 등)
+                // 3. F&B 보행 인프라 (5티어 카페/편의점)
+                for(let i = 0; i < FNB_CATEGORIES.length; i++) {
+                    let fnb = FNB_CATEGORIES[i];
+                    statusEl.innerText = `☕ 골목 인프라 체크 중...`;
+                    await new Promise(resolve => {
+                        ps.categorySearch(fnb.code, function(data, status) {
+                            if (status === kakao.maps.services.Status.OK) {
+                                for(let k=0; k<data.length; k++) {
+                                    let place = data[k];
+                                    if(!seenIds[place.id]) {
+                                        seenIds[place.id] = true;
+                                        place.isFnb = true;
+                                        place.fnbData = fnb; 
+                                        rawScannedNodes.push(place);
+                                    }
+                                }
+                            }
+                            resolve(); 
+                        }, { location: centerPos, radius: searchRadius, size: 15 });
+                    });
+                    await delay(100); 
+                }
+
                 placeCache.forEach(item => {
                     let p = item.rawData;
                     if(!seenIds[p.id]) {
@@ -651,7 +675,7 @@
                 document.getElementById('anchor_count').innerText = targetStats.anchor + '개';
                 try { drawRadarChart(targetStats.comp, targetStats.anchor); } catch(chartErr) {}
 
-                statusEl.innerText = "🌐 유입 동선과 메인 코너를 종합하여 S급 입지를 찾습니다...";
+                statusEl.innerText = "🌐 10-8-7-5-1 배점 룰에 따라 S급 명당을 계산 중입니다...";
 
                 let gridPoints = [];
                 let latDiff = maxLat - minLat;
@@ -661,9 +685,7 @@
 
                 for(let lat = minLat; lat <= maxLat; lat += stepLat) {
                     for(let lng = minLng; lng <= maxLng; lng += stepLng) {
-                        if(isPointInPolygon(lat, lng, targetPath)) {
-                            gridPoints.push({ lat: lat, lng: lng, score: 0 });
-                        }
+                        if(isPointInPolygon(lat, lng, targetPath)) gridPoints.push({ lat: lat, lng: lng, score: 0 });
                     }
                 }
 
@@ -677,11 +699,11 @@
                 }
                 if(isPointInPolygon(cLat, cLng, targetPath)) gridPoints.push({ lat: cLat, lng: cLng, score: 0 });
 
-                // 💡 [V15.0 평가 로직] 스텔스(휴대폰/가챠) 가점 폭격
+                // 💡 점수 융합 로직 
                 for(let i=0; i<gridPoints.length; i++) {
                     let pt = gridPoints[i];
                     let score = 0.1; 
-                    let localStoreCount = 0; // 밀도 체크
+                    let localStoreCount = 0; 
 
                     for(let j=0; j<rawScannedNodes.length; j++) {
                         let node = rawScannedNodes[j];
@@ -690,16 +712,25 @@
                         if(dist <= 80) localStoreCount++; 
 
                         if(node.isStealth) {
+                            // 1티어 폰(10) / 4티어 가챠네컷(5)
                             let sData = node.stealthData;
                             if(dist <= sData.radius) {
                                 score += (sData.radius - dist) * sData.weight;
                             }
+                        } else if(node.isFnb) {
+                            // 5티어 카페편의점(1)
+                            let fData = node.fnbData;
+                            if(dist <= fData.radius) {
+                                score += (fData.radius - dist) * fData.weight;
+                            }
                         } else if (node.brandKey && BRAND_CONFIG[node.brandKey]) {
                             let cfg = BRAND_CONFIG[node.brandKey];
                             if(cfg.isAnchor && dist <= 80) {
-                                score += (80 - dist) * 1.5; 
-                            } else if(cfg.isComp && dist <= 100) {
-                                score += (100 - dist) * 1.5;
+                                // 2티어 올영/다이소(8)
+                                score += (80 - dist) * 8.0; 
+                            } else if(cfg.isComp && dist <= 80) {
+                                // 3티어 렌즈경쟁사(7)
+                                score += (80 - dist) * 7.0;
                             }
                         }
                     }
@@ -707,15 +738,11 @@
                     if(nearestSubway) {
                         let subX = parseFloat(nearestSubway.x), subY = parseFloat(nearestSubway.y);
                         let distToFlow = distToSegment(pt.lng, pt.lat, subX, subY, cLng, cLat);
-                        if(distToFlow <= 50) {
-                            score += (50 - distToFlow) * 2.0; 
-                        }
+                        if(distToFlow <= 50) score += (50 - distToFlow) * 2.0; 
                     }
 
-                    // 💡 고립된 으슥한 뒷골목 방지
-                    if(localStoreCount < 2) {
-                        score = score * 0.1; 
-                    }
+                    // 후미진 골목 필터링 (최소 인프라 부족 시 탈락)
+                    if(localStoreCount < 2) score = score * 0.1; 
                     
                     pt.score = score;
                 }
@@ -782,7 +809,7 @@
                     }
 
                     document.getElementById('rankingResultBox').classList.remove('hidden');
-                    statusEl.innerText = `✅ 분석 완료! [대로변 코너/가챠샵]을 추적하여 찐 입지를 찾았습니다.`;
+                    statusEl.innerText = `✅ 분석 완료! 10-8-7-5-1 비율로 현장 검증형 S급지를 도출했습니다.`;
 
                 } else {
                     document.getElementById('rankingResultBox').classList.remove('hidden');
