@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>렌즈미 상권 분석 대시보드 (V5.2 무적 - 에러 완전 멸종)</title>
+    <title>렌즈미 상권 분석 대시보드 (V5.2 Final - 절대 무적 방탄)</title>
     <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
@@ -156,6 +156,10 @@
     <script type="text/javascript" src="//dapi.kakao.com/v2/maps/sdk.js?appkey=c045609510f8b75252389123f086be48&libraries=services,drawing"></script>
 
     <script>
+        // 💡 [초강력 핵심 모듈] 카카오 특수 객체든, 저장된 텍스트든 무조건 숫자로 강제 변환하는 '만능 좌표 판독기'
+        function getLat(p) { return (typeof p.getLat === 'function') ? p.getLat() : parseFloat(p.y); }
+        function getLng(p) { return (typeof p.getLng === 'function') ? p.getLng() : parseFloat(p.x); }
+
         let mapContainer = document.getElementById('map'); 
         let currentCenter = new kakao.maps.LatLng(37.498095, 127.027610); 
         let searchCenter = currentCenter; 
@@ -249,7 +253,10 @@
             if (name) {
                 try {
                     let sumLat = 0, sumLng = 0;
-                    tempDrawnPath.forEach(p => { sumLat += p.getLat(); sumLng += p.getLng(); });
+                    tempDrawnPath.forEach(p => { 
+                        sumLat += getLat(p); // 💡 만능 판독기 적용
+                        sumLng += getLng(p); 
+                    });
                     let centerLat = sumLat / tempDrawnPath.length;
                     let centerLng = sumLng / tempDrawnPath.length;
 
@@ -262,7 +269,8 @@
                             dong = addr.region_3depth_name;
                         }
                         
-                        let coords = tempDrawnPath.map(p => ({ x: p.getLng(), y: p.getLat() }));
+                        // 💡 만능 판독기로 순수 숫자로만 변환해서 안전하게 저장
+                        let coords = tempDrawnPath.map(p => ({ x: getLng(p), y: getLat(p) }));
                         let id = 'poly_' + Date.now();
                         savedPolygons.push({ id: id, name: name, path: coords, si: si, gu: gu, dong: dong, centerLat: centerLat, centerLng: centerLng });
                         localStorage.setItem('lensmePolygonsV5_2', JSON.stringify(savedPolygons));
@@ -277,6 +285,8 @@
                         selectSavedPolygon(id); 
                     });
                 } catch (saveError) {
+                    console.error("저장 오류:", saveError);
+                    alert("영토 저장 중 오류가 발생했습니다.");
                     cancelDrawing();
                 }
             } else {
@@ -403,17 +413,19 @@
             rankOverlays = [];
         }
 
+        // 💡 [핵심 V5.2] 만능 판독기가 적용된 가장 안전한 충돌 검사
         function isPointInPolygon(lat, lng, polygonPath) {
             try {
                 let inside = false;
                 for (let i = 0, j = polygonPath.length - 1; i < polygonPath.length; j = i++) {
-                    let xi = polygonPath[i].getLng(), yi = polygonPath[i].getLat();
-                    let xj = polygonPath[j].getLng(), yj = polygonPath[j].getLat();
+                    let xi = getLng(polygonPath[i]), yi = getLat(polygonPath[i]);
+                    let xj = getLng(polygonPath[j]), yj = getLat(polygonPath[j]);
                     let intersect = ((yi > lat) != (yj > lat)) && (lng < (xj - xi) * (lat - yi) / (yj - yi) + xi);
                     if (intersect) inside = !inside;
                 }
                 return inside;
             } catch(e) {
+                console.error("다각형 검사 에러:", e);
                 return false;
             }
         }
@@ -502,7 +514,7 @@
             return true;
         }
 
-        // 💡 [핵심 V5.2] 멋 부림 제로! 구형 문법을 사용한 에러 멸종 딥스캔 모듈
+        // 💡 [핵심 V5.2] 멋 부림 제로! 무적의 방탄 스캔 + 3단계 하이브리드 로직
         async function runDirectDeepScan(targetPath) {
             if(isScanningAPI) return;
             isScanningAPI = true;
@@ -512,7 +524,10 @@
             
             try {
                 let bounds = new kakao.maps.LatLngBounds();
-                targetPath.forEach(p => bounds.extend(p));
+                targetPath.forEach(p => {
+                    // 💡 바운즈 생성에도 만능 판독기 적용
+                    bounds.extend(new kakao.maps.LatLng(getLat(p), getLng(p)));
+                });
                 
                 let activeKeys = Object.keys(BRAND_CONFIG).filter(key => document.getElementById(key) && document.getElementById(key).checked);
                 let fnbCategories = [{code: 'CE7', name: '카페'}, {code: 'CS2', name: '편의점'}];
@@ -523,14 +538,16 @@
                 let totalSteps = activeKeys.length + fnbCategories.length;
                 let currentStep = 0;
 
-                for (let key of activeKeys) {
+                for (let i = 0; i < activeKeys.length; i++) {
+                    let key = activeKeys[i];
                     currentStep++;
                     statusEl.innerText = `🎯 스캔 중... [${currentStep}/${totalSteps}] ${BRAND_CONFIG[key].name} 찾는 중`;
                     
                     await new Promise(resolve => {
                         ps.keywordSearch(BRAND_CONFIG[key].kw, function(data, status) {
                             if (status === kakao.maps.services.Status.OK) {
-                                data.forEach(place => {
+                                for(let k=0; k<data.length; k++) {
+                                    let place = data[k];
                                     if (isPointInPolygon(parseFloat(place.y), parseFloat(place.x), targetPath)) {
                                         place.isTarget = true;
                                         allScannedNodes.push(place);
@@ -538,7 +555,7 @@
                                         else if(BRAND_CONFIG[key].isAnchor) targetStats.anchor++;
                                         processPlaceAndDrawMarker(place, key);
                                     }
-                                });
+                                }
                             }
                             resolve(); 
                         }, { bounds: bounds, size: 15 });
@@ -546,19 +563,21 @@
                     await delay(150); 
                 }
 
-                for (let cat of fnbCategories) {
+                for (let i = 0; i < fnbCategories.length; i++) {
+                    let cat = fnbCategories[i];
                     currentStep++;
                     statusEl.innerText = `☕ 스캔 중... [${currentStep}/${totalSteps}] ${cat.name} 유동인구 스캔 중`;
                     
                     await new Promise(resolve => {
                         ps.categorySearch(cat.code, function(data, status) {
                             if (status === kakao.maps.services.Status.OK) {
-                                data.forEach(place => {
+                                for(let k=0; k<data.length; k++) {
+                                    let place = data[k];
                                     if (isPointInPolygon(parseFloat(place.y), parseFloat(place.x), targetPath)) {
                                         place.isFnb = true;
                                         allScannedNodes.push(place);
                                     }
-                                });
+                                }
                             }
                             resolve();
                         }, { bounds: bounds, size: 15 });
@@ -572,7 +591,7 @@
                 try { drawRadarChart(targetStats.comp, targetStats.anchor); } catch(chartErr) {}
 
                 try {
-                    // 💡 신규 문법(Array.from, Set) 전부 폐기하고 원시적인 중복 제거 방식 채택
+                    // 구형 문법 중복 제거 (완전 안전)
                     let uniqueNodes = [];
                     let seenIds = {};
                     for (let i = 0; i < allScannedNodes.length; i++) {
@@ -583,6 +602,7 @@
                         }
                     }
 
+                    // 3단계 하이브리드 엔진
                     let pureTargets = [];
                     for (let j = 0; j < uniqueNodes.length; j++) {
                         if (uniqueNodes[j].isTarget) {
@@ -593,12 +613,18 @@
                     if (pureTargets.length >= 3) {
                         calculateTop3Spots(pureTargets, "타겟 매장 우선");
                     } 
-                    else if (uniqueNodes.length > 0) {
-                        calculateTop3Spots(uniqueNodes, pureTargets.length > 0 ? "타겟+유동인구 혼합" : "유동인구 단독");
+                    else if (pureTargets.length > 0) { // 타겟이 1~2개뿐일 때 (2단계)
+                        calculateTop3Spots(uniqueNodes, "타겟+유동인구 혼합");
+                    }
+                    else if (uniqueNodes.length > 0) { // 타겟이 아예 없을 때 (3단계)
+                        calculateTop3Spots(uniqueNodes, "유동인구 단독");
                     } 
                     else {
                         let sumLat = 0, sumLng = 0;
-                        targetPath.forEach(p => { sumLat += p.getLat(); sumLng += p.getLng(); });
+                        targetPath.forEach(p => { 
+                            sumLat += getLat(p); 
+                            sumLng += getLng(p); 
+                        });
                         let overlay = new kakao.maps.CustomOverlay({
                             position: new kakao.maps.LatLng(sumLat/targetPath.length, sumLng/targetPath.length),
                             content: `<div class="rank-badge rank-2">📍 영토 지리적 중앙</div><div class="rank-dot rank-dot-2"></div>`,
@@ -610,7 +636,6 @@
                     }
                 } catch(calcErr) {
                     console.error("랭킹 도출 중 오류:", calcErr);
-                    // 에러 발생 시 사장님이 정확한 원인을 알 수 있도록 원문 출력
                     statusEl.innerText = "⚠️ 에러 발생: " + calcErr.message;
                 }
 
@@ -623,18 +648,19 @@
         }
 
         function calculateTop3Spots(nodes, messageContext) {
-            nodes.forEach(node => {
+            for(let i=0; i<nodes.length; i++){
+                let node = nodes[i];
                 let score = 0;
-                nodes.forEach(other => {
+                for(let j=0; j<nodes.length; j++){
+                    let other = nodes[j];
                     if (node.id !== other.id) {
                         let d = getDistanceMeters(parseFloat(node.y), parseFloat(node.x), parseFloat(other.y), parseFloat(other.x));
                         if (d <= 200) score += (200 - d); 
                     }
-                });
+                }
                 node.densityScore = score || 1; 
-            });
+            }
 
-            // 원본 배열을 망가뜨리지 않는 안전한 정렬 복사
             let sortedNodes = nodes.slice().sort(function(a, b) {
                 return b.densityScore - a.densityScore;
             });
