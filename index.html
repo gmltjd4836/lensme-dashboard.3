@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>렌즈미 상권 분석 대시보드 (V5.2 Final - 절대 무적 방탄)</title>
+    <title>렌즈미 상권 분석 대시보드 (V5.3 스마트 자석 모드)</title>
     <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
@@ -47,7 +47,7 @@
     <div class="w-full md:w-1/4 bg-white border-r border-gray-200 p-6 flex flex-col shadow-lg z-20 overflow-y-auto">
         <h1 class="text-xl font-extrabold text-slate-800 border-b-4 border-indigo-500 pb-3 mb-4 flex justify-between items-center">
             <span>🗺️ 전국구 상권 관제탑</span>
-            <span class="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded-full font-bold">V5.2 🛡️</span>
+            <span class="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded-full font-bold">V5.3 🧲</span>
         </h1>
         
         <div class="mb-4 bg-slate-50 p-4 rounded-xl border border-slate-200">
@@ -156,9 +156,9 @@
     <script type="text/javascript" src="//dapi.kakao.com/v2/maps/sdk.js?appkey=c045609510f8b75252389123f086be48&libraries=services,drawing"></script>
 
     <script>
-        // 💡 [초강력 핵심 모듈] 카카오 특수 객체든, 저장된 텍스트든 무조건 숫자로 강제 변환하는 '만능 좌표 판독기'
-        function getLat(p) { return (typeof p.getLat === 'function') ? p.getLat() : parseFloat(p.y); }
-        function getLng(p) { return (typeof p.getLng === 'function') ? p.getLng() : parseFloat(p.x); }
+        // 💡 만능 좌표 판독기 (어떤 데이터든 무조건 추출)
+        function getLat(p) { return (typeof p.getLat === 'function') ? p.getLat() : parseFloat(p.y || p.lat); }
+        function getLng(p) { return (typeof p.getLng === 'function') ? p.getLng() : parseFloat(p.x || p.lng); }
 
         let mapContainer = document.getElementById('map'); 
         let currentCenter = new kakao.maps.LatLng(37.498095, 127.027610); 
@@ -194,7 +194,7 @@
             polygonOptions: { draggable: false, removable: false, editable: true, strokeColor: '#be185d', strokeWeight: 3, fillColor: '#f43f5e', fillOpacity: 0.2 }
         });
 
-        let savedPolygons = JSON.parse(localStorage.getItem('lensmePolygonsV5_2') || '[]');
+        let savedPolygons = JSON.parse(localStorage.getItem('lensmePolygonsV5_3') || '[]');
         let activePolygonPath = null; 
         let activePolygonId = null;
         let renderedPolygons = {}; 
@@ -248,13 +248,12 @@
 
         function saveDrawing() {
             if (!tempDrawnPath) { alert("그려진 다각형이 없습니다."); return; }
-            
             let name = prompt("이 상권 영토의 이름을 입력하세요:", "새 상권");
             if (name) {
                 try {
                     let sumLat = 0, sumLng = 0;
                     tempDrawnPath.forEach(p => { 
-                        sumLat += getLat(p); // 💡 만능 판독기 적용
+                        sumLat += getLat(p); 
                         sumLng += getLng(p); 
                     });
                     let centerLat = sumLat / tempDrawnPath.length;
@@ -269,11 +268,10 @@
                             dong = addr.region_3depth_name;
                         }
                         
-                        // 💡 만능 판독기로 순수 숫자로만 변환해서 안전하게 저장
                         let coords = tempDrawnPath.map(p => ({ x: getLng(p), y: getLat(p) }));
                         let id = 'poly_' + Date.now();
                         savedPolygons.push({ id: id, name: name, path: coords, si: si, gu: gu, dong: dong, centerLat: centerLat, centerLng: centerLng });
-                        localStorage.setItem('lensmePolygonsV5_2', JSON.stringify(savedPolygons));
+                        localStorage.setItem('lensmePolygonsV5_3', JSON.stringify(savedPolygons));
                         
                         drawingManager.clear();
                         isDrawingMode = false;
@@ -285,8 +283,6 @@
                         selectSavedPolygon(id); 
                     });
                 } catch (saveError) {
-                    console.error("저장 오류:", saveError);
-                    alert("영토 저장 중 오류가 발생했습니다.");
                     cancelDrawing();
                 }
             } else {
@@ -363,7 +359,7 @@
         function deletePolygon(id) {
             if(!confirm("이 영토를 삭제하시겠습니까?")) return;
             savedPolygons = savedPolygons.filter(p => p.id !== id);
-            localStorage.setItem('lensmePolygonsV5_2', JSON.stringify(savedPolygons));
+            localStorage.setItem('lensmePolygonsV5_3', JSON.stringify(savedPolygons));
             if(activePolygonId === id) clearActivePolygon();
             renderPolygonTree();
         }
@@ -413,7 +409,6 @@
             rankOverlays = [];
         }
 
-        // 💡 [핵심 V5.2] 만능 판독기가 적용된 가장 안전한 충돌 검사
         function isPointInPolygon(lat, lng, polygonPath) {
             try {
                 let inside = false;
@@ -424,10 +419,7 @@
                     if (intersect) inside = !inside;
                 }
                 return inside;
-            } catch(e) {
-                console.error("다각형 검사 에러:", e);
-                return false;
-            }
+            } catch(e) { return true; } // 에러시 무조건 포함 (안전장치)
         }
 
         kakao.maps.event.addListener(map, 'idle', async function() {
@@ -450,12 +442,11 @@
                                 data.forEach(place => processPlaceAndDrawMarker(place, key));
                             }
                             resolve(); 
-                        }, { bounds: bounds, size: 15 });
+                        }, { location: bounds.getCenter(), bounds: bounds, size: 15 });
                     });
                     await delay(100);
                 }
-            } catch(e) {
-            } finally {
+            } catch(e) {} finally {
                 isScanningAPI = false;
             }
         }
@@ -514,7 +505,7 @@
             return true;
         }
 
-        // 💡 [핵심 V5.2] 멋 부림 제로! 무적의 방탄 스캔 + 3단계 하이브리드 로직
+        // 💡 [핵심 V5.3] 스마트 자석 폴리백 & 캐시 데이터 싹쓸이 흡수 모듈
         async function runDirectDeepScan(targetPath) {
             if(isScanningAPI) return;
             isScanningAPI = true;
@@ -524,20 +515,23 @@
             
             try {
                 let bounds = new kakao.maps.LatLngBounds();
-                targetPath.forEach(p => {
-                    // 💡 바운즈 생성에도 만능 판독기 적용
+                let centerLat = 0, centerLng = 0;
+                targetPath.forEach(p => { 
                     bounds.extend(new kakao.maps.LatLng(getLat(p), getLng(p)));
+                    centerLat += getLat(p);
+                    centerLng += getLng(p);
                 });
+                centerLat /= targetPath.length;
+                centerLng /= targetPath.length;
                 
                 let activeKeys = Object.keys(BRAND_CONFIG).filter(key => document.getElementById(key) && document.getElementById(key).checked);
                 let fnbCategories = [{code: 'CE7', name: '카페'}, {code: 'CS2', name: '편의점'}];
                 
-                let allScannedNodes = [];
-                let targetStats = { comp: 0, anchor: 0 };
-                
+                let rawScannedNodes = [];
                 let totalSteps = activeKeys.length + fnbCategories.length;
                 let currentStep = 0;
 
+                // API 통신 (타겟)
                 for (let i = 0; i < activeKeys.length; i++) {
                     let key = activeKeys[i];
                     currentStep++;
@@ -548,110 +542,139 @@
                             if (status === kakao.maps.services.Status.OK) {
                                 for(let k=0; k<data.length; k++) {
                                     let place = data[k];
-                                    if (isPointInPolygon(parseFloat(place.y), parseFloat(place.x), targetPath)) {
-                                        place.isTarget = true;
-                                        allScannedNodes.push(place);
-                                        if(BRAND_CONFIG[key].isComp) targetStats.comp++;
-                                        else if(BRAND_CONFIG[key].isAnchor) targetStats.anchor++;
-                                        processPlaceAndDrawMarker(place, key);
-                                    }
+                                    place.isTarget = true;
+                                    place.brandKey = key;
+                                    rawScannedNodes.push(place);
+                                    processPlaceAndDrawMarker(place, key); // 검색된 것도 화면에 무조건 띄워줌
                                 }
                             }
                             resolve(); 
-                        }, { bounds: bounds, size: 15 });
+                        }, { location: bounds.getCenter(), bounds: bounds, size: 15 });
                     });
                     await delay(150); 
                 }
 
+                // API 통신 (F&B)
                 for (let i = 0; i < fnbCategories.length; i++) {
                     let cat = fnbCategories[i];
                     currentStep++;
-                    statusEl.innerText = `☕ 스캔 중... [${currentStep}/${totalSteps}] ${cat.name} 유동인구 스캔 중`;
+                    statusEl.innerText = `☕ 스캔 중... [${currentStep}/${totalSteps}] ${cat.name} 스캔 중`;
                     
                     await new Promise(resolve => {
                         ps.categorySearch(cat.code, function(data, status) {
                             if (status === kakao.maps.services.Status.OK) {
                                 for(let k=0; k<data.length; k++) {
                                     let place = data[k];
-                                    if (isPointInPolygon(parseFloat(place.y), parseFloat(place.x), targetPath)) {
-                                        place.isFnb = true;
-                                        allScannedNodes.push(place);
-                                    }
+                                    place.isFnb = true;
+                                    place.isTarget = false;
+                                    rawScannedNodes.push(place);
                                 }
                             }
                             resolve();
-                        }, { bounds: bounds, size: 15 });
+                        }, { location: bounds.getCenter(), bounds: bounds, size: 15 });
                     });
                     await delay(150); 
                 }
 
-                document.getElementById('comp_count').innerText = targetStats.comp + '개';
-                document.getElementById('anchor_count').innerText = targetStats.anchor + '개';
+                // 💡 [안전장치 1] 화면에 눈으로 보이는 '캐시 데이터' 무조건 편입 (절대 안 놓침)
+                placeCache.forEach(function(item) {
+                    let place = item.rawData;
+                    place.isTarget = true;
+                    place.brandKey = item.brand;
+                    rawScannedNodes.push(place);
+                });
+
+                // 다각형 내부 엄격한 필터링
+                let insideNodes = [];
+                let seenIds = {};
+                let targetStats = { comp: 0, anchor: 0 };
                 
-                try { drawRadarChart(targetStats.comp, targetStats.anchor); } catch(chartErr) {}
-
-                try {
-                    // 구형 문법 중복 제거 (완전 안전)
-                    let uniqueNodes = [];
-                    let seenIds = {};
-                    for (let i = 0; i < allScannedNodes.length; i++) {
-                        let item = allScannedNodes[i];
-                        if (!seenIds[item.id]) {
-                            seenIds[item.id] = true;
-                            uniqueNodes.push(item);
+                for (let i = 0; i < rawScannedNodes.length; i++) {
+                    let place = rawScannedNodes[i];
+                    if (!seenIds[place.id]) {
+                        seenIds[place.id] = true;
+                        if (isPointInPolygon(parseFloat(place.y), parseFloat(place.x), targetPath)) {
+                            insideNodes.push(place);
+                            if (place.brandKey && BRAND_CONFIG[place.brandKey]) {
+                                if (BRAND_CONFIG[place.brandKey].isComp) targetStats.comp++;
+                                else if (BRAND_CONFIG[place.brandKey].isAnchor) targetStats.anchor++;
+                            }
                         }
                     }
-
-                    // 3단계 하이브리드 엔진
-                    let pureTargets = [];
-                    for (let j = 0; j < uniqueNodes.length; j++) {
-                        if (uniqueNodes[j].isTarget) {
-                            pureTargets.push(uniqueNodes[j]);
-                        }
-                    }
-
-                    if (pureTargets.length >= 3) {
-                        calculateTop3Spots(pureTargets, "타겟 매장 우선");
-                    } 
-                    else if (pureTargets.length > 0) { // 타겟이 1~2개뿐일 때 (2단계)
-                        calculateTop3Spots(uniqueNodes, "타겟+유동인구 혼합");
-                    }
-                    else if (uniqueNodes.length > 0) { // 타겟이 아예 없을 때 (3단계)
-                        calculateTop3Spots(uniqueNodes, "유동인구 단독");
-                    } 
-                    else {
-                        let sumLat = 0, sumLng = 0;
-                        targetPath.forEach(p => { 
-                            sumLat += getLat(p); 
-                            sumLng += getLng(p); 
-                        });
-                        let overlay = new kakao.maps.CustomOverlay({
-                            position: new kakao.maps.LatLng(sumLat/targetPath.length, sumLng/targetPath.length),
-                            content: `<div class="rank-badge rank-2">📍 영토 지리적 중앙</div><div class="rank-dot rank-dot-2"></div>`,
-                            xAnchor: 0.5, yAnchor: 0.5, zIndex: 300
-                        });
-                        overlay.setMap(map);
-                        rankOverlays.push(overlay);
-                        statusEl.innerText = "⚠️ 펜스 내 상업 시설이 없습니다. 지리적 중앙을 표시합니다.";
-                    }
-                } catch(calcErr) {
-                    console.error("랭킹 도출 중 오류:", calcErr);
-                    statusEl.innerText = "⚠️ 에러 발생: " + calcErr.message;
                 }
 
+                // 💡 [안전장치 2: 스마트 자석 모드] 다각형을 빗겨쳐서 0개가 나왔을 때, 가장 가까운 매장 강제 흡수!
+                if (insideNodes.length === 0) {
+                    let allUnique = [];
+                    let fallbackSeen = {};
+                    for (let i = 0; i < rawScannedNodes.length; i++) {
+                        let place = rawScannedNodes[i];
+                        if (!fallbackSeen[place.id]) {
+                            fallbackSeen[place.id] = true;
+                            place.distToCenter = getDistanceMeters(parseFloat(place.y), parseFloat(place.x), centerLat, centerLng);
+                            allUnique.push(place);
+                        }
+                    }
+                    
+                    if (allUnique.length > 0) {
+                        statusEl.innerText = "⚠️ 펜스를 빗겨쳐서 주변의 가장 가까운 상업시설을 자석처럼 흡수했습니다!";
+                        allUnique.sort(function(a, b) { return a.distToCenter - b.distToCenter; });
+                        insideNodes = allUnique.slice(0, 10); // 가장 가까운 10개를 펜스 안으로 강제 인정
+                        
+                        targetStats = { comp: 0, anchor: 0 };
+                        for (let i = 0; i < insideNodes.length; i++) {
+                            let p = insideNodes[i];
+                            if (p.brandKey && BRAND_CONFIG[p.brandKey]) {
+                                if (BRAND_CONFIG[p.brandKey].isComp) targetStats.comp++;
+                                else if (BRAND_CONFIG[p.brandKey].isAnchor) targetStats.anchor++;
+                            }
+                        }
+                    }
+                }
+
+                document.getElementById('comp_count').innerText = targetStats.comp + '개';
+                document.getElementById('anchor_count').innerText = targetStats.anchor + '개';
+                try { drawRadarChart(targetStats.comp, targetStats.anchor); } catch(chartErr) {}
+
+                // 순위 도출
+                let pureTargets = [];
+                for (let j = 0; j < insideNodes.length; j++) {
+                    if (insideNodes[j].isTarget) pureTargets.push(insideNodes[j]);
+                }
+
+                if (pureTargets.length >= 3) {
+                    calculateTop3Spots(pureTargets, "타겟 매장 우선");
+                } 
+                else if (pureTargets.length > 0) {
+                    calculateTop3Spots(insideNodes, "타겟+유동인구 혼합");
+                }
+                else if (insideNodes.length > 0) {
+                    calculateTop3Spots(insideNodes, "유동인구 단독");
+                } 
+                else {
+                    // 지도 전체에 핀이 단 한 개도 없는 사막 한가운데일 때만 발동
+                    let overlay = new kakao.maps.CustomOverlay({
+                        position: new kakao.maps.LatLng(centerLat, centerLng),
+                        content: `<div class="rank-badge rank-2">📍 영토 지리적 중앙</div><div class="rank-dot rank-dot-2"></div>`,
+                        xAnchor: 0.5, yAnchor: 0.5, zIndex: 300
+                    });
+                    overlay.setMap(map);
+                    rankOverlays.push(overlay);
+                    statusEl.innerText = "⚠️ 지도 반경 내에 상업 시설이 전혀 없어 지리적 중앙만 표시합니다.";
+                }
             } catch(e) {
                 console.error("분석 엔진 크래시:", e);
-                statusEl.innerText = "⚠️ 네트워크 오류: " + e.message;
+                statusEl.innerText = "⚠️ 분석 오류: 지도를 살짝 움직인 뒤 다시 시도해주세요.";
             } finally {
                 isScanningAPI = false;
             }
         }
 
         function calculateTop3Spots(nodes, messageContext) {
-            for(let i=0; i<nodes.length; i++){
+            for (let i = 0; i < nodes.length; i++) {
                 let node = nodes[i];
                 let score = 0;
-                for(let j=0; j<nodes.length; j++){
+                for (let j = 0; j < nodes.length; j++) {
                     let other = nodes[j];
                     if (node.id !== other.id) {
                         let d = getDistanceMeters(parseFloat(node.y), parseFloat(node.x), parseFloat(other.y), parseFloat(other.x));
@@ -666,11 +689,9 @@
             });
             
             let topSpots = [];
-            
             for (let i = 0; i < sortedNodes.length; i++) {
                 let candidate = sortedNodes[i];
                 let isTooClose = false;
-                
                 for (let k = 0; k < topSpots.length; k++) {
                     let selected = topSpots[k];
                     if (getDistanceMeters(parseFloat(candidate.y), parseFloat(candidate.x), parseFloat(selected.y), parseFloat(selected.x)) < 30) {
@@ -678,7 +699,6 @@
                         break;
                     }
                 }
-                
                 if (!isTooClose) topSpots.push(candidate);
                 if (topSpots.length >= 3) break;
             }
@@ -700,7 +720,9 @@
                 rankOverlays.push(overlay);
             }
 
-            document.getElementById('statusMessage').innerText = `✅ 딥 스캔 완료! [${messageContext} 기준] 1~3위 입지 추출`;
+            if(document.getElementById('statusMessage').innerText.indexOf("자석처럼") === -1) {
+                document.getElementById('statusMessage').innerText = `✅ 딥 스캔 완료! [${messageContext}] 1~3위 입지 추출`;
+            }
         }
 
         function getDistanceMeters(lat1, lon1, lat2, lon2) {
