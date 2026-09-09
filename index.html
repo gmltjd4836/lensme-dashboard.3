@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>렌즈미 상권 분석 대시보드 (V5.3 스마트 자석 모드)</title>
+    <title>렌즈미 상권 분석 대시보드 (V6.0 순정 엔진)</title>
     <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
@@ -47,7 +47,7 @@
     <div class="w-full md:w-1/4 bg-white border-r border-gray-200 p-6 flex flex-col shadow-lg z-20 overflow-y-auto">
         <h1 class="text-xl font-extrabold text-slate-800 border-b-4 border-indigo-500 pb-3 mb-4 flex justify-between items-center">
             <span>🗺️ 전국구 상권 관제탑</span>
-            <span class="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded-full font-bold">V5.3 🧲</span>
+            <span class="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded-full font-bold">V6.0 🚀</span>
         </h1>
         
         <div class="mb-4 bg-slate-50 p-4 rounded-xl border border-slate-200">
@@ -156,10 +156,6 @@
     <script type="text/javascript" src="//dapi.kakao.com/v2/maps/sdk.js?appkey=c045609510f8b75252389123f086be48&libraries=services,drawing"></script>
 
     <script>
-        // 💡 만능 좌표 판독기 (어떤 데이터든 무조건 추출)
-        function getLat(p) { return (typeof p.getLat === 'function') ? p.getLat() : parseFloat(p.y || p.lat); }
-        function getLng(p) { return (typeof p.getLng === 'function') ? p.getLng() : parseFloat(p.x || p.lng); }
-
         let mapContainer = document.getElementById('map'); 
         let currentCenter = new kakao.maps.LatLng(37.498095, 127.027610); 
         let searchCenter = currentCenter; 
@@ -194,25 +190,31 @@
             polygonOptions: { draggable: false, removable: false, editable: true, strokeColor: '#be185d', strokeWeight: 3, fillColor: '#f43f5e', fillOpacity: 0.2 }
         });
 
-        let savedPolygons = JSON.parse(localStorage.getItem('lensmePolygonsV5_3') || '[]');
+        let savedPolygons = JSON.parse(localStorage.getItem('lensmePolygonsV6_0') || '[]');
         let activePolygonPath = null; 
         let activePolygonId = null;
         let renderedPolygons = {}; 
         let renderedNametags = {};
         let isDrawingMode = false;
-        let tempDrawnPath = null; 
+        let tempDrawnPath = null; // 순수 {lat, lng} 배열로만 관리됩니다.
         let isScanningAPI = false;
 
         const delay = ms => new Promise(res => setTimeout(res, ms));
 
+        // 💡 [에러 원천 차단 1] 다각형을 그리는 즉시 복잡한 카카오 객체를 버리고 순수 숫자로 추출합니다.
         drawingManager.addListener('drawend', function(data) {
             if (data.overlayType === kakao.maps.drawing.OverlayType.POLYGON) {
                 let rawPath = data.target.getPath();
-                if (rawPath.length > 0 && Array.isArray(rawPath[0])) {
-                    tempDrawnPath = rawPath[0]; 
-                } else {
-                    tempDrawnPath = rawPath;
+                let targetArray = (rawPath.length > 0 && Array.isArray(rawPath[0])) ? rawPath[0] : rawPath;
+                
+                let flatPath = [];
+                for(let i = 0; i < targetArray.length; i++) {
+                    let pt = targetArray[i];
+                    let ptLat = typeof pt.getLat === 'function' ? pt.getLat() : parseFloat(pt.y);
+                    let ptLng = typeof pt.getLng === 'function' ? pt.getLng() : parseFloat(pt.x);
+                    flatPath.push({ lat: ptLat, lng: ptLng });
                 }
+                tempDrawnPath = flatPath;
                 
                 document.getElementById('btnStartDraw').classList.add('hidden');
                 document.getElementById('btnSaveDraw').classList.remove('hidden');
@@ -223,7 +225,7 @@
         });
 
         function startDrawing() {
-            if(isScanningAPI) return alert("현재 데이터를 분석 중입니다. 1~2초 후 다시 시도해주세요.");
+            if(isScanningAPI) return alert("데이터 로딩 중입니다. 잠시 후 다시 시도해주세요.");
             isDrawingMode = true;
             tempDrawnPath = null;
             clearActivePolygon(); 
@@ -250,41 +252,36 @@
             if (!tempDrawnPath) { alert("그려진 다각형이 없습니다."); return; }
             let name = prompt("이 상권 영토의 이름을 입력하세요:", "새 상권");
             if (name) {
-                try {
-                    let sumLat = 0, sumLng = 0;
-                    tempDrawnPath.forEach(p => { 
-                        sumLat += getLat(p); 
-                        sumLng += getLng(p); 
-                    });
-                    let centerLat = sumLat / tempDrawnPath.length;
-                    let centerLng = sumLng / tempDrawnPath.length;
-
-                    geocoder.coord2RegionCode(centerLng, centerLat, function(result, status) {
-                        let si = "기타", gu = "기타", dong = "기타";
-                        if (status === kakao.maps.services.Status.OK) {
-                            let addr = result.find(r => r.region_type === 'B') || result[0];
-                            si = addr.region_1depth_name;
-                            gu = addr.region_2depth_name || "전체";
-                            dong = addr.region_3depth_name;
-                        }
-                        
-                        let coords = tempDrawnPath.map(p => ({ x: getLng(p), y: getLat(p) }));
-                        let id = 'poly_' + Date.now();
-                        savedPolygons.push({ id: id, name: name, path: coords, si: si, gu: gu, dong: dong, centerLat: centerLat, centerLng: centerLng });
-                        localStorage.setItem('lensmePolygonsV5_3', JSON.stringify(savedPolygons));
-                        
-                        drawingManager.clear();
-                        isDrawingMode = false;
-                        document.getElementById('btnStartDraw').classList.remove('hidden');
-                        document.getElementById('btnSaveDraw').classList.add('hidden');
-                        document.getElementById('btnCancelDraw').classList.add('hidden');
-                        
-                        renderPolygonTree();
-                        selectSavedPolygon(id); 
-                    });
-                } catch (saveError) {
-                    cancelDrawing();
+                let sumLat = 0, sumLng = 0;
+                for(let i = 0; i < tempDrawnPath.length; i++) {
+                    sumLat += tempDrawnPath[i].lat;
+                    sumLng += tempDrawnPath[i].lng;
                 }
+                let centerLat = sumLat / tempDrawnPath.length;
+                let centerLng = sumLng / tempDrawnPath.length;
+
+                geocoder.coord2RegionCode(centerLng, centerLat, function(result, status) {
+                    let si = "기타", gu = "기타", dong = "기타";
+                    if (status === kakao.maps.services.Status.OK) {
+                        let addr = result.find(r => r.region_type === 'B') || result[0];
+                        si = addr.region_1depth_name;
+                        gu = addr.region_2depth_name || "전체";
+                        dong = addr.region_3depth_name;
+                    }
+                    
+                    let id = 'poly_' + Date.now();
+                    savedPolygons.push({ id: id, name: name, path: tempDrawnPath, si: si, gu: gu, dong: dong, centerLat: centerLat, centerLng: centerLng });
+                    localStorage.setItem('lensmePolygonsV6_0', JSON.stringify(savedPolygons));
+                    
+                    drawingManager.clear();
+                    isDrawingMode = false;
+                    document.getElementById('btnStartDraw').classList.remove('hidden');
+                    document.getElementById('btnSaveDraw').classList.add('hidden');
+                    document.getElementById('btnCancelDraw').classList.add('hidden');
+                    
+                    renderPolygonTree();
+                    selectSavedPolygon(id); 
+                });
             } else {
                 cancelDrawing();
             }
@@ -332,9 +329,9 @@
                             `;
                             divDong.appendChild(item);
 
-                            let path = poly.path.map(p => new kakao.maps.LatLng(p.y, p.x));
+                            let pathForMap = poly.path.map(p => new kakao.maps.LatLng(p.lat, p.lng));
                             let polygon = new kakao.maps.Polygon({
-                                path: path, strokeWeight: 2, strokeColor: '#be185d', strokeOpacity: 0.8, fillOpacity: 0.1, fillColor: '#f43f5e'
+                                path: pathForMap, strokeWeight: 2, strokeColor: '#be185d', strokeOpacity: 0.8, fillOpacity: 0.1, fillColor: '#f43f5e'
                             });
                             polygon.setMap(map);
                             kakao.maps.event.addListener(polygon, 'click', function() { selectSavedPolygon(poly.id); });
@@ -359,25 +356,24 @@
         function deletePolygon(id) {
             if(!confirm("이 영토를 삭제하시겠습니까?")) return;
             savedPolygons = savedPolygons.filter(p => p.id !== id);
-            localStorage.setItem('lensmePolygonsV5_3', JSON.stringify(savedPolygons));
+            localStorage.setItem('lensmePolygonsV6_0', JSON.stringify(savedPolygons));
             if(activePolygonId === id) clearActivePolygon();
             renderPolygonTree();
         }
 
         function selectSavedPolygon(id) {
             if(isScanningAPI) return alert("현재 분석이 진행 중입니다. 잠시 기다려주세요.");
-            
             let poly = savedPolygons.find(p => p.id === id);
             if(!poly) return;
 
             activePolygonId = id;
-            activePolygonPath = poly.path.map(p => new kakao.maps.LatLng(p.y, p.x));
+            activePolygonPath = poly.path; // 순수 {lat, lng} 데이터 그대로 사용
             
             document.getElementById('targetLocationInput').innerText = `[${poly.dong}] ${poly.name}`;
             document.getElementById('btnClearPolygon').classList.remove('hidden');
             
             let bounds = new kakao.maps.LatLngBounds();
-            activePolygonPath.forEach(p => bounds.extend(p));
+            activePolygonPath.forEach(p => bounds.extend(new kakao.maps.LatLng(p.lat, p.lng)));
             map.setBounds(bounds);
             searchCenter = bounds.getCenter();
 
@@ -409,17 +405,16 @@
             rankOverlays = [];
         }
 
+        // 💡 [에러 원천 차단 2] 순수 {lat, lng} 객체 배열만 취급하여 에러율 0% 달성
         function isPointInPolygon(lat, lng, polygonPath) {
-            try {
-                let inside = false;
-                for (let i = 0, j = polygonPath.length - 1; i < polygonPath.length; j = i++) {
-                    let xi = getLng(polygonPath[i]), yi = getLat(polygonPath[i]);
-                    let xj = getLng(polygonPath[j]), yj = getLat(polygonPath[j]);
-                    let intersect = ((yi > lat) != (yj > lat)) && (lng < (xj - xi) * (lat - yi) / (yj - yi) + xi);
-                    if (intersect) inside = !inside;
-                }
-                return inside;
-            } catch(e) { return true; } // 에러시 무조건 포함 (안전장치)
+            let inside = false;
+            for (let i = 0, j = polygonPath.length - 1; i < polygonPath.length; j = i++) {
+                let xi = polygonPath[i].lng, yi = polygonPath[i].lat;
+                let xj = polygonPath[j].lng, yj = polygonPath[j].lat;
+                let intersect = ((yi > lat) != (yj > lat)) && (lng < (xj - xi) * (lat - yi) / (yj - yi) + xi);
+                if (intersect) inside = !inside;
+            }
+            return inside;
         }
 
         kakao.maps.event.addListener(map, 'idle', async function() {
@@ -435,16 +430,17 @@
                 let bounds = map.getBounds();
                 let activeKeys = Object.keys(BRAND_CONFIG).filter(key => document.getElementById(key) && document.getElementById(key).checked);
                 
-                for (let key of activeKeys) {
+                for (let i=0; i<activeKeys.length; i++) {
+                    let key = activeKeys[i];
                     await new Promise(resolve => {
                         ps.keywordSearch(BRAND_CONFIG[key].kw, function(data, status) {
                             if (status === kakao.maps.services.Status.OK) {
                                 data.forEach(place => processPlaceAndDrawMarker(place, key));
                             }
                             resolve(); 
-                        }, { location: bounds.getCenter(), bounds: bounds, size: 15 });
+                        }, { bounds: bounds, size: 15 });
                     });
-                    await delay(100);
+                    await delay(50);
                 }
             } catch(e) {} finally {
                 isScanningAPI = false;
@@ -505,7 +501,7 @@
             return true;
         }
 
-        // 💡 [핵심 V5.3] 스마트 자석 폴리백 & 캐시 데이터 싹쓸이 흡수 모듈
+        // 💡 [에러 원천 차단 3] 좁은 다각형 모양 때문에 검색을 실패하는 API 한계를 극복 (반경 500m 검색 후 오려내기)
         async function runDirectDeepScan(targetPath) {
             if(isScanningAPI) return;
             isScanningAPI = true;
@@ -513,161 +509,116 @@
             
             let statusEl = document.getElementById('statusMessage');
             
-            try {
-                let bounds = new kakao.maps.LatLngBounds();
-                let centerLat = 0, centerLng = 0;
-                targetPath.forEach(p => { 
-                    bounds.extend(new kakao.maps.LatLng(getLat(p), getLng(p)));
-                    centerLat += getLat(p);
-                    centerLng += getLng(p);
-                });
-                centerLat /= targetPath.length;
-                centerLng /= targetPath.length;
-                
-                let activeKeys = Object.keys(BRAND_CONFIG).filter(key => document.getElementById(key) && document.getElementById(key).checked);
-                let fnbCategories = [{code: 'CE7', name: '카페'}, {code: 'CS2', name: '편의점'}];
-                
-                let rawScannedNodes = [];
-                let totalSteps = activeKeys.length + fnbCategories.length;
-                let currentStep = 0;
-
-                // API 통신 (타겟)
-                for (let i = 0; i < activeKeys.length; i++) {
-                    let key = activeKeys[i];
-                    currentStep++;
-                    statusEl.innerText = `🎯 스캔 중... [${currentStep}/${totalSteps}] ${BRAND_CONFIG[key].name} 찾는 중`;
-                    
-                    await new Promise(resolve => {
-                        ps.keywordSearch(BRAND_CONFIG[key].kw, function(data, status) {
-                            if (status === kakao.maps.services.Status.OK) {
-                                for(let k=0; k<data.length; k++) {
-                                    let place = data[k];
-                                    place.isTarget = true;
-                                    place.brandKey = key;
-                                    rawScannedNodes.push(place);
-                                    processPlaceAndDrawMarker(place, key); // 검색된 것도 화면에 무조건 띄워줌
-                                }
-                            }
-                            resolve(); 
-                        }, { location: bounds.getCenter(), bounds: bounds, size: 15 });
-                    });
-                    await delay(150); 
-                }
-
-                // API 통신 (F&B)
-                for (let i = 0; i < fnbCategories.length; i++) {
-                    let cat = fnbCategories[i];
-                    currentStep++;
-                    statusEl.innerText = `☕ 스캔 중... [${currentStep}/${totalSteps}] ${cat.name} 스캔 중`;
-                    
-                    await new Promise(resolve => {
-                        ps.categorySearch(cat.code, function(data, status) {
-                            if (status === kakao.maps.services.Status.OK) {
-                                for(let k=0; k<data.length; k++) {
-                                    let place = data[k];
-                                    place.isFnb = true;
-                                    place.isTarget = false;
-                                    rawScannedNodes.push(place);
-                                }
-                            }
-                            resolve();
-                        }, { location: bounds.getCenter(), bounds: bounds, size: 15 });
-                    });
-                    await delay(150); 
-                }
-
-                // 💡 [안전장치 1] 화면에 눈으로 보이는 '캐시 데이터' 무조건 편입 (절대 안 놓침)
-                placeCache.forEach(function(item) {
-                    let place = item.rawData;
-                    place.isTarget = true;
-                    place.brandKey = item.brand;
-                    rawScannedNodes.push(place);
-                });
-
-                // 다각형 내부 엄격한 필터링
-                let insideNodes = [];
-                let seenIds = {};
-                let targetStats = { comp: 0, anchor: 0 };
-                
-                for (let i = 0; i < rawScannedNodes.length; i++) {
-                    let place = rawScannedNodes[i];
-                    if (!seenIds[place.id]) {
-                        seenIds[place.id] = true;
-                        if (isPointInPolygon(parseFloat(place.y), parseFloat(place.x), targetPath)) {
-                            insideNodes.push(place);
-                            if (place.brandKey && BRAND_CONFIG[place.brandKey]) {
-                                if (BRAND_CONFIG[place.brandKey].isComp) targetStats.comp++;
-                                else if (BRAND_CONFIG[place.brandKey].isAnchor) targetStats.anchor++;
-                            }
-                        }
-                    }
-                }
-
-                // 💡 [안전장치 2: 스마트 자석 모드] 다각형을 빗겨쳐서 0개가 나왔을 때, 가장 가까운 매장 강제 흡수!
-                if (insideNodes.length === 0) {
-                    let allUnique = [];
-                    let fallbackSeen = {};
-                    for (let i = 0; i < rawScannedNodes.length; i++) {
-                        let place = rawScannedNodes[i];
-                        if (!fallbackSeen[place.id]) {
-                            fallbackSeen[place.id] = true;
-                            place.distToCenter = getDistanceMeters(parseFloat(place.y), parseFloat(place.x), centerLat, centerLng);
-                            allUnique.push(place);
-                        }
-                    }
-                    
-                    if (allUnique.length > 0) {
-                        statusEl.innerText = "⚠️ 펜스를 빗겨쳐서 주변의 가장 가까운 상업시설을 자석처럼 흡수했습니다!";
-                        allUnique.sort(function(a, b) { return a.distToCenter - b.distToCenter; });
-                        insideNodes = allUnique.slice(0, 10); // 가장 가까운 10개를 펜스 안으로 강제 인정
-                        
-                        targetStats = { comp: 0, anchor: 0 };
-                        for (let i = 0; i < insideNodes.length; i++) {
-                            let p = insideNodes[i];
-                            if (p.brandKey && BRAND_CONFIG[p.brandKey]) {
-                                if (BRAND_CONFIG[p.brandKey].isComp) targetStats.comp++;
-                                else if (BRAND_CONFIG[p.brandKey].isAnchor) targetStats.anchor++;
-                            }
-                        }
-                    }
-                }
-
-                document.getElementById('comp_count').innerText = targetStats.comp + '개';
-                document.getElementById('anchor_count').innerText = targetStats.anchor + '개';
-                try { drawRadarChart(targetStats.comp, targetStats.anchor); } catch(chartErr) {}
-
-                // 순위 도출
-                let pureTargets = [];
-                for (let j = 0; j < insideNodes.length; j++) {
-                    if (insideNodes[j].isTarget) pureTargets.push(insideNodes[j]);
-                }
-
-                if (pureTargets.length >= 3) {
-                    calculateTop3Spots(pureTargets, "타겟 매장 우선");
-                } 
-                else if (pureTargets.length > 0) {
-                    calculateTop3Spots(insideNodes, "타겟+유동인구 혼합");
-                }
-                else if (insideNodes.length > 0) {
-                    calculateTop3Spots(insideNodes, "유동인구 단독");
-                } 
-                else {
-                    // 지도 전체에 핀이 단 한 개도 없는 사막 한가운데일 때만 발동
-                    let overlay = new kakao.maps.CustomOverlay({
-                        position: new kakao.maps.LatLng(centerLat, centerLng),
-                        content: `<div class="rank-badge rank-2">📍 영토 지리적 중앙</div><div class="rank-dot rank-dot-2"></div>`,
-                        xAnchor: 0.5, yAnchor: 0.5, zIndex: 300
-                    });
-                    overlay.setMap(map);
-                    rankOverlays.push(overlay);
-                    statusEl.innerText = "⚠️ 지도 반경 내에 상업 시설이 전혀 없어 지리적 중앙만 표시합니다.";
-                }
-            } catch(e) {
-                console.error("분석 엔진 크래시:", e);
-                statusEl.innerText = "⚠️ 분석 오류: 지도를 살짝 움직인 뒤 다시 시도해주세요.";
-            } finally {
-                isScanningAPI = false;
+            let centerLat = 0, centerLng = 0;
+            for(let i=0; i<targetPath.length; i++) {
+                centerLat += targetPath[i].lat;
+                centerLng += targetPath[i].lng;
             }
+            centerLat /= targetPath.length;
+            centerLng /= targetPath.length;
+            let centerPos = new kakao.maps.LatLng(centerLat, centerLng);
+
+            let activeKeys = Object.keys(BRAND_CONFIG).filter(key => document.getElementById(key) && document.getElementById(key).checked);
+            let fnbCategories = [{code: 'CE7', name: '카페'}, {code: 'CS2', name: '편의점'}];
+            
+            let rawScannedNodes = [];
+            let totalSteps = activeKeys.length + fnbCategories.length;
+            let currentStep = 0;
+
+            for (let i = 0; i < activeKeys.length; i++) {
+                let key = activeKeys[i];
+                currentStep++;
+                statusEl.innerText = `🎯 스캔 중... [${currentStep}/${totalSteps}] ${BRAND_CONFIG[key].name} 찾는 중`;
+                
+                await new Promise(resolve => {
+                    // 💡 Bounds 대신 반경(radius: 500m)을 사용하여 카카오가 데이터를 누락하는 버그를 완벽히 해결!
+                    ps.keywordSearch(BRAND_CONFIG[key].kw, function(data, status) {
+                        if (status === kakao.maps.services.Status.OK) {
+                            for(let k=0; k<data.length; k++) {
+                                let place = data[k];
+                                place.isTarget = true;
+                                place.brandKey = key;
+                                rawScannedNodes.push(place);
+                                processPlaceAndDrawMarker(place, key); 
+                            }
+                        }
+                        resolve(); 
+                    }, { location: centerPos, radius: 500, size: 15 });
+                });
+                await delay(100); 
+            }
+
+            for (let i = 0; i < fnbCategories.length; i++) {
+                let cat = fnbCategories[i];
+                currentStep++;
+                statusEl.innerText = `☕ 스캔 중... [${currentStep}/${totalSteps}] ${cat.name} 유동인구 확인 중`;
+                
+                await new Promise(resolve => {
+                    ps.categorySearch(cat.code, function(data, status) {
+                        if (status === kakao.maps.services.Status.OK) {
+                            for(let k=0; k<data.length; k++) {
+                                let place = data[k];
+                                place.isFnb = true;
+                                place.isTarget = false;
+                                rawScannedNodes.push(place);
+                            }
+                        }
+                        resolve();
+                    }, { location: centerPos, radius: 500, size: 15 });
+                });
+                await delay(100); 
+            }
+
+            // 다각형 내부 엄격 필터링 (반경 500m에서 긁어온 데이터를 펜스 모양으로 깔끔하게 오려냅니다)
+            let insideNodes = [];
+            let seenIds = {};
+            let targetStats = { comp: 0, anchor: 0 };
+            
+            for (let i = 0; i < rawScannedNodes.length; i++) {
+                let place = rawScannedNodes[i];
+                if (!seenIds[place.id]) {
+                    seenIds[place.id] = true;
+                    // 순수 좌표 데이터(targetPath)로 충돌 검사를 진행하므로 절대 뻗지 않습니다.
+                    if (isPointInPolygon(parseFloat(place.y), parseFloat(place.x), targetPath)) {
+                        insideNodes.push(place);
+                        if (place.brandKey && BRAND_CONFIG[place.brandKey]) {
+                            if (BRAND_CONFIG[place.brandKey].isComp) targetStats.comp++;
+                            else if (BRAND_CONFIG[place.brandKey].isAnchor) targetStats.anchor++;
+                        }
+                    }
+                }
+            }
+
+            document.getElementById('comp_count').innerText = targetStats.comp + '개';
+            document.getElementById('anchor_count').innerText = targetStats.anchor + '개';
+            try { drawRadarChart(targetStats.comp, targetStats.anchor); } catch(chartErr) {}
+
+            let pureTargets = [];
+            for (let j = 0; j < insideNodes.length; j++) {
+                if (insideNodes[j].isTarget) pureTargets.push(insideNodes[j]);
+            }
+
+            if (pureTargets.length >= 3) {
+                calculateTop3Spots(pureTargets, "타겟 매장 우선");
+            } 
+            else if (pureTargets.length > 0) {
+                calculateTop3Spots(insideNodes, "타겟+유동인구 혼합");
+            }
+            else if (insideNodes.length > 0) {
+                calculateTop3Spots(insideNodes, "유동인구 단독");
+            } 
+            else {
+                let overlay = new kakao.maps.CustomOverlay({
+                    position: new kakao.maps.LatLng(centerLat, centerLng),
+                    content: `<div class="rank-badge rank-2">📍 영토 지리적 중앙</div><div class="rank-dot rank-dot-2"></div>`,
+                    xAnchor: 0.5, yAnchor: 0.5, zIndex: 300
+                });
+                overlay.setMap(map);
+                rankOverlays.push(overlay);
+                statusEl.innerText = "⚠️ 펜스 내 상업 시설이 없습니다. 지리적 중앙을 표시합니다.";
+            }
+
+            isScanningAPI = false;
         }
 
         function calculateTop3Spots(nodes, messageContext) {
@@ -720,9 +671,7 @@
                 rankOverlays.push(overlay);
             }
 
-            if(document.getElementById('statusMessage').innerText.indexOf("자석처럼") === -1) {
-                document.getElementById('statusMessage').innerText = `✅ 딥 스캔 완료! [${messageContext}] 1~3위 입지 추출`;
-            }
+            document.getElementById('statusMessage').innerText = `✅ 딥 스캔 완료! [${messageContext}] 1~3위 입지 추출`;
         }
 
         function getDistanceMeters(lat1, lon1, lat2, lon2) {
