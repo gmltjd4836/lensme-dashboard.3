@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>렌즈미 상권 분석 대시보드 (V17.0 뷰티 특화 엔진)</title>
+    <title>렌즈미 상권 분석 대시보드 (V18.0 슈퍼 스내핑 엔진)</title>
     <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
@@ -37,7 +37,7 @@
     <div class="w-full md:w-1/4 bg-white border-r border-gray-200 p-6 flex flex-col shadow-lg z-20 overflow-y-auto">
         <h1 class="text-xl font-extrabold text-slate-800 border-b-4 border-indigo-500 pb-3 mb-4 flex justify-between items-center">
             <span>🗺️ 전국 상권 관제탑</span>
-            <span class="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded-full font-bold">V17.0 👑</span>
+            <span class="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded-full font-bold">V18.0 👑</span>
         </h1>
         
         <div class="mb-4 bg-slate-50 p-4 rounded-xl border border-slate-200">
@@ -79,7 +79,7 @@
                 </div>
 
                 <div id="rankingResultBox" class="mt-3 pt-3 border-t border-indigo-200 hidden">
-                    <p class="text-xs text-indigo-800 font-extrabold mb-2">👑 입지 평가 (올리브영 1티어 모드)</p>
+                    <p class="text-xs text-indigo-800 font-extrabold mb-2">👑 신규 출점 입지 평가</p>
                     <div id="rankingResultText" class="space-y-1"></div>
                 </div>
             </div>
@@ -94,10 +94,10 @@
 
         <div id="tab-map" class="flex-grow w-full h-full relative">
             <div id="statusMessage" class="absolute top-4 left-1/2 transform -translate-x-1/2 z-10 bg-white/95 backdrop-blur-sm px-6 py-2 rounded-full shadow-md text-sm font-bold text-slate-700 border border-slate-200 text-center transition-all">
-                🎯 펜스를 치면 [올리브영 1티어] 기준으로 S급 코너를 도출합니다!
+                🎯 펜스를 치면 [슈퍼명당 공식] 및 [보행로 스내핑]을 적용해 S급지를 도출합니다!
             </div>
 
-            <!-- UI 클린업 (다비치 복구) -->
+            <!-- UI 클린업 (일반 안경원은 필터에 표시 안함) -->
             <div class="absolute top-16 left-4 z-10 bg-white/95 backdrop-blur-sm p-4 rounded-xl shadow-lg border border-slate-200 w-64 max-h-[80vh] overflow-y-auto hidden md:block">
                 <p class="text-xs font-extrabold text-slate-800 mb-2.5 border-b pb-1 flex justify-between"><span>🎯 렌즈 전문 브랜드</span><span class="text-slate-400">전국 누적</span></p>
                 <div class="space-y-2 mb-4">
@@ -115,6 +115,9 @@
                     <label class="flex items-center space-x-2 cursor-pointer"><input type="checkbox" id="f_olive" checked onchange="triggerScan()" class="chk-green"><span class="text-[13px] font-bold text-green-600 flex-grow">🟩 일반 올리브영</span><span id="cnt_olive" class="text-[12px] font-bold text-slate-500"></span></label>
                     <label class="flex items-center space-x-2 cursor-pointer"><input type="checkbox" id="f_daiso" checked onchange="triggerScan()" class="chk-red"><span class="text-[13px] font-bold text-rose-600 flex-grow">🟥 다이소</span><span id="cnt_daiso" class="text-[12px] font-bold text-slate-500"></span></label>
                     <label class="flex items-center space-x-2 cursor-pointer"><input type="checkbox" id="f_davich" checked onchange="triggerScan()" class="chk-blue"><span class="text-[13px] font-bold text-blue-700 flex-grow">🟦 다비치안경</span><span id="cnt_davich" class="text-[12px] font-bold text-slate-500"></span></label>
+                </div>
+                <div class="mt-3 bg-slate-100 px-3 py-2 rounded text-[11px] text-slate-500 font-bold border border-slate-200">
+                    💡 일반 안경원(회색 핀)은 지도에 자동 표출됩니다.
                 </div>
             </div>
 
@@ -167,7 +170,7 @@
         
         let tooltipOverlay = new kakao.maps.CustomOverlay({ xAnchor: 0.5, yAnchor: 1.5, zIndex: 150 });
 
-        // 화면 표출 타겟 (올리브영 1티어, 다비치 복구)
+        // 화면 표출 타겟 설정
         const BRAND_CONFIG = {
             f_lensme: { kw: '렌즈미', hex: '%239333ea', isComp: true },
             f_olens: { kw: '오렌즈', hex: '%23f97316', isComp: true },
@@ -182,8 +185,7 @@
             f_davich: { kw: '다비치안경', hex: '%231d4ed8', isOther: true }
         };
 
-        // 💡 [V17.0 최종 스텔스 배점 엔진] 
-        // 3티어: 휴대폰(7) / 4티어: 네컷/가챠(5)
+        // 스텔스 배점 엔진
         const STEALTH_KEYWORDS = [
             { kw: '휴대폰대리점', weight: 7.0, radius: 80 }, 
             { kw: '이동통신', weight: 7.0, radius: 80 },
@@ -193,19 +195,13 @@
             { kw: '뽑기방', weight: 5.0, radius: 80 }
         ];
 
-        // 5티어: 카페/편의점(1)
-        const FNB_CATEGORIES = [
-            { code: 'CE7', weight: 1.0, radius: 50 },
-            { code: 'CS2', weight: 1.0, radius: 50 }
-        ];
-
         let drawingManager = new kakao.maps.drawing.DrawingManager({
             map: map, drawingMode: [kakao.maps.drawing.OverlayType.POLYGON],
             guideTooltip: ['그리기 시작: 클릭', '완료: 더블클릭'],
             polygonOptions: { draggable: false, removable: false, editable: true, strokeColor: '#be185d', strokeWeight: 3, fillColor: '#f43f5e', fillOpacity: 0.2 }
         });
 
-        let savedPolygons = JSON.parse(localStorage.getItem('lensmePolygonsV17_0') || '[]');
+        let savedPolygons = JSON.parse(localStorage.getItem('lensmePolygonsV18_0') || '[]');
         let activePolygonPath = null; 
         let activePolygonId = null;
         let renderedPolygons = {}; 
@@ -287,7 +283,7 @@
                     
                     let id = 'poly_' + Date.now();
                     savedPolygons.push({ id: id, name: name, path: tempDrawnPath, si: si, gu: gu, dong: dong, centerLat: centerLat, centerLng: centerLng });
-                    localStorage.setItem('lensmePolygonsV17_0', JSON.stringify(savedPolygons));
+                    localStorage.setItem('lensmePolygonsV18_0', JSON.stringify(savedPolygons));
                     
                     drawingManager.clear();
                     isDrawingMode = false;
@@ -373,7 +369,7 @@
         function deletePolygon(id) {
             if(!confirm("이 영토를 삭제하시겠습니까?")) return;
             savedPolygons = savedPolygons.filter(p => p.id !== id);
-            localStorage.setItem('lensmePolygonsV17_0', JSON.stringify(savedPolygons));
+            localStorage.setItem('lensmePolygonsV18_0', JSON.stringify(savedPolygons));
             if(activePolygonId === id) clearActivePolygon();
             renderPolygonTree();
         }
@@ -457,6 +453,7 @@
                 let bounds = map.getBounds();
                 let activeKeys = Object.keys(BRAND_CONFIG).filter(key => document.getElementById(key) && document.getElementById(key).checked);
                 
+                // 1. 체크된 필터 마커 렌더링
                 for (let i=0; i<activeKeys.length; i++) {
                     let key = activeKeys[i];
                     await new Promise(resolve => {
@@ -469,6 +466,23 @@
                     });
                     await delay(50);
                 }
+
+                // 2. 💡 일반 안경원 강제 스텔스 렌더링 (UI엔 안 보이고 지도에만 회색 핀 추가)
+                await new Promise(resolve => {
+                    ps.keywordSearch('안경', function(data, status) {
+                        if (status === kakao.maps.services.Status.OK) {
+                            data.forEach(place => {
+                                // 다비치, 렌즈샵 등 브랜드명이 들어가지 않은 일반 안경원만 필터링
+                                if(place.place_name.indexOf('렌즈') === -1 && place.place_name.indexOf('다비치') === -1) {
+                                    // %2394a3b8 = 회색 (Slate-400)
+                                    processPlaceAndDrawMarker(place, 'f_optical_gen', '%2394a3b8'); 
+                                }
+                            });
+                        }
+                        resolve(); 
+                    }, { bounds: bounds, size: 15 });
+                });
+
             } catch(e) {} finally {
                 isScanningAPI = false;
             }
@@ -494,8 +508,9 @@
             await scanMarkersInBoundsSequential();
         }
 
-        function processPlaceAndDrawMarker(place, key) {
+        function processPlaceAndDrawMarker(place, key, customHex) {
             if (placeCache.has(place.id)) return false; 
+            
             let isDuplicate = false;
             let skipDeduplication = ['f_daiso', 'f_olive', 'f_olive_hapa', 'f_davich'].includes(key);
 
@@ -509,8 +524,11 @@
             }
             if (isDuplicate) return false;
 
-            let cfg = BRAND_CONFIG[key];
-            let svgString = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24"><circle cx="12" cy="12" r="10" fill="${cfg.hex}" stroke="white" stroke-width="2.5"/></svg>`;
+            let hex = customHex;
+            if(!hex && BRAND_CONFIG[key]) hex = BRAND_CONFIG[key].hex;
+            
+            let rSize = customHex ? "7" : "10"; // 안경원은 핀 크기 작게
+            let svgString = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24"><circle cx="12" cy="12" r="${rSize}" fill="${hex}" stroke="white" stroke-width="2"/></svg>`;
             let markerImage = new kakao.maps.MarkerImage('data:image/svg+xml;utf-8,' + svgString, new kakao.maps.Size(24, 24), { offset: new kakao.maps.Point(12, 12) });
             
             let marker = new kakao.maps.Marker({ position: new kakao.maps.LatLng(place.y, place.x), image: markerImage });
@@ -529,7 +547,7 @@
             return true;
         }
 
-        // 💡 [V17.0] 10-8-7-5-1 (올영 1티어, 렌즈 2티어, 폰/다이소 3티어) 엔진
+        // 💡 [V18.0] 스내핑 보정 + 올영/렌즈2 특수룰 적용 엔진
         async function runGridHotspotScan(targetPath) {
             if(isScanningAPI) return;
             isScanningAPI = true;
@@ -552,29 +570,6 @@
                 cLat /= targetPath.length; cLng /= targetPath.length;
                 let centerPos = new kakao.maps.LatLng(cLat, cLng);
 
-                // 광역 역세권 거시 분석
-                let nearestSubway = null;
-                await new Promise(resolve => {
-                    ps.categorySearch('SW8', function(data, status) {
-                        if (status === kakao.maps.services.Status.OK) {
-                            let minDist = 99999;
-                            for(let k=0; k<data.length; k++) {
-                                let d = getDistanceMeters(cLat, cLng, parseFloat(data[k].y), parseFloat(data[k].x));
-                                if(d < minDist) { minDist = d; nearestSubway = data[k]; }
-                            }
-                        }
-                        resolve();
-                    }, { location: centerPos, radius: 1500 });
-                });
-
-                if(nearestSubway) {
-                    let linePath = [ new kakao.maps.LatLng(parseFloat(nearestSubway.y), parseFloat(nearestSubway.x)), centerPos ];
-                    flowLineOverlay = new kakao.maps.Polyline({
-                        path: linePath, strokeWeight: 4, strokeColor: '#3b82f6', strokeOpacity: 0.5, strokeStyle: 'dashed'
-                    });
-                    flowLineOverlay.setMap(map);
-                }
-
                 let maxRadius = 50;
                 for(let i=0; i<targetPath.length; i++) {
                     let d = getDistanceMeters(targetPath[i].lat, targetPath[i].lng, cLat, cLng);
@@ -585,7 +580,7 @@
                 let rawScannedNodes = [];
                 let seenIds = {};
 
-                // 1. 시각화 대상 스캔 (올영, 렌즈샵, 다이소, 다비치 등)
+                // 데이터 수집
                 let activeKeys = Object.keys(BRAND_CONFIG).filter(key => document.getElementById(key) && document.getElementById(key).checked);
                 for (let i = 0; i < activeKeys.length; i++) {
                     let key = activeKeys[i];
@@ -596,9 +591,7 @@
                                 for(let k=0; k<data.length; k++) {
                                     let place = data[k];
                                     if(!seenIds[place.id]) {
-                                        seenIds[place.id] = true;
-                                        place.brandKey = key;
-                                        rawScannedNodes.push(place);
+                                        seenIds[place.id] = true; place.brandKey = key; rawScannedNodes.push(place);
                                     }
                                 }
                             }
@@ -608,7 +601,6 @@
                     await delay(100); 
                 }
 
-                // 2. 스텔스 키워드 (3티어 폰, 4티어 가챠/네컷)
                 for(let i = 0; i < STEALTH_KEYWORDS.length; i++) {
                     let stealth = STEALTH_KEYWORDS[i];
                     statusEl.innerText = `🕵️ 백그라운드 탐지 중... [${stealth.kw}]`;
@@ -618,33 +610,7 @@
                                 for(let k=0; k<data.length; k++) {
                                     let place = data[k];
                                     if(!seenIds[place.id]) {
-                                        seenIds[place.id] = true;
-                                        place.isStealth = true;
-                                        place.stealthData = stealth; 
-                                        rawScannedNodes.push(place);
-                                    }
-                                }
-                            }
-                            resolve(); 
-                        }, { location: centerPos, radius: searchRadius, size: 15 });
-                    });
-                    await delay(100); 
-                }
-
-                // 3. F&B 보행 인프라 (5티어 카페/편의점)
-                for(let i = 0; i < FNB_CATEGORIES.length; i++) {
-                    let fnb = FNB_CATEGORIES[i];
-                    statusEl.innerText = `☕ 골목 인프라 체크 중...`;
-                    await new Promise(resolve => {
-                        ps.categorySearch(fnb.code, function(data, status) {
-                            if (status === kakao.maps.services.Status.OK) {
-                                for(let k=0; k<data.length; k++) {
-                                    let place = data[k];
-                                    if(!seenIds[place.id]) {
-                                        seenIds[place.id] = true;
-                                        place.isFnb = true;
-                                        place.fnbData = fnb; 
-                                        rawScannedNodes.push(place);
+                                        seenIds[place.id] = true; place.isStealth = true; place.stealthData = stealth; rawScannedNodes.push(place);
                                     }
                                 }
                             }
@@ -657,9 +623,7 @@
                 placeCache.forEach(item => {
                     let p = item.rawData;
                     if(!seenIds[p.id]) {
-                        seenIds[p.id] = true;
-                        p.brandKey = item.brand;
-                        rawScannedNodes.push(p);
+                        seenIds[p.id] = true; p.brandKey = item.brand; rawScannedNodes.push(p);
                     }
                 });
 
@@ -675,9 +639,8 @@
                 }
                 document.getElementById('comp_count').innerText = targetStats.comp + '개';
                 document.getElementById('anchor_count').innerText = targetStats.anchor + '개';
-                try { drawRadarChart(targetStats.comp, targetStats.anchor); } catch(chartErr) {}
 
-                statusEl.innerText = "🌐 올리브영 1티어 특화 배점(10-8-7-5-1) 적용 중...";
+                statusEl.innerText = "🌐 올리브영+렌즈2 Супер 특수룰 및 스내핑 보정 중...";
 
                 let gridPoints = [];
                 let latDiff = maxLat - minLat;
@@ -691,62 +654,49 @@
                     }
                 }
 
-                if(gridPoints.length === 0) {
-                    stepLat = latDiff / 100; stepLng = lngDiff / 100;
-                    for(let lat = minLat; lat <= maxLat; lat += stepLat) {
-                        for(let lng = minLng; lng <= maxLng; lng += stepLng) {
-                            if(isPointInPolygon(lat, lng, targetPath)) gridPoints.push({ lat: lat, lng: lng, score: 0 });
-                        }
-                    }
-                }
-                if(isPointInPolygon(cLat, cLng, targetPath)) gridPoints.push({ lat: cLat, lng: cLng, score: 0 });
-
-                // 💡 [V17.0] 변경된 점수 융합 로직 
+                // 💡 [V18.0] 슈퍼룰 점수 및 도로 스내핑(가까운 POI 유도)
                 for(let i=0; i<gridPoints.length; i++) {
                     let pt = gridPoints[i];
                     let score = 0.1; 
-                    let localStoreCount = 0; 
+                    
+                    let localOliveCount = 0;
+                    let localLensCount = 0;
+                    let closestPoiDist = 999; // 스내핑용 가장 가까운 매장 거리 확인
 
                     for(let j=0; j<rawScannedNodes.length; j++) {
                         let node = rawScannedNodes[j];
                         let dist = getDistanceMeters(pt.lat, pt.lng, parseFloat(node.y), parseFloat(node.x));
                         
-                        if(dist <= 80) localStoreCount++; 
+                        if (dist < closestPoiDist) closestPoiDist = dist;
 
                         if(node.isStealth) {
-                            // 3티어 폰(7) / 4티어 가챠네컷(5)
                             let sData = node.stealthData;
-                            if(dist <= sData.radius) {
-                                score += (sData.radius - dist) * sData.weight;
-                            }
-                        } else if(node.isFnb) {
-                            // 5티어 카페편의점(1)
-                            let fData = node.fnbData;
-                            if(dist <= fData.radius) {
-                                score += (fData.radius - dist) * fData.weight;
-                            }
+                            if(dist <= sData.radius) score += (sData.radius - dist) * sData.weight;
                         } else if (node.brandKey && BRAND_CONFIG[node.brandKey]) {
                             let cfg = BRAND_CONFIG[node.brandKey];
                             if(cfg.isOlive && dist <= 80) {
-                                // 1티어 올리브영(10)
                                 score += (80 - dist) * 10.0; 
+                                localOliveCount++; // 올영 카운트
                             } else if(cfg.isComp && dist <= 80) {
-                                // 2티어 렌즈경쟁사(8)
                                 score += (80 - dist) * 8.0;
+                                localLensCount++; // 렌즈 카운트
                             } else if(cfg.isDaiso && dist <= 80) {
-                                // 3티어 다이소(7)
                                 score += (80 - dist) * 7.0;
                             }
                         }
                     }
+
+                    // 🚨 스내핑 보정: 상가(길)에서 너무 먼 지붕 한가운데는 점수 대폭 삭감
+                    if(closestPoiDist > 15) {
+                        score = score * 0.3; 
+                    }
                     
-                    if(nearestSubway) {
-                        let subX = parseFloat(nearestSubway.x), subY = parseFloat(nearestSubway.y);
-                        let distToFlow = distToSegment(pt.lng, pt.lat, subX, subY, cLng, cLat);
-                        if(distToFlow <= 50) score += (50 - distToFlow) * 2.0; 
+                    // 👑 [슈퍼 명당 특수룰] 올영 1곳 + 렌즈샵 2곳 이상이면 만점 부여
+                    if(localOliveCount >= 1 && localLensCount >= 2) {
+                        score += 10000;
+                        pt.isSuperSpot = true;
                     }
 
-                    if(localStoreCount < 2) score = score * 0.1; 
                     pt.score = score;
                 }
 
@@ -780,22 +730,27 @@
                     for (let idx = 0; idx < topSpots.length; idx++) {
                         let spot = topSpots[idx];
                         
-                        (function(index, targetSpot) {
+                        let rankTitle = rankStyles[idx].title;
+                        if(spot.isSuperSpot && idx === 0) {
+                            rankTitle = '👑 슈퍼 명당 (올영+렌즈2)'; // 특수룰 걸린 경우 타이틀 변경
+                        }
+                        
+                        (function(index, targetSpot, title) {
                             geocoder.coord2Address(targetSpot.lng, targetSpot.lat, function(result, status) {
                                 let addrName = "펜스 내부 위치";
                                 if (status === kakao.maps.services.Status.OK) {
                                     addrName = result[0].road_address ? result[0].road_address.address_name : result[0].address.address_name;
                                 }
                                 let currentHtml = document.getElementById('rankingResultText').innerHTML;
-                                document.getElementById('rankingResultText').innerHTML = currentHtml + `<div class="text-[13px] font-bold text-slate-700 bg-white px-2 py-1 rounded border border-slate-100 shadow-sm mt-1">${rankStyles[index].title.split(' ')[1]} : <span class="text-indigo-600">${addrName}</span></div>`;
+                                document.getElementById('rankingResultText').innerHTML = currentHtml + `<div class="text-[13px] font-bold text-slate-700 bg-white px-2 py-1 rounded border border-slate-100 shadow-sm mt-1">${title.split(' ')[1]} : <span class="text-indigo-600">${addrName}</span></div>`;
                             });
-                        })(idx, spot);
+                        })(idx, spot, rankTitle);
 
                         let zIndexVal = 9999 - idx; 
                         let contentStr = `
                             <div style="position:relative; z-index:${zIndexVal}; bottom:20px; text-align:center; transform:translateY(-50%);">
                                 <div style="background:${rankStyles[idx].bg}; color:white; padding:5px 12px; border-radius:8px; font-weight:900; font-size:14px; border:2px solid white; box-shadow:0 3px 10px rgba(0,0,0,0.4); white-space:nowrap;">
-                                    ${rankStyles[idx].title}
+                                    ${rankTitle}
                                 </div>
                                 <div style="width:0; height:0; border-left:7px solid transparent; border-right:7px solid transparent; border-top:10px solid ${rankStyles[idx].bg}; margin:0 auto;"></div>
                             </div>
@@ -812,7 +767,7 @@
                     }
 
                     document.getElementById('rankingResultBox').classList.remove('hidden');
-                    statusEl.innerText = `✅ 분석 완료! 올리브영 중심의 1020 타겟 맞춤형 S급지를 도출했습니다.`;
+                    statusEl.innerText = `✅ 분석 완료! 길(보도) 중심으로 슈퍼 명당 타겟팅이 끝났습니다.`;
 
                 } else {
                     document.getElementById('rankingResultBox').classList.remove('hidden');
@@ -843,15 +798,6 @@
             else if (tabId === 'radar') {
                 try { Plotly.Plots.resize(document.getElementById('radarChart')); } catch(e){}
             }
-        }
-
-        function drawRadarChart(compCount, anchorScoreRaw) {
-            let compScore = Math.max(10, 100 - (compCount * 8)); 
-            let anchorScore = Math.min(100, 30 + (anchorScoreRaw * 15));
-            let data = [
-                { type: 'scatterpolar', r: [anchorScore+5, anchorScore, compScore, 65, anchorScore+5, anchorScore+5], theta: ['1030 유동인구', '타겟밀집', '경쟁강도', '임대료가성비', '상권활력', '1030 유동인구'], fill: 'toself', name: document.getElementById('targetLocationInput').innerText.replace(' (자유 탐색)',''), line: {color: '#ec4899'}, fillcolor: 'rgba(236,72,153,0.4)' }
-            ];
-            Plotly.newPlot('radarChart', data, { polar: { radialaxis: {visible: true, range: [0, 100]} }, margin: {t:30, b:30}, legend: {orientation: "h", y: -0.2} }, {responsive: true, displayModeBar: false});
         }
 
         renderPolygonTree();
