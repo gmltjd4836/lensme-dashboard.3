@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>렌즈미 상권 분석 대시보드 (V18.0 슈퍼 스내핑 엔진)</title>
+    <title>렌즈미 상권 분석 대시보드 (V19.0 혈관 동선 추적 엔진)</title>
     <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
@@ -37,7 +37,7 @@
     <div class="w-full md:w-1/4 bg-white border-r border-gray-200 p-6 flex flex-col shadow-lg z-20 overflow-y-auto">
         <h1 class="text-xl font-extrabold text-slate-800 border-b-4 border-indigo-500 pb-3 mb-4 flex justify-between items-center">
             <span>🗺️ 전국 상권 관제탑</span>
-            <span class="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded-full font-bold">V18.0 👑</span>
+            <span class="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded-full font-bold">V19.0 🌊</span>
         </h1>
         
         <div class="mb-4 bg-slate-50 p-4 rounded-xl border border-slate-200">
@@ -94,10 +94,10 @@
 
         <div id="tab-map" class="flex-grow w-full h-full relative">
             <div id="statusMessage" class="absolute top-4 left-1/2 transform -translate-x-1/2 z-10 bg-white/95 backdrop-blur-sm px-6 py-2 rounded-full shadow-md text-sm font-bold text-slate-700 border border-slate-200 text-center transition-all">
-                🎯 펜스를 치면 [슈퍼명당 공식] 및 [보행로 스내핑]을 적용해 S급지를 도출합니다!
+                🎯 펜스를 치면 [지하철/버스 유입로]와 [올리브영 동선]을 스캔하여 S급지를 찾습니다!
             </div>
 
-            <!-- UI 클린업 (일반 안경원은 필터에 표시 안함) -->
+            <!-- UI -->
             <div class="absolute top-16 left-4 z-10 bg-white/95 backdrop-blur-sm p-4 rounded-xl shadow-lg border border-slate-200 w-64 max-h-[80vh] overflow-y-auto hidden md:block">
                 <p class="text-xs font-extrabold text-slate-800 mb-2.5 border-b pb-1 flex justify-between"><span>🎯 렌즈 전문 브랜드</span><span class="text-slate-400">전국 누적</span></p>
                 <div class="space-y-2 mb-4">
@@ -117,7 +117,7 @@
                     <label class="flex items-center space-x-2 cursor-pointer"><input type="checkbox" id="f_davich" checked onchange="triggerScan()" class="chk-blue"><span class="text-[13px] font-bold text-blue-700 flex-grow">🟦 다비치안경</span><span id="cnt_davich" class="text-[12px] font-bold text-slate-500"></span></label>
                 </div>
                 <div class="mt-3 bg-slate-100 px-3 py-2 rounded text-[11px] text-slate-500 font-bold border border-slate-200">
-                    💡 일반 안경원(회색 핀)은 지도에 자동 표출됩니다.
+                    💡 일반 안경원(회색 핀)은 백그라운드 탐지
                 </div>
             </div>
 
@@ -165,12 +165,11 @@
         
         let mapMarkers = [];
         let rankOverlays = []; 
-        let flowLineOverlay = null; 
+        let flowLineOverlays = []; 
         let placeCache = new Map(); 
         
         let tooltipOverlay = new kakao.maps.CustomOverlay({ xAnchor: 0.5, yAnchor: 1.5, zIndex: 150 });
 
-        // 화면 표출 타겟 설정
         const BRAND_CONFIG = {
             f_lensme: { kw: '렌즈미', hex: '%239333ea', isComp: true },
             f_olens: { kw: '오렌즈', hex: '%23f97316', isComp: true },
@@ -185,7 +184,6 @@
             f_davich: { kw: '다비치안경', hex: '%231d4ed8', isOther: true }
         };
 
-        // 스텔스 배점 엔진
         const STEALTH_KEYWORDS = [
             { kw: '휴대폰대리점', weight: 7.0, radius: 80 }, 
             { kw: '이동통신', weight: 7.0, radius: 80 },
@@ -201,7 +199,7 @@
             polygonOptions: { draggable: false, removable: false, editable: true, strokeColor: '#be185d', strokeWeight: 3, fillColor: '#f43f5e', fillOpacity: 0.2 }
         });
 
-        let savedPolygons = JSON.parse(localStorage.getItem('lensmePolygonsV18_0') || '[]');
+        let savedPolygons = JSON.parse(localStorage.getItem('lensmePolygonsV19_0') || '[]');
         let activePolygonPath = null; 
         let activePolygonId = null;
         let renderedPolygons = {}; 
@@ -257,17 +255,12 @@
         }
 
         function saveDrawing() {
-            if (!tempDrawnPath || tempDrawnPath.length === 0) {
-                alert("⚠️ 펜스 그리기가 완료되지 않았습니다.\n지도에서 '더블클릭'하여 영토 그리기를 마쳐주세요!");
-                return; 
-            }
-            
+            if (!tempDrawnPath || tempDrawnPath.length === 0) return;
             let name = prompt("이 상권 영토의 이름을 입력하세요:", "새 상권");
             if (name) {
                 let sumLat = 0, sumLng = 0;
                 for(let i = 0; i < tempDrawnPath.length; i++) {
-                    sumLat += tempDrawnPath[i].lat;
-                    sumLng += tempDrawnPath[i].lng;
+                    sumLat += tempDrawnPath[i].lat; sumLng += tempDrawnPath[i].lng;
                 }
                 let centerLat = sumLat / tempDrawnPath.length;
                 let centerLng = sumLng / tempDrawnPath.length;
@@ -276,14 +269,11 @@
                     let si = "기타", gu = "기타", dong = "기타";
                     if (status === kakao.maps.services.Status.OK) {
                         let addr = result.find(r => r.region_type === 'B') || result[0];
-                        si = addr.region_1depth_name;
-                        gu = addr.region_2depth_name || "전체";
-                        dong = addr.region_3depth_name;
+                        si = addr.region_1depth_name; gu = addr.region_2depth_name || "전체"; dong = addr.region_3depth_name;
                     }
-                    
                     let id = 'poly_' + Date.now();
                     savedPolygons.push({ id: id, name: name, path: tempDrawnPath, si: si, gu: gu, dong: dong, centerLat: centerLat, centerLng: centerLng });
-                    localStorage.setItem('lensmePolygonsV18_0', JSON.stringify(savedPolygons));
+                    localStorage.setItem('lensmePolygonsV19_0', JSON.stringify(savedPolygons));
                     
                     drawingManager.clear();
                     isDrawingMode = false;
@@ -294,9 +284,7 @@
                     renderPolygonTree();
                     selectSavedPolygon(id); 
                 });
-            } else {
-                cancelDrawing();
-            }
+            } else { cancelDrawing(); }
         }
 
         function renderPolygonTree() {
@@ -318,12 +306,10 @@
                 let detSi = document.createElement('details'); detSi.open = true;
                 detSi.innerHTML = `<summary>${si}</summary><div class="tree-indent"></div>`;
                 let divSi = detSi.querySelector('.tree-indent');
-                
                 for (let gu in treeData[si]) {
                     let detGu = document.createElement('details'); detGu.open = true;
                     detGu.innerHTML = `<summary>${gu}</summary><div class="tree-indent"></div>`;
                     let divGu = detGu.querySelector('.tree-indent');
-                    
                     for (let dong in treeData[si][gu]) {
                         let polys = treeData[si][gu][dong];
                         let detDong = document.createElement('details'); detDong.open = true;
@@ -369,7 +355,7 @@
         function deletePolygon(id) {
             if(!confirm("이 영토를 삭제하시겠습니까?")) return;
             savedPolygons = savedPolygons.filter(p => p.id !== id);
-            localStorage.setItem('lensmePolygonsV18_0', JSON.stringify(savedPolygons));
+            localStorage.setItem('lensmePolygonsV19_0', JSON.stringify(savedPolygons));
             if(activePolygonId === id) clearActivePolygon();
             renderPolygonTree();
         }
@@ -378,45 +364,34 @@
             if(isScanningAPI) return alert("현재 분석이 진행 중입니다. 잠시 기다려주세요.");
             let poly = savedPolygons.find(p => p.id === id);
             if(!poly) return;
-
-            activePolygonId = id;
-            activePolygonPath = poly.path; 
-            
+            activePolygonId = id; activePolygonPath = poly.path; 
             document.getElementById('targetLocationInput').innerText = `[${poly.dong}] ${poly.name}`;
             document.getElementById('btnClearPolygon').classList.remove('hidden');
-            
             let bounds = new kakao.maps.LatLngBounds();
             activePolygonPath.forEach(p => bounds.extend(new kakao.maps.LatLng(p.lat, p.lng)));
             map.setBounds(bounds);
             searchCenter = bounds.getCenter();
-
             Object.values(renderedPolygons).forEach(p => p.setOptions({ fillColor: '#f43f5e', fillOpacity: 0.1, strokeWeight: 2 }));
             renderedPolygons[id].setOptions({ fillColor: '#ec4899', fillOpacity: 0.25, strokeWeight: 4 });
-
             runGridHotspotScan(activePolygonPath); 
         }
 
         function clearActivePolygon() {
-            activePolygonId = null;
-            activePolygonPath = null;
-            tempDrawnPath = null;
+            activePolygonId = null; activePolygonPath = null; tempDrawnPath = null;
             document.getElementById('targetLocationInput').innerText = "선택 없음 (자유 탐색)";
             document.getElementById('btnClearPolygon').classList.add('hidden');
-            
             document.getElementById('comp_count').innerText = "-개";
             document.getElementById('anchor_count').innerText = "-개";
             document.getElementById('rankingResultBox').classList.add('hidden');
             document.getElementById('rankingResultText').innerHTML = '';
-
             Object.values(renderedPolygons).forEach(p => p.setOptions({ fillColor: '#f43f5e', fillOpacity: 0.1, strokeWeight: 2 }));
             clearRankMarkers(); 
             triggerScan();
         }
 
         function clearRankMarkers() {
-            rankOverlays.forEach(o => o.setMap(null)); 
-            rankOverlays = [];
-            if(flowLineOverlay) { flowLineOverlay.setMap(null); flowLineOverlay = null; }
+            rankOverlays.forEach(o => o.setMap(null)); rankOverlays = [];
+            flowLineOverlays.forEach(o => o.setMap(null)); flowLineOverlays = [];
         }
 
         function isPointInPolygon(lat, lng, polygonPath) {
@@ -441,9 +416,7 @@
         }
 
         kakao.maps.event.addListener(map, 'idle', async function() {
-            if(!isDrawingMode && !activePolygonPath && !isScanningAPI) {
-                await scanMarkersInBoundsSequential(); 
-            }
+            if(!isDrawingMode && !activePolygonPath && !isScanningAPI) await scanMarkersInBoundsSequential(); 
         });
 
         async function scanMarkersInBoundsSequential() {
@@ -453,7 +426,6 @@
                 let bounds = map.getBounds();
                 let activeKeys = Object.keys(BRAND_CONFIG).filter(key => document.getElementById(key) && document.getElementById(key).checked);
                 
-                // 1. 체크된 필터 마커 렌더링
                 for (let i=0; i<activeKeys.length; i++) {
                     let key = activeKeys[i];
                     await new Promise(resolve => {
@@ -467,14 +439,11 @@
                     await delay(50);
                 }
 
-                // 2. 💡 일반 안경원 강제 스텔스 렌더링 (UI엔 안 보이고 지도에만 회색 핀 추가)
                 await new Promise(resolve => {
                     ps.keywordSearch('안경', function(data, status) {
                         if (status === kakao.maps.services.Status.OK) {
                             data.forEach(place => {
-                                // 다비치, 렌즈샵 등 브랜드명이 들어가지 않은 일반 안경원만 필터링
                                 if(place.place_name.indexOf('렌즈') === -1 && place.place_name.indexOf('다비치') === -1) {
-                                    // %2394a3b8 = 회색 (Slate-400)
                                     processPlaceAndDrawMarker(place, 'f_optical_gen', '%2394a3b8'); 
                                 }
                             });
@@ -482,7 +451,6 @@
                         resolve(); 
                     }, { bounds: bounds, size: 15 });
                 });
-
             } catch(e) {} finally {
                 isScanningAPI = false;
             }
@@ -496,8 +464,7 @@
                     clearActivePolygon();
                     let place = data[0];
                     searchCenter = new kakao.maps.LatLng(place.y, place.x);
-                    map.setCenter(searchCenter);
-                    triggerScan();
+                    map.setCenter(searchCenter); triggerScan();
                 }
             });
         }
@@ -510,7 +477,6 @@
 
         function processPlaceAndDrawMarker(place, key, customHex) {
             if (placeCache.has(place.id)) return false; 
-            
             let isDuplicate = false;
             let skipDeduplication = ['f_daiso', 'f_olive', 'f_olive_hapa', 'f_davich'].includes(key);
 
@@ -527,27 +493,24 @@
             let hex = customHex;
             if(!hex && BRAND_CONFIG[key]) hex = BRAND_CONFIG[key].hex;
             
-            let rSize = customHex ? "7" : "10"; // 안경원은 핀 크기 작게
+            let rSize = customHex ? "7" : "10"; 
             let svgString = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24"><circle cx="12" cy="12" r="${rSize}" fill="${hex}" stroke="white" stroke-width="2"/></svg>`;
             let markerImage = new kakao.maps.MarkerImage('data:image/svg+xml;utf-8,' + svgString, new kakao.maps.Size(24, 24), { offset: new kakao.maps.Point(12, 12) });
             
             let marker = new kakao.maps.Marker({ position: new kakao.maps.LatLng(place.y, place.x), image: markerImage });
-            marker.setMap(map);
-            mapMarkers.push(marker);
+            marker.setMap(map); mapMarkers.push(marker);
             
             placeCache.set(place.id, { brand: key, rawData: place, marker: marker });
             
             kakao.maps.event.addListener(marker, 'mouseover', function() {
                 tooltipOverlay.setContent(`<div class="store-tooltip">${place.place_name}</div>`);
-                tooltipOverlay.setPosition(marker.getPosition());
-                tooltipOverlay.setMap(map);
+                tooltipOverlay.setPosition(marker.getPosition()); tooltipOverlay.setMap(map);
             });
             kakao.maps.event.addListener(marker, 'mouseout', function() { tooltipOverlay.setMap(null); });
-            
             return true;
         }
 
-        // 💡 [V18.0] 스내핑 보정 + 올영/렌즈2 특수룰 적용 엔진
+        // 💡 [V19.0] 유입/유출 동선 엔진 적용
         async function runGridHotspotScan(targetPath) {
             if(isScanningAPI) return;
             isScanningAPI = true;
@@ -561,8 +524,7 @@
                 let cLat = 0, cLng = 0;
                 let minLat = 90, maxLat = -90, minLng = 180, maxLng = -180;
                 for(let i=0; i<targetPath.length; i++) {
-                    let lat = targetPath[i].lat;
-                    let lng = targetPath[i].lng;
+                    let lat = targetPath[i].lat; let lng = targetPath[i].lng;
                     cLat += lat; cLng += lng;
                     if(lat < minLat) minLat = lat; if(lat > maxLat) maxLat = lat;
                     if(lng < minLng) minLng = lng; if(lng > maxLng) maxLng = lng;
@@ -575,16 +537,45 @@
                     let d = getDistanceMeters(targetPath[i].lat, targetPath[i].lng, cLat, cLng);
                     if(d > maxRadius) maxRadius = d;
                 }
-                let searchRadius = Math.min(Math.ceil(maxRadius + 100), 2000); 
+                let searchRadius = Math.min(Math.ceil(maxRadius + 150), 2000); 
 
                 let rawScannedNodes = [];
                 let seenIds = {};
+                let gates = []; // 유입구(지하철, 버스) 저장
+                let anchors = []; // 도착지(올영, 다이소) 저장
 
-                // 데이터 수집
+                // 1. 유입로: 지하철역 탐색
+                statusEl.innerText = `🚇 주변 지하철 출입구 확인 중...`;
+                await new Promise(resolve => {
+                    ps.categorySearch('SW8', function(data, status) {
+                        if (status === kakao.maps.services.Status.OK) {
+                            gates.push({ lat: parseFloat(data[0].y), lng: parseFloat(data[0].x), type: 'subway', name: data[0].place_name });
+                        }
+                        resolve();
+                    }, { location: centerPos, radius: 1500 });
+                });
+
+                // 2. 유입로: 핵심 버스정류장 탐색 (가장 가까운 2개)
+                statusEl.innerText = `🚌 주변 버스정류장 유입로 탐지 중...`;
+                await new Promise(resolve => {
+                    ps.keywordSearch('버스정류장', function(data, status) {
+                        if (status === kakao.maps.services.Status.OK) {
+                            let count = 0;
+                            for(let k=0; k<data.length; k++) {
+                                gates.push({ lat: parseFloat(data[k].y), lng: parseFloat(data[k].x), type: 'bus', name: data[k].place_name });
+                                count++;
+                                if(count >= 2) break;
+                            }
+                        }
+                        resolve();
+                    }, { location: centerPos, radius: searchRadius });
+                });
+
+                // 3. 인프라 스캔 (올영/다이소 등)
                 let activeKeys = Object.keys(BRAND_CONFIG).filter(key => document.getElementById(key) && document.getElementById(key).checked);
                 for (let i = 0; i < activeKeys.length; i++) {
                     let key = activeKeys[i];
-                    statusEl.innerText = `🎯 인프라 조사 중... [${BRAND_CONFIG[key].kw}]`;
+                    statusEl.innerText = `🎯 앵커 시설 조사 중... [${BRAND_CONFIG[key].kw}]`;
                     await new Promise(resolve => {
                         ps.keywordSearch(BRAND_CONFIG[key].kw, function(data, status) {
                             if (status === kakao.maps.services.Status.OK) {
@@ -592,6 +583,10 @@
                                     let place = data[k];
                                     if(!seenIds[place.id]) {
                                         seenIds[place.id] = true; place.brandKey = key; rawScannedNodes.push(place);
+                                        // 앵커 추출 (올영, 다이소)
+                                        if (BRAND_CONFIG[key].isOlive || BRAND_CONFIG[key].isDaiso) {
+                                            anchors.push({ lat: parseFloat(place.y), lng: parseFloat(place.x), name: place.place_name });
+                                        }
                                     }
                                 }
                             }
@@ -601,9 +596,10 @@
                     await delay(100); 
                 }
 
+                // 4. 스텔스 인프라 (폰, 가챠)
                 for(let i = 0; i < STEALTH_KEYWORDS.length; i++) {
                     let stealth = STEALTH_KEYWORDS[i];
-                    statusEl.innerText = `🕵️ 백그라운드 탐지 중... [${stealth.kw}]`;
+                    statusEl.innerText = `🕵️ 코너 및 타겟 핫플 스캔 중... [${stealth.kw}]`;
                     await new Promise(resolve => {
                         ps.keywordSearch(stealth.kw, function(data, status) {
                             if (status === kakao.maps.services.Status.OK) {
@@ -627,6 +623,7 @@
                     }
                 });
 
+                // 통계 및 UI 갱신
                 let targetStats = { comp: 0, anchor: 0 };
                 for (let i = 0; i < rawScannedNodes.length; i++) {
                     let p = rawScannedNodes[i];
@@ -640,13 +637,33 @@
                 document.getElementById('comp_count').innerText = targetStats.comp + '개';
                 document.getElementById('anchor_count').innerText = targetStats.anchor + '개';
 
-                statusEl.innerText = "🌐 올리브영+렌즈2 Супер 특수룰 및 스내핑 보정 중...";
+                statusEl.innerText = "🌐 유입/유출 실질 보행 동선(Flow)을 맵핑 중입니다...";
+
+                // 💡 [V19.0 핵심] 동선(Flow Lines) 생성 및 지도 표출
+                let flowPaths = [];
+                for(let g=0; g<gates.length; g++) {
+                    for(let a=0; a<anchors.length; a++) {
+                        // 유입구에서 핵심 앵커(올영 등)로 이어지는 선분 저장
+                        flowPaths.push({
+                            x1: gates[g].lng, y1: gates[g].lat,
+                            x2: anchors[a].lng, y2: anchors[a].lat,
+                            type: gates[g].type
+                        });
+                        
+                        // 지도상에 유입 동선 그리기 (지하철: 파란 점선, 버스: 초록 점선)
+                        let color = gates[g].type === 'subway' ? '#3b82f6' : '#10b981';
+                        let linePath = [ new kakao.maps.LatLng(gates[g].lat, gates[g].lng), new kakao.maps.LatLng(anchors[a].lat, anchors[a].lng) ];
+                        let pl = new kakao.maps.Polyline({
+                            path: linePath, strokeWeight: 3, strokeColor: color, strokeOpacity: 0.4, strokeStyle: 'dashed'
+                        });
+                        pl.setMap(map);
+                        flowLineOverlays.push(pl);
+                    }
+                }
 
                 let gridPoints = [];
-                let latDiff = maxLat - minLat;
-                let lngDiff = maxLng - minLng;
-                let stepLat = Math.max(latDiff / 30, 0.00002); 
-                let stepLng = Math.max(lngDiff / 30, 0.00002);
+                let latDiff = maxLat - minLat; let lngDiff = maxLng - minLng;
+                let stepLat = Math.max(latDiff / 30, 0.00002); let stepLng = Math.max(lngDiff / 30, 0.00002);
 
                 for(let lat = minLat; lat <= maxLat; lat += stepLat) {
                     for(let lng = minLng; lng <= maxLng; lng += stepLng) {
@@ -654,15 +671,25 @@
                     }
                 }
 
-                // 💡 [V18.0] 슈퍼룰 점수 및 도로 스내핑(가까운 POI 유도)
+                if(gridPoints.length === 0) {
+                    stepLat = latDiff / 100; stepLng = lngDiff / 100;
+                    for(let lat = minLat; lat <= maxLat; lat += stepLat) {
+                        for(let lng = minLng; lng <= maxLng; lng += stepLng) {
+                            if(isPointInPolygon(lat, lng, targetPath)) gridPoints.push({ lat: lat, lng: lng, score: 0 });
+                        }
+                    }
+                }
+
+                // 💡 [V19.0] 점수 융합: 기존 배점 + 유입 동선 가산점(Flow Bonus)
                 for(let i=0; i<gridPoints.length; i++) {
                     let pt = gridPoints[i];
                     let score = 0.1; 
                     
                     let localOliveCount = 0;
                     let localLensCount = 0;
-                    let closestPoiDist = 999; // 스내핑용 가장 가까운 매장 거리 확인
+                    let closestPoiDist = 999; 
 
+                    // 1. 핵심 매장(앵커) 점수
                     for(let j=0; j<rawScannedNodes.length; j++) {
                         let node = rawScannedNodes[j];
                         let dist = getDistanceMeters(pt.lat, pt.lng, parseFloat(node.y), parseFloat(node.x));
@@ -675,23 +702,33 @@
                         } else if (node.brandKey && BRAND_CONFIG[node.brandKey]) {
                             let cfg = BRAND_CONFIG[node.brandKey];
                             if(cfg.isOlive && dist <= 80) {
-                                score += (80 - dist) * 10.0; 
-                                localOliveCount++; // 올영 카운트
+                                score += (80 - dist) * 10.0; localOliveCount++;
                             } else if(cfg.isComp && dist <= 80) {
-                                score += (80 - dist) * 8.0;
-                                localLensCount++; // 렌즈 카운트
+                                score += (80 - dist) * 8.0; localLensCount++;
                             } else if(cfg.isDaiso && dist <= 80) {
                                 score += (80 - dist) * 7.0;
                             }
                         }
                     }
 
-                    // 🚨 스내핑 보정: 상가(길)에서 너무 먼 지붕 한가운데는 점수 대폭 삭감
+                    // 2. 동선(Flow) 가산점 
+                    // 기지국/정류장에서 올리브영으로 가는 '길목'에 서 있다면 폭풍 가산점 부여
+                    let isOnFlow = false;
+                    for(let pIdx=0; pIdx<flowPaths.length; pIdx++) {
+                        let f = flowPaths[pIdx];
+                        let distToFlow = distToSegment(pt.lng, pt.lat, f.x1, f.y1, f.x2, f.y2);
+                        if(distToFlow <= 30) {
+                            score += (30 - distToFlow) * 1.5; // 최대 45점 추가
+                            isOnFlow = true;
+                        }
+                    }
+
+                    // 🚨 스내핑 보정: 상가 입구(POI)에서 너무 멀면 점수 삭감
                     if(closestPoiDist > 15) {
                         score = score * 0.3; 
                     }
                     
-                    // 👑 [슈퍼 명당 특수룰] 올영 1곳 + 렌즈샵 2곳 이상이면 만점 부여
+                    // 👑 슈퍼 명당 특수룰 (올영+렌즈2)
                     if(localOliveCount >= 1 && localLensCount >= 2) {
                         score += 10000;
                         pt.isSuperSpot = true;
@@ -731,9 +768,7 @@
                         let spot = topSpots[idx];
                         
                         let rankTitle = rankStyles[idx].title;
-                        if(spot.isSuperSpot && idx === 0) {
-                            rankTitle = '👑 슈퍼 명당 (올영+렌즈2)'; // 특수룰 걸린 경우 타이틀 변경
-                        }
+                        if(spot.isSuperSpot && idx === 0) rankTitle = '👑 슈퍼 명당 (올영+렌즈2)';
                         
                         (function(index, targetSpot, title) {
                             geocoder.coord2Address(targetSpot.lng, targetSpot.lat, function(result, status) {
@@ -759,19 +794,18 @@
                         let overlay = new kakao.maps.CustomOverlay({
                             position: new kakao.maps.LatLng(spot.lat, spot.lng),
                             content: contentStr,
-                            xAnchor: 0.5, 
-                            yAnchor: 1 
+                            xAnchor: 0.5, yAnchor: 1 
                         });
                         overlay.setMap(map);
                         rankOverlays.push(overlay);
                     }
 
                     document.getElementById('rankingResultBox').classList.remove('hidden');
-                    statusEl.innerText = `✅ 분석 완료! 길(보도) 중심으로 슈퍼 명당 타겟팅이 끝났습니다.`;
+                    statusEl.innerText = `✅ 분석 완료! 지하철/버스 정류장 유입 동선이 지도에 반영되었습니다.`;
 
                 } else {
                     document.getElementById('rankingResultBox').classList.remove('hidden');
-                    document.getElementById('rankingResultText').innerHTML = `<div class="text-xs text-rose-600 font-bold mt-1">분석 조건(상업 밀도 등)을 만족하는 입지가 없습니다.</div>`;
+                    document.getElementById('rankingResultText').innerHTML = `<div class="text-xs text-rose-600 font-bold mt-1">분석 조건을 만족하는 입지가 없습니다.</div>`;
                     statusEl.innerText = "⚠️ 펜스 내부에 유효한 상업 밀집 구역이 존재하지 않습니다.";
                 }
 
@@ -795,9 +829,6 @@
             document.getElementById('btn-map').classList.remove('active'); document.getElementById('btn-radar').classList.remove('active');
             document.getElementById('tab-' + tabId).classList.remove('hidden'); document.getElementById('btn-' + tabId).classList.add('active');
             if(tabId === 'map') { map.relayout(); map.setCenter(map.getCenter()); }
-            else if (tabId === 'radar') {
-                try { Plotly.Plots.resize(document.getElementById('radarChart')); } catch(e){}
-            }
         }
 
         renderPolygonTree();
