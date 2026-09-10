@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>렌즈미 상권 분석 대시보드 (V19.0 혈관 동선 추적 엔진)</title>
+    <title>렌즈미 상권 분석 대시보드 (V21.0 스마트 필터링 엔진)</title>
     <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
@@ -37,7 +37,7 @@
     <div class="w-full md:w-1/4 bg-white border-r border-gray-200 p-6 flex flex-col shadow-lg z-20 overflow-y-auto">
         <h1 class="text-xl font-extrabold text-slate-800 border-b-4 border-indigo-500 pb-3 mb-4 flex justify-between items-center">
             <span>🗺️ 전국 상권 관제탑</span>
-            <span class="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded-full font-bold">V19.0 🌊</span>
+            <span class="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded-full font-bold">V21.0 🧠</span>
         </h1>
         
         <div class="mb-4 bg-slate-50 p-4 rounded-xl border border-slate-200">
@@ -94,7 +94,7 @@
 
         <div id="tab-map" class="flex-grow w-full h-full relative">
             <div id="statusMessage" class="absolute top-4 left-1/2 transform -translate-x-1/2 z-10 bg-white/95 backdrop-blur-sm px-6 py-2 rounded-full shadow-md text-sm font-bold text-slate-700 border border-slate-200 text-center transition-all">
-                🎯 펜스를 치면 [지하철/버스 유입로]와 [올리브영 동선]을 스캔하여 S급지를 찾습니다!
+                🎯 펜스를 치면 [상권 유효 정류장]과 [술상가 필터]를 적용해 진짜 S급지를 찾습니다!
             </div>
 
             <!-- UI -->
@@ -116,8 +116,8 @@
                     <label class="flex items-center space-x-2 cursor-pointer"><input type="checkbox" id="f_daiso" checked onchange="triggerScan()" class="chk-red"><span class="text-[13px] font-bold text-rose-600 flex-grow">🟥 다이소</span><span id="cnt_daiso" class="text-[12px] font-bold text-slate-500"></span></label>
                     <label class="flex items-center space-x-2 cursor-pointer"><input type="checkbox" id="f_davich" checked onchange="triggerScan()" class="chk-blue"><span class="text-[13px] font-bold text-blue-700 flex-grow">🟦 다비치안경</span><span id="cnt_davich" class="text-[12px] font-bold text-slate-500"></span></label>
                 </div>
-                <div class="mt-3 bg-slate-100 px-3 py-2 rounded text-[11px] text-slate-500 font-bold border border-slate-200">
-                    💡 일반 안경원(회색 핀)은 백그라운드 탐지
+                <div class="mt-3 bg-red-50 px-3 py-2 rounded text-[11px] text-red-600 font-bold border border-red-200">
+                    🚫 술상가(10m 내 5개 이상) 페널티 작동 중
                 </div>
             </div>
 
@@ -130,26 +130,6 @@
             </div>
         </div>
     </div>
-
-    <!-- 로컬 데이터 연동 -->
-    <script>
-        let script = document.createElement('script');
-        script.src = 'store_counts.js?v=' + new Date().getTime();
-        script.onload = function() {
-            if (typeof GLOBAL_COUNTS !== 'undefined') {
-                const idMap = { 
-                    'lensme': 'cnt_lensme', 'olens': 'cnt_olens', 'hapa': 'cnt_hapa',
-                    'winc': 'cnt_winc', 'withlens': 'cnt_withlens', 'lensvery': 'cnt_lensvery', 'lenstown': 'cnt_lenstown',
-                    'olive': 'cnt_olive', 'daiso': 'cnt_daiso', 'olive_hapa': 'cnt_olive_hapa', 'davich': 'cnt_davich'
-                };
-                for(let key in idMap) {
-                    let el = document.getElementById(idMap[key]);
-                    if(el && GLOBAL_COUNTS[key] !== undefined) el.innerText = `(${GLOBAL_COUNTS[key]}개)`;
-                }
-            }
-        };
-        document.head.appendChild(script);
-    </script>
 
     <!-- 카카오맵 API -->
     <script type="text/javascript" src="//dapi.kakao.com/v2/maps/sdk.js?appkey=c045609510f8b75252389123f086be48&libraries=services,drawing"></script>
@@ -193,13 +173,15 @@
             { kw: '뽑기방', weight: 5.0, radius: 80 }
         ];
 
+        const NIGHTLIFE_KEYWORDS = ['술집', '주점', '호프', '이자카야'];
+
         let drawingManager = new kakao.maps.drawing.DrawingManager({
             map: map, drawingMode: [kakao.maps.drawing.OverlayType.POLYGON],
             guideTooltip: ['그리기 시작: 클릭', '완료: 더블클릭'],
             polygonOptions: { draggable: false, removable: false, editable: true, strokeColor: '#be185d', strokeWeight: 3, fillColor: '#f43f5e', fillOpacity: 0.2 }
         });
 
-        let savedPolygons = JSON.parse(localStorage.getItem('lensmePolygonsV19_0') || '[]');
+        let savedPolygons = JSON.parse(localStorage.getItem('lensmePolygonsV21_0') || '[]');
         let activePolygonPath = null; 
         let activePolygonId = null;
         let renderedPolygons = {}; 
@@ -273,7 +255,7 @@
                     }
                     let id = 'poly_' + Date.now();
                     savedPolygons.push({ id: id, name: name, path: tempDrawnPath, si: si, gu: gu, dong: dong, centerLat: centerLat, centerLng: centerLng });
-                    localStorage.setItem('lensmePolygonsV19_0', JSON.stringify(savedPolygons));
+                    localStorage.setItem('lensmePolygonsV21_0', JSON.stringify(savedPolygons));
                     
                     drawingManager.clear();
                     isDrawingMode = false;
@@ -355,7 +337,7 @@
         function deletePolygon(id) {
             if(!confirm("이 영토를 삭제하시겠습니까?")) return;
             savedPolygons = savedPolygons.filter(p => p.id !== id);
-            localStorage.setItem('lensmePolygonsV19_0', JSON.stringify(savedPolygons));
+            localStorage.setItem('lensmePolygonsV21_0', JSON.stringify(savedPolygons));
             if(activePolygonId === id) clearActivePolygon();
             renderPolygonTree();
         }
@@ -510,7 +492,6 @@
             return true;
         }
 
-        // 💡 [V19.0] 유입/유출 동선 엔진 적용
         async function runGridHotspotScan(targetPath) {
             if(isScanningAPI) return;
             isScanningAPI = true;
@@ -541,37 +522,35 @@
 
                 let rawScannedNodes = [];
                 let seenIds = {};
-                let gates = []; // 유입구(지하철, 버스) 저장
-                let anchors = []; // 도착지(올영, 다이소) 저장
+                let rawGates = []; 
+                let anchors = []; 
 
                 // 1. 유입로: 지하철역 탐색
                 statusEl.innerText = `🚇 주변 지하철 출입구 확인 중...`;
                 await new Promise(resolve => {
                     ps.categorySearch('SW8', function(data, status) {
                         if (status === kakao.maps.services.Status.OK) {
-                            gates.push({ lat: parseFloat(data[0].y), lng: parseFloat(data[0].x), type: 'subway', name: data[0].place_name });
+                            rawGates.push({ lat: parseFloat(data[0].y), lng: parseFloat(data[0].x), type: 'subway', name: data[0].place_name });
                         }
                         resolve();
                     }, { location: centerPos, radius: 1500 });
                 });
 
-                // 2. 유입로: 핵심 버스정류장 탐색 (가장 가까운 2개)
+                // 2. 유입로: 버스정류장 전체 스캔
                 statusEl.innerText = `🚌 주변 버스정류장 유입로 탐지 중...`;
                 await new Promise(resolve => {
                     ps.keywordSearch('버스정류장', function(data, status) {
                         if (status === kakao.maps.services.Status.OK) {
-                            let count = 0;
                             for(let k=0; k<data.length; k++) {
-                                gates.push({ lat: parseFloat(data[k].y), lng: parseFloat(data[k].x), type: 'bus', name: data[k].place_name });
-                                count++;
-                                if(count >= 2) break;
+                                rawGates.push({ lat: parseFloat(data[k].y), lng: parseFloat(data[k].x), type: 'bus', name: data[k].place_name });
+                                if(k >= 4) break; // 최대 5개 스캔 후 나중에 상권 여부 필터링
                             }
                         }
                         resolve();
                     }, { location: centerPos, radius: searchRadius });
                 });
 
-                // 3. 인프라 스캔 (올영/다이소 등)
+                // 3. 상권 인프라 스캔
                 let activeKeys = Object.keys(BRAND_CONFIG).filter(key => document.getElementById(key) && document.getElementById(key).checked);
                 for (let i = 0; i < activeKeys.length; i++) {
                     let key = activeKeys[i];
@@ -583,7 +562,6 @@
                                     let place = data[k];
                                     if(!seenIds[place.id]) {
                                         seenIds[place.id] = true; place.brandKey = key; rawScannedNodes.push(place);
-                                        // 앵커 추출 (올영, 다이소)
                                         if (BRAND_CONFIG[key].isOlive || BRAND_CONFIG[key].isDaiso) {
                                             anchors.push({ lat: parseFloat(place.y), lng: parseFloat(place.x), name: place.place_name });
                                         }
@@ -596,7 +574,6 @@
                     await delay(100); 
                 }
 
-                // 4. 스텔스 인프라 (폰, 가챠)
                 for(let i = 0; i < STEALTH_KEYWORDS.length; i++) {
                     let stealth = STEALTH_KEYWORDS[i];
                     statusEl.innerText = `🕵️ 코너 및 타겟 핫플 스캔 중... [${stealth.kw}]`;
@@ -616,14 +593,46 @@
                     await delay(100); 
                 }
 
-                placeCache.forEach(item => {
-                    let p = item.rawData;
-                    if(!seenIds[p.id]) {
-                        seenIds[p.id] = true; p.brandKey = item.brand; rawScannedNodes.push(p);
-                    }
-                });
+                for(let i = 0; i < NIGHTLIFE_KEYWORDS.length; i++) {
+                    statusEl.innerText = `🍺 유흥/술집 밀집 구역 필터링 중... [${NIGHTLIFE_KEYWORDS[i]}]`;
+                    await new Promise(resolve => {
+                        ps.keywordSearch(NIGHTLIFE_KEYWORDS[i], function(data, status) {
+                            if (status === kakao.maps.services.Status.OK) {
+                                for(let k=0; k<data.length; k++) {
+                                    let place = data[k];
+                                    if(!seenIds[place.id]) {
+                                        seenIds[place.id] = true; place.isNightlife = true; rawScannedNodes.push(place);
+                                    }
+                                }
+                            }
+                            resolve(); 
+                        }, { location: centerPos, radius: searchRadius, size: 15 });
+                    });
+                    await delay(100); 
+                }
 
-                // 통계 및 UI 갱신
+                // 💡 [V21.0] 상권 밖 '유령 정류장' 필터링 
+                let gates = [];
+                for(let i=0; i<rawGates.length; i++) {
+                    if(rawGates[i].type === 'subway') {
+                        gates.push(rawGates[i]);
+                    } else {
+                        // 버스정류장 주변(100m) 핵심 상가 개수 확인
+                        let nearbyStoreCount = 0;
+                        for(let j=0; j<rawScannedNodes.length; j++) {
+                            // 술집은 상권 활성화 지표에서 제외
+                            if(rawScannedNodes[j].isNightlife) continue; 
+                            let dist = getDistanceMeters(rawGates[i].lat, rawGates[i].lng, parseFloat(rawScannedNodes[j].y), parseFloat(rawScannedNodes[j].x));
+                            if(dist <= 100) nearbyStoreCount++;
+                        }
+                        // 핵심 타겟 매장이 3개 이상 있는 '진짜 상권 정류장'만 동선 유입구로 인정
+                        if(nearbyStoreCount >= 3) {
+                            gates.push(rawGates[i]);
+                        }
+                    }
+                }
+
+                // 통계 UI
                 let targetStats = { comp: 0, anchor: 0 };
                 for (let i = 0; i < rawScannedNodes.length; i++) {
                     let p = rawScannedNodes[i];
@@ -637,20 +646,17 @@
                 document.getElementById('comp_count').innerText = targetStats.comp + '개';
                 document.getElementById('anchor_count').innerText = targetStats.anchor + '개';
 
-                statusEl.innerText = "🌐 유입/유출 실질 보행 동선(Flow)을 맵핑 중입니다...";
+                statusEl.innerText = "🌐 스마트 유입 동선 및 술상가(10m) 페널티 계산 중...";
 
-                // 💡 [V19.0 핵심] 동선(Flow Lines) 생성 및 지도 표출
                 let flowPaths = [];
                 for(let g=0; g<gates.length; g++) {
                     for(let a=0; a<anchors.length; a++) {
-                        // 유입구에서 핵심 앵커(올영 등)로 이어지는 선분 저장
                         flowPaths.push({
                             x1: gates[g].lng, y1: gates[g].lat,
                             x2: anchors[a].lng, y2: anchors[a].lat,
                             type: gates[g].type
                         });
                         
-                        // 지도상에 유입 동선 그리기 (지하철: 파란 점선, 버스: 초록 점선)
                         let color = gates[g].type === 'subway' ? '#3b82f6' : '#10b981';
                         let linePath = [ new kakao.maps.LatLng(gates[g].lat, gates[g].lng), new kakao.maps.LatLng(anchors[a].lat, anchors[a].lng) ];
                         let pl = new kakao.maps.Polyline({
@@ -680,23 +686,25 @@
                     }
                 }
 
-                // 💡 [V19.0] 점수 융합: 기존 배점 + 유입 동선 가산점(Flow Bonus)
                 for(let i=0; i<gridPoints.length; i++) {
                     let pt = gridPoints[i];
                     let score = 0.1; 
                     
                     let localOliveCount = 0;
                     let localLensCount = 0;
+                    let localNightlifeCount = 0; 
                     let closestPoiDist = 999; 
 
-                    // 1. 핵심 매장(앵커) 점수
                     for(let j=0; j<rawScannedNodes.length; j++) {
                         let node = rawScannedNodes[j];
                         let dist = getDistanceMeters(pt.lat, pt.lng, parseFloat(node.y), parseFloat(node.x));
                         
-                        if (dist < closestPoiDist) closestPoiDist = dist;
+                        if (!node.isNightlife && dist < closestPoiDist) closestPoiDist = dist;
 
-                        if(node.isStealth) {
+                        if(node.isNightlife) {
+                            // 💡 [V21.0] 반경 10m 이내로 좁혀 '술집 건물' 핀포인트 타격
+                            if (dist <= 10) localNightlifeCount++; 
+                        } else if(node.isStealth) {
                             let sData = node.stealthData;
                             if(dist <= sData.radius) score += (sData.radius - dist) * sData.weight;
                         } else if (node.brandKey && BRAND_CONFIG[node.brandKey]) {
@@ -711,24 +719,25 @@
                         }
                     }
 
-                    // 2. 동선(Flow) 가산점 
-                    // 기지국/정류장에서 올리브영으로 가는 '길목'에 서 있다면 폭풍 가산점 부여
                     let isOnFlow = false;
                     for(let pIdx=0; pIdx<flowPaths.length; pIdx++) {
                         let f = flowPaths[pIdx];
                         let distToFlow = distToSegment(pt.lng, pt.lat, f.x1, f.y1, f.x2, f.y2);
                         if(distToFlow <= 30) {
-                            score += (30 - distToFlow) * 1.5; // 최대 45점 추가
+                            score += (30 - distToFlow) * 1.5;
                             isOnFlow = true;
                         }
                     }
 
-                    // 🚨 스내핑 보정: 상가 입구(POI)에서 너무 멀면 점수 삭감
                     if(closestPoiDist > 15) {
                         score = score * 0.3; 
                     }
+
+                    // 🚨 [V21.0] 10m 이내에 술집이 5개 이상 있는 유흥 특화 건물은 90% 삭감
+                    if(localNightlifeCount >= 5) {
+                        score = score * 0.1;
+                    }
                     
-                    // 👑 슈퍼 명당 특수룰 (올영+렌즈2)
                     if(localOliveCount >= 1 && localLensCount >= 2) {
                         score += 10000;
                         pt.isSuperSpot = true;
@@ -801,7 +810,7 @@
                     }
 
                     document.getElementById('rankingResultBox').classList.remove('hidden');
-                    statusEl.innerText = `✅ 분석 완료! 지하철/버스 정류장 유입 동선이 지도에 반영되었습니다.`;
+                    statusEl.innerText = `✅ 분석 완료! 스마트 필터(상권 정류장, 술상가 회피)가 적용되었습니다.`;
 
                 } else {
                     document.getElementById('rankingResultBox').classList.remove('hidden');
