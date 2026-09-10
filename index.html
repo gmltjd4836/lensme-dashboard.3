@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>렌즈미 상권 분석 대시보드 (V16.0 최종 황금배점 엔진)</title>
+    <title>렌즈미 상권 분석 대시보드 (V17.0 뷰티 특화 엔진)</title>
     <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
@@ -37,7 +37,7 @@
     <div class="w-full md:w-1/4 bg-white border-r border-gray-200 p-6 flex flex-col shadow-lg z-20 overflow-y-auto">
         <h1 class="text-xl font-extrabold text-slate-800 border-b-4 border-indigo-500 pb-3 mb-4 flex justify-between items-center">
             <span>🗺️ 전국 상권 관제탑</span>
-            <span class="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded-full font-bold">V16.0 👑</span>
+            <span class="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded-full font-bold">V17.0 👑</span>
         </h1>
         
         <div class="mb-4 bg-slate-50 p-4 rounded-xl border border-slate-200">
@@ -70,16 +70,16 @@
             
             <div class="bg-indigo-50/80 p-3 rounded-lg border border-indigo-100 space-y-1.5 mt-2">
                 <div class="flex justify-between items-center text-xs font-bold text-slate-700">
-                    <span>⚔️ 펜스 내 경쟁샵:</span>
+                    <span>⚔️ 펜스 내 렌즈샵:</span>
                     <span id="comp_count" class="text-sm font-black text-pink-600">-개</span>
                 </div>
                 <div class="flex justify-between items-center text-xs font-bold text-slate-700">
-                    <span>📸 펜스 내 핵심 앵커:</span>
+                    <span>📸 펜스 내 앵커시설:</span>
                     <span id="anchor_count" class="text-sm font-black text-emerald-600">-개</span>
                 </div>
 
                 <div id="rankingResultBox" class="mt-3 pt-3 border-t border-indigo-200 hidden">
-                    <p class="text-xs text-indigo-800 font-extrabold mb-2">👑 신규 출점 입지 평가 (10-8-7-5-1 적용)</p>
+                    <p class="text-xs text-indigo-800 font-extrabold mb-2">👑 입지 평가 (올리브영 1티어 모드)</p>
                     <div id="rankingResultText" class="space-y-1"></div>
                 </div>
             </div>
@@ -94,10 +94,10 @@
 
         <div id="tab-map" class="flex-grow w-full h-full relative">
             <div id="statusMessage" class="absolute top-4 left-1/2 transform -translate-x-1/2 z-10 bg-white/95 backdrop-blur-sm px-6 py-2 rounded-full shadow-md text-sm font-bold text-slate-700 border border-slate-200 text-center transition-all">
-                🎯 펜스를 치면 [대로변 자석]과 [렌즈 타겟 동선]을 분석하여 S급지를 찾습니다!
+                🎯 펜스를 치면 [올리브영 1티어] 기준으로 S급 코너를 도출합니다!
             </div>
 
-            <!-- UI 클린업 (다비치 제외, 카운트 포함) -->
+            <!-- UI 클린업 (다비치 복구) -->
             <div class="absolute top-16 left-4 z-10 bg-white/95 backdrop-blur-sm p-4 rounded-xl shadow-lg border border-slate-200 w-64 max-h-[80vh] overflow-y-auto hidden md:block">
                 <p class="text-xs font-extrabold text-slate-800 mb-2.5 border-b pb-1 flex justify-between"><span>🎯 렌즈 전문 브랜드</span><span class="text-slate-400">전국 누적</span></p>
                 <div class="space-y-2 mb-4">
@@ -114,6 +114,7 @@
                     <label class="flex items-center space-x-2 cursor-pointer"><input type="checkbox" id="f_olive_hapa" checked onchange="triggerScan()" class="chk-green"><span class="text-[13px] font-bold text-teal-700 flex-grow">🌿 올영(하파크리스틴)</span><span id="cnt_olive_hapa" class="text-[12px] font-bold text-slate-500"></span></label>
                     <label class="flex items-center space-x-2 cursor-pointer"><input type="checkbox" id="f_olive" checked onchange="triggerScan()" class="chk-green"><span class="text-[13px] font-bold text-green-600 flex-grow">🟩 일반 올리브영</span><span id="cnt_olive" class="text-[12px] font-bold text-slate-500"></span></label>
                     <label class="flex items-center space-x-2 cursor-pointer"><input type="checkbox" id="f_daiso" checked onchange="triggerScan()" class="chk-red"><span class="text-[13px] font-bold text-rose-600 flex-grow">🟥 다이소</span><span id="cnt_daiso" class="text-[12px] font-bold text-slate-500"></span></label>
+                    <label class="flex items-center space-x-2 cursor-pointer"><input type="checkbox" id="f_davich" checked onchange="triggerScan()" class="chk-blue"><span class="text-[13px] font-bold text-blue-700 flex-grow">🟦 다비치안경</span><span id="cnt_davich" class="text-[12px] font-bold text-slate-500"></span></label>
                 </div>
             </div>
 
@@ -136,7 +137,7 @@
                 const idMap = { 
                     'lensme': 'cnt_lensme', 'olens': 'cnt_olens', 'hapa': 'cnt_hapa',
                     'winc': 'cnt_winc', 'withlens': 'cnt_withlens', 'lensvery': 'cnt_lensvery', 'lenstown': 'cnt_lenstown',
-                    'olive': 'cnt_olive', 'daiso': 'cnt_daiso', 'olive_hapa': 'cnt_olive_hapa' 
+                    'olive': 'cnt_olive', 'daiso': 'cnt_daiso', 'olive_hapa': 'cnt_olive_hapa', 'davich': 'cnt_davich'
                 };
                 for(let key in idMap) {
                     let el = document.getElementById(idMap[key]);
@@ -166,7 +167,7 @@
         
         let tooltipOverlay = new kakao.maps.CustomOverlay({ xAnchor: 0.5, yAnchor: 1.5, zIndex: 150 });
 
-        // 화면 표출 타겟 (다비치 삭제)
+        // 화면 표출 타겟 (올리브영 1티어, 다비치 복구)
         const BRAND_CONFIG = {
             f_lensme: { kw: '렌즈미', hex: '%239333ea', isComp: true },
             f_olens: { kw: '오렌즈', hex: '%23f97316', isComp: true },
@@ -175,16 +176,17 @@
             f_withlens: { kw: '위드렌즈', hex: '%23059669', isComp: true },
             f_lensvery: { kw: '렌즈베리', hex: '%23eab308', isComp: true },
             f_lenstown: { kw: '렌즈타운', hex: '%23dc2626', isComp: true }, 
-            f_olive_hapa: { kw: '올리브영 하파크리스틴', hex: '%230f766e', isAnchor: true }, 
-            f_olive: { kw: '올리브영', hex: '%2316a34a', isAnchor: true },
-            f_daiso: { kw: '다이소', hex: '%23e11d48', isAnchor: true }
+            f_olive_hapa: { kw: '올리브영 하파크리스틴', hex: '%230f766e', isOlive: true, isAnchor: true }, 
+            f_olive: { kw: '올리브영', hex: '%2316a34a', isOlive: true, isAnchor: true },
+            f_daiso: { kw: '다이소', hex: '%23e11d48', isDaiso: true, isAnchor: true },
+            f_davich: { kw: '다비치안경', hex: '%231d4ed8', isOther: true }
         };
 
-        // 💡 [V16.0 최종 스텔스 배점 엔진] 
-        // 1티어: 휴대폰(10) / 4티어: 네컷/가챠(5)
+        // 💡 [V17.0 최종 스텔스 배점 엔진] 
+        // 3티어: 휴대폰(7) / 4티어: 네컷/가챠(5)
         const STEALTH_KEYWORDS = [
-            { kw: '휴대폰대리점', weight: 10.0, radius: 80 }, 
-            { kw: '이동통신', weight: 10.0, radius: 80 },
+            { kw: '휴대폰대리점', weight: 7.0, radius: 80 }, 
+            { kw: '이동통신', weight: 7.0, radius: 80 },
             { kw: '셀프사진관', weight: 5.0, radius: 80 }, 
             { kw: '포토이즘', weight: 5.0, radius: 80 },
             { kw: '가챠샵', weight: 5.0, radius: 80 },
@@ -203,7 +205,7 @@
             polygonOptions: { draggable: false, removable: false, editable: true, strokeColor: '#be185d', strokeWeight: 3, fillColor: '#f43f5e', fillOpacity: 0.2 }
         });
 
-        let savedPolygons = JSON.parse(localStorage.getItem('lensmePolygonsV16_0') || '[]');
+        let savedPolygons = JSON.parse(localStorage.getItem('lensmePolygonsV17_0') || '[]');
         let activePolygonPath = null; 
         let activePolygonId = null;
         let renderedPolygons = {}; 
@@ -285,7 +287,7 @@
                     
                     let id = 'poly_' + Date.now();
                     savedPolygons.push({ id: id, name: name, path: tempDrawnPath, si: si, gu: gu, dong: dong, centerLat: centerLat, centerLng: centerLng });
-                    localStorage.setItem('lensmePolygonsV16_0', JSON.stringify(savedPolygons));
+                    localStorage.setItem('lensmePolygonsV17_0', JSON.stringify(savedPolygons));
                     
                     drawingManager.clear();
                     isDrawingMode = false;
@@ -371,7 +373,7 @@
         function deletePolygon(id) {
             if(!confirm("이 영토를 삭제하시겠습니까?")) return;
             savedPolygons = savedPolygons.filter(p => p.id !== id);
-            localStorage.setItem('lensmePolygonsV16_0', JSON.stringify(savedPolygons));
+            localStorage.setItem('lensmePolygonsV17_0', JSON.stringify(savedPolygons));
             if(activePolygonId === id) clearActivePolygon();
             renderPolygonTree();
         }
@@ -495,7 +497,7 @@
         function processPlaceAndDrawMarker(place, key) {
             if (placeCache.has(place.id)) return false; 
             let isDuplicate = false;
-            let skipDeduplication = ['f_daiso', 'f_olive', 'f_olive_hapa'].includes(key);
+            let skipDeduplication = ['f_daiso', 'f_olive', 'f_olive_hapa', 'f_davich'].includes(key);
 
             if (!skipDeduplication) {
                 placeCache.forEach((existingItem) => {
@@ -527,7 +529,7 @@
             return true;
         }
 
-        // 💡 [V16.0] 10-8-7-5-1 황금 배점 적용 엔진
+        // 💡 [V17.0] 10-8-7-5-1 (올영 1티어, 렌즈 2티어, 폰/다이소 3티어) 엔진
         async function runGridHotspotScan(targetPath) {
             if(isScanningAPI) return;
             isScanningAPI = true;
@@ -583,7 +585,7 @@
                 let rawScannedNodes = [];
                 let seenIds = {};
 
-                // 1. 시각화 대상 앵커/경쟁사 스캔
+                // 1. 시각화 대상 스캔 (올영, 렌즈샵, 다이소, 다비치 등)
                 let activeKeys = Object.keys(BRAND_CONFIG).filter(key => document.getElementById(key) && document.getElementById(key).checked);
                 for (let i = 0; i < activeKeys.length; i++) {
                     let key = activeKeys[i];
@@ -606,7 +608,7 @@
                     await delay(100); 
                 }
 
-                // 2. 스텔스 키워드 (1티어 폰, 4티어 가챠/네컷)
+                // 2. 스텔스 키워드 (3티어 폰, 4티어 가챠/네컷)
                 for(let i = 0; i < STEALTH_KEYWORDS.length; i++) {
                     let stealth = STEALTH_KEYWORDS[i];
                     statusEl.innerText = `🕵️ 백그라운드 탐지 중... [${stealth.kw}]`;
@@ -675,7 +677,7 @@
                 document.getElementById('anchor_count').innerText = targetStats.anchor + '개';
                 try { drawRadarChart(targetStats.comp, targetStats.anchor); } catch(chartErr) {}
 
-                statusEl.innerText = "🌐 10-8-7-5-1 배점 룰에 따라 S급 명당을 계산 중입니다...";
+                statusEl.innerText = "🌐 올리브영 1티어 특화 배점(10-8-7-5-1) 적용 중...";
 
                 let gridPoints = [];
                 let latDiff = maxLat - minLat;
@@ -699,7 +701,7 @@
                 }
                 if(isPointInPolygon(cLat, cLng, targetPath)) gridPoints.push({ lat: cLat, lng: cLng, score: 0 });
 
-                // 💡 점수 융합 로직 
+                // 💡 [V17.0] 변경된 점수 융합 로직 
                 for(let i=0; i<gridPoints.length; i++) {
                     let pt = gridPoints[i];
                     let score = 0.1; 
@@ -712,7 +714,7 @@
                         if(dist <= 80) localStoreCount++; 
 
                         if(node.isStealth) {
-                            // 1티어 폰(10) / 4티어 가챠네컷(5)
+                            // 3티어 폰(7) / 4티어 가챠네컷(5)
                             let sData = node.stealthData;
                             if(dist <= sData.radius) {
                                 score += (sData.radius - dist) * sData.weight;
@@ -725,11 +727,14 @@
                             }
                         } else if (node.brandKey && BRAND_CONFIG[node.brandKey]) {
                             let cfg = BRAND_CONFIG[node.brandKey];
-                            if(cfg.isAnchor && dist <= 80) {
-                                // 2티어 올영/다이소(8)
-                                score += (80 - dist) * 8.0; 
+                            if(cfg.isOlive && dist <= 80) {
+                                // 1티어 올리브영(10)
+                                score += (80 - dist) * 10.0; 
                             } else if(cfg.isComp && dist <= 80) {
-                                // 3티어 렌즈경쟁사(7)
+                                // 2티어 렌즈경쟁사(8)
+                                score += (80 - dist) * 8.0;
+                            } else if(cfg.isDaiso && dist <= 80) {
+                                // 3티어 다이소(7)
                                 score += (80 - dist) * 7.0;
                             }
                         }
@@ -741,9 +746,7 @@
                         if(distToFlow <= 50) score += (50 - distToFlow) * 2.0; 
                     }
 
-                    // 후미진 골목 필터링 (최소 인프라 부족 시 탈락)
                     if(localStoreCount < 2) score = score * 0.1; 
-                    
                     pt.score = score;
                 }
 
@@ -809,7 +812,7 @@
                     }
 
                     document.getElementById('rankingResultBox').classList.remove('hidden');
-                    statusEl.innerText = `✅ 분석 완료! 10-8-7-5-1 비율로 현장 검증형 S급지를 도출했습니다.`;
+                    statusEl.innerText = `✅ 분석 완료! 올리브영 중심의 1020 타겟 맞춤형 S급지를 도출했습니다.`;
 
                 } else {
                     document.getElementById('rankingResultBox').classList.remove('hidden');
