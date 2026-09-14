@@ -3,10 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>렌즈미 상권 분석 대시보드 (V27.0 마스터 엔진)</title>
-    <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css" rel="stylesheet">
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+    <title>렌즈미 상권 분석 대시보드 (V28.0 순위/군락지 분리 엔진)</title>
+    <link href="[https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css](https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css)" rel="stylesheet">
+    <script src="[https://cdn.tailwindcss.com](https://cdn.tailwindcss.com)"></script>
+    <script src="[https://cdn.plot.ly/plotly-2.27.0.min.js](https://cdn.plot.ly/plotly-2.27.0.min.js)"></script>
     <style>
         body { font-family: 'Pretendard', sans-serif; background-color: #f8fafc; }
         ::-webkit-scrollbar { width: 6px; }
@@ -37,7 +37,7 @@
     <div class="w-full md:w-1/4 bg-white border-r border-gray-200 p-6 flex flex-col shadow-lg z-20 overflow-y-auto">
         <h1 class="text-xl font-extrabold text-slate-800 border-b-4 border-indigo-500 pb-3 mb-4 flex justify-between items-center">
             <span>🗺️ 전국 상권 관제탑</span>
-            <span class="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded-full font-bold">V27.0 👑</span>
+            <span class="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded-full font-bold">V28.0 🎯</span>
         </h1>
         
         <div class="mb-4 bg-slate-50 p-4 rounded-xl border border-slate-200">
@@ -79,9 +79,10 @@
                 </div>
 
                 <div id="rankingResultBox" class="mt-3 pt-3 border-t border-indigo-200 hidden">
-                    <p class="text-xs text-indigo-800 font-extrabold mb-2">👑 신규 출점 입지 평가</p>
-                    <div id="rankingResultText" class="space-y-1"></div>
-                    <div id="specialResultText" class="mt-2 pt-2 border-t border-indigo-100 space-y-1"></div>
+                    <p class="text-xs text-indigo-800 font-extrabold mb-2">💎 순수 1~3위 입지 평가</p>
+                    <div id="rankingResultText" class="space-y-1 mb-3 border-b border-indigo-100 pb-2"></div>
+                    <p class="text-xs text-purple-800 font-extrabold mb-2">👑 기존 군락지 확인 (점수 무관)</p>
+                    <div id="specialResultText" class="space-y-1"></div>
                 </div>
             </div>
         </div>
@@ -95,7 +96,7 @@
 
         <div id="tab-map" class="flex-grow w-full h-full relative">
             <div id="statusMessage" class="absolute top-4 left-1/2 transform -translate-x-1/2 z-10 bg-white/95 backdrop-blur-sm px-6 py-2 rounded-full shadow-md text-sm font-bold text-slate-700 border border-slate-200 text-center transition-all">
-                🎯 펜스를 치면 [올영+렌즈 슈퍼룰]과 [1~3위 명당], [올영+다이소 별도구역]을 모두 찾아냅니다!
+                🎯 펜스를 치면 [순수 1~3위 입지]와 기존에 뭉쳐있는 [군락지]를 분리해서 마커로 찍어줍니다!
             </div>
 
             <!-- UI -->
@@ -119,10 +120,10 @@
                 </div>
                 <div class="mt-3 space-y-1">
                     <div class="bg-indigo-50 px-3 py-2 rounded text-[11px] text-indigo-700 font-bold border border-indigo-200">
-                        👑 특수 룰: [올영+렌즈미] 또는 [올영+오렌즈]
+                        👑 기존 군락지 [올영+렌즈] 개별 마커 표출
                     </div>
                     <div class="bg-orange-50 px-3 py-2 rounded text-[11px] text-orange-700 font-bold border border-orange-200">
-                        🛍️ 올영+다이소 시너지 구역 별도 표출
+                        🛍️ 기존 군락지 [올영+다이소] 개별 마커 표출
                     </div>
                 </div>
             </div>
@@ -137,20 +138,18 @@
         </div>
     </div>
 
-    <!-- 💡 [V27.0 핵심] 전국 팩트 수량 강제 연동 (API 45개 한계 돌파) -->
+    <!-- 💡 [V28.0] 전국 팩트 수량 (API 45개 한계 돌파를 위한 V17 방식 고정) -->
     <script>
         const FALLBACK_COUNTS = {
             'lensme': 286, 'olens': 335, 'hapa': 42, 'winc': 15, 'withlens': 61, 'lensvery': 28, 'lenstown': 79,
             'olive': 1342, 'daiso': 1485, 'olive_hapa': 124, 'davich': 288
         };
         
-        // 1차: 미리 쪼개서 합산해 둔 팩트 수량을 즉시 화면에 박아줍니다.
         for(let key in FALLBACK_COUNTS) {
             let el = document.getElementById('cnt_' + key);
             if(el) el.innerText = `(${FALLBACK_COUNTS[key].toLocaleString()}개)`;
         }
 
-        // 2차: 사장님 서버에 최신 업데이트 파일이 있다면 덮어씌웁니다. (V17 원상복구)
         let script = document.createElement('script');
         script.src = 'store_counts.js?v=' + new Date().getTime();
         script.onload = function() {
@@ -165,7 +164,7 @@
     </script>
 
     <!-- 카카오맵 API -->
-    <script type="text/javascript" src="//dapi.kakao.com/v2/maps/sdk.js?appkey=c045609510f8b75252389123f086be48&libraries=services,drawing"></script>
+    <script type="text/javascript" src="//[dapi.kakao.com/v2/maps/sdk.js?appkey=c045609510f8b75252389123f086be48&libraries=services,drawing](https://dapi.kakao.com/v2/maps/sdk.js?appkey=c045609510f8b75252389123f086be48&libraries=services,drawing)"></script>
 
     <script>
         let mapContainer = document.getElementById('map'); 
@@ -211,7 +210,7 @@
             polygonOptions: { draggable: false, removable: false, editable: true, strokeColor: '#be185d', strokeWeight: 3, fillColor: '#f43f5e', fillOpacity: 0.2 }
         });
 
-        let savedPolygons = JSON.parse(localStorage.getItem('lensmePolygonsV27_0') || '[]');
+        let savedPolygons = JSON.parse(localStorage.getItem('lensmePolygonsV28_0') || '[]');
         let activePolygonPath = null; 
         let activePolygonId = null;
         let renderedPolygons = {}; 
@@ -285,7 +284,7 @@
                     }
                     let id = 'poly_' + Date.now();
                     savedPolygons.push({ id: id, name: name, path: tempDrawnPath, si: si, gu: gu, dong: dong, centerLat: centerLat, centerLng: centerLng });
-                    localStorage.setItem('lensmePolygonsV27_0', JSON.stringify(savedPolygons));
+                    localStorage.setItem('lensmePolygonsV28_0', JSON.stringify(savedPolygons));
                     
                     drawingManager.clear();
                     isDrawingMode = false;
@@ -367,7 +366,7 @@
         function deletePolygon(id) {
             if(!confirm("이 영토를 삭제하시겠습니까?")) return;
             savedPolygons = savedPolygons.filter(p => p.id !== id);
-            localStorage.setItem('lensmePolygonsV27_0', JSON.stringify(savedPolygons));
+            localStorage.setItem('lensmePolygonsV28_0', JSON.stringify(savedPolygons));
             if(activePolygonId === id) clearActivePolygon();
             renderPolygonTree();
         }
@@ -506,7 +505,7 @@
             if(!hex && BRAND_CONFIG[key]) hex = BRAND_CONFIG[key].hex;
             
             let rSize = customHex ? "7" : "10"; 
-            let svgString = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24"><circle cx="12" cy="12" r="${rSize}" fill="${hex}" stroke="white" stroke-width="2"/></svg>`;
+            let svgString = `<svg xmlns="[http://www.w3.org/2000/svg](http://www.w3.org/2000/svg)" width="24" height="24"><circle cx="12" cy="12" r="${rSize}" fill="${hex}" stroke="white" stroke-width="2"/></svg>`;
             let markerImage = new kakao.maps.MarkerImage('data:image/svg+xml;utf-8,' + svgString, new kakao.maps.Size(24, 24), { offset: new kakao.maps.Point(12, 12) });
             
             let marker = new kakao.maps.Marker({ position: new kakao.maps.LatLng(place.y, place.x), image: markerImage });
@@ -556,7 +555,6 @@
                 let rawGates = []; 
                 let anchors = []; 
 
-                // 1. 유입로: 지하철역
                 statusEl.innerText = `🚇 주변 지하철 출입구 확인 중...`;
                 await new Promise(resolve => {
                     ps.categorySearch('SW8', function(data, status) {
@@ -567,7 +565,6 @@
                     }, { location: centerPos, radius: 1500 });
                 });
 
-                // 2. 유입로: 버스정류장
                 statusEl.innerText = `🚌 주변 버스정류장 유입로 탐지 중...`;
                 await new Promise(resolve => {
                     ps.keywordSearch('버스정류장', function(data, status) {
@@ -581,7 +578,6 @@
                     }, { location: centerPos, radius: searchRadius });
                 });
 
-                // 3. 학교 동선 탐색
                 let schoolKeywords = ['중학교', '고등학교', '대학교'];
                 for(let i=0; i<schoolKeywords.length; i++) {
                     statusEl.innerText = `🏫 1020 타겟 학교 탐지 중... [${schoolKeywords[i]}]`;
@@ -600,7 +596,6 @@
                     await delay(100);
                 }
 
-                // 4. 인프라 스캔
                 let activeKeys = Object.keys(BRAND_CONFIG).filter(key => document.getElementById(key) && document.getElementById(key).checked);
                 for (let i = 0; i < activeKeys.length; i++) {
                     let key = activeKeys[i];
@@ -670,7 +665,7 @@
                 document.getElementById('comp_count').innerText = targetStats.comp + '개';
                 document.getElementById('anchor_count').innerText = targetStats.anchor + '개';
 
-                statusEl.innerText = "🌐 타겟 동선 및 올영/다이소 시너지 구역 분리 중...";
+                statusEl.innerText = "🌐 순수 1~3위 명당 연산 및 기존 군락지(클러스터) 분리 중...";
 
                 let flowPaths = [];
                 for(let g=0; g<gates.length; g++) {
@@ -747,62 +742,69 @@
                         score = score * 0.3; 
                     }
 
-                    // 👑 슈퍼 룰 적용 (올영 + 렌즈미 or 올영 + 오렌즈)
+                    // 💡 [V28.0 핵심] 점수 폭탄 삭제, 마커 표시용 플래그만 설정
                     if (localOliveCount >= 1 && (localLensmeCount >= 1 || localOlensCount >= 1)) {
-                        score += 10000;
-                        pt.isSuperSpot = true;
+                        pt.isSuperLens = true;
                     } 
-                    
-                    // 🛍️ 올영 + 다이소 시너지 존 분리
                     if (localOliveCount >= 1 && localDaisoCount >= 1) {
-                        pt.isOliveDaiso = true;
+                        pt.isSuperDaiso = true;
                     }
 
-                    pt.score = score;
+                    pt.score = score; // 오직 순수 인프라+동선 점수만 저장
                 }
 
                 gridPoints.sort(function(a, b) { return b.score - a.score; });
                 
                 let topSpots = [];
-                let oliveDaisoSpots = [];
+                let specialLensSpots = [];
+                let specialDaisoSpots = [];
 
                 for(let i=0; i<gridPoints.length; i++) {
                     let candidate = gridPoints[i];
                     if(candidate.score < 1) continue; 
 
+                    // 군락지 추출 (점수와 무관하게 해당 조건이 있는 곳 중 가장 활성화된 중심부 1곳)
+                    if (candidate.isSuperLens && specialLensSpots.length === 0) {
+                        specialLensSpots.push(candidate);
+                    }
+                    if (candidate.isSuperDaiso && specialDaisoSpots.length === 0) {
+                        let isOverlap = false;
+                        if(specialLensSpots.length > 0) {
+                            if(getDistanceMeters(candidate.lat, candidate.lng, specialLensSpots[0].lat, specialLensSpots[0].lng) < 30) {
+                                isOverlap = true;
+                            }
+                        }
+                        if(!isOverlap) specialDaisoSpots.push(candidate);
+                    }
+
+                    // 순수 1위 ~ 3위 랭킹 추출
                     let tooClose = false;
                     for(let k=0; k<topSpots.length; k++) {
                         if(getDistanceMeters(candidate.lat, candidate.lng, topSpots[k].lat, topSpots[k].lng) < 30) {
                             tooClose = true; break;
                         }
                     }
-
-                    if(!tooClose) {
-                        if (candidate.isOliveDaiso && !candidate.isSuperSpot && oliveDaisoSpots.length === 0) {
-                            oliveDaisoSpots.push(candidate);
-                        } else if (topSpots.length < 3) {
-                            topSpots.push(candidate);
-                        }
+                    if(!tooClose && topSpots.length < 3) {
+                        topSpots.push(candidate);
                     }
-                    if(topSpots.length >= 3 && oliveDaisoSpots.length >= 1) break;
                 }
 
-                if (topSpots.length > 0 || oliveDaisoSpots.length > 0) {
+                let rBox = document.getElementById('rankingResultText');
+                let sBox = document.getElementById('specialResultText');
+                rBox.innerHTML = "";
+                sBox.innerHTML = "";
+
+                // 순수 1~3위 렌더링
+                if (topSpots.length > 0) {
                     const rankStyles = [
                         { title: '💎 1위 명당', bg: '#ef4444' }, 
                         { title: '⭐ 2위 명당', bg: '#3b82f6' }, 
                         { title: '✅ 3위 명당', bg: '#10b981' }  
                     ];
 
-                    let rBox = document.getElementById('rankingResultText');
-                    let sBox = document.getElementById('specialResultText');
-                    rBox.innerHTML = "";
-                    sBox.innerHTML = "";
-
                     for (let idx = 0; idx < topSpots.length; idx++) {
                         let spot = topSpots[idx];
                         let rankTitle = rankStyles[idx].title;
-                        if(spot.isSuperSpot) rankTitle = '👑 슈퍼 명당 (올영+렌즈)';
                         
                         (function(index, targetSpot, title) {
                             geocoder.coord2Address(targetSpot.lng, targetSpot.lat, function(result, status) {
@@ -827,37 +829,62 @@
                         let overlay = new kakao.maps.CustomOverlay({ position: new kakao.maps.LatLng(spot.lat, spot.lng), content: contentStr, xAnchor: 0.5, yAnchor: 1 });
                         overlay.setMap(map); rankOverlays.push(overlay);
                     }
-
-                    if (oliveDaisoSpots.length > 0) {
-                        let spot = oliveDaisoSpots[0];
-                        let title = "🛍️ 올영+다이소 시너지";
-                        
-                        geocoder.coord2Address(spot.lng, spot.lat, function(result, status) {
-                            let addrName = "펜스 내부 위치";
-                            if (status === kakao.maps.services.Status.OK) addrName = result[0].road_address ? result[0].road_address.address_name : result[0].address.address_name;
-                            sBox.innerHTML = `<p class="text-xs text-orange-700 font-extrabold mb-1">🔥 스페셜 시너지 존</p><div class="text-[13px] font-bold text-slate-700 bg-orange-50 px-2 py-1 rounded border border-orange-200 shadow-sm">올영+다이소 : <span class="text-orange-600">${addrName}</span></div>`;
-                        });
-
-                        let contentStr = `
-                            <div style="position:relative; z-index:9990; bottom:20px; text-align:center; transform:translateY(-50%);">
-                                <div style="background:#ea580c; color:white; padding:5px 12px; border-radius:8px; font-weight:900; font-size:14px; border:2px solid white; box-shadow:0 3px 10px rgba(0,0,0,0.4); white-space:nowrap;">
-                                    ${title}
-                                </div>
-                                <div style="width:0; height:0; border-left:7px solid transparent; border-right:7px solid transparent; border-top:10px solid #ea580c; margin:0 auto;"></div>
-                            </div>
-                        `;
-                        let overlay = new kakao.maps.CustomOverlay({ position: new kakao.maps.LatLng(spot.lat, spot.lng), content: contentStr, xAnchor: 0.5, yAnchor: 1 });
-                        overlay.setMap(map); rankOverlays.push(overlay);
-                    }
-
-                    document.getElementById('rankingResultBox').classList.remove('hidden');
-                    statusEl.innerText = `✅ 분석 완료! 1~3위 순위와 별도의 [올영+다이소] 시너지 존을 도출했습니다.`;
-
                 } else {
-                    document.getElementById('rankingResultBox').classList.remove('hidden');
-                    document.getElementById('rankingResultText').innerHTML = `<div class="text-xs text-rose-600 font-bold mt-1">분석 조건을 만족하는 입지가 없습니다.</div>`;
-                    statusEl.innerText = "⚠️ 펜스 내부에 유효한 상업 밀집 구역이 존재하지 않습니다.";
+                    rBox.innerHTML = `<div class="text-xs text-rose-600 font-bold mt-1">분석 조건을 만족하는 1~3위 입지가 없습니다.</div>`;
                 }
+
+                // 군락지 (올영+렌즈) 렌더링
+                if (specialLensSpots.length > 0) {
+                    let spot = specialLensSpots[0];
+                    let title = "👑 올영+렌즈 군락지";
+                    
+                    geocoder.coord2Address(spot.lng, spot.lat, function(result, status) {
+                        let addrName = "펜스 내부 위치";
+                        if (status === kakao.maps.services.Status.OK) addrName = result[0].road_address ? result[0].road_address.address_name : result[0].address.address_name;
+                        sBox.innerHTML += `<div class="text-[13px] font-bold text-slate-700 bg-purple-50 px-2 py-1 rounded border border-purple-200 shadow-sm mb-1">${title} : <span class="text-purple-700">${addrName}</span></div>`;
+                    });
+
+                    let contentStr = `
+                        <div style="position:relative; z-index:9995; bottom:20px; text-align:center; transform:translateY(-50%);">
+                            <div style="background:#7e22ce; color:white; padding:5px 12px; border-radius:8px; font-weight:900; font-size:14px; border:2px solid white; box-shadow:0 3px 10px rgba(0,0,0,0.4); white-space:nowrap;">
+                                ${title}
+                            </div>
+                            <div style="width:0; height:0; border-left:7px solid transparent; border-right:7px solid transparent; border-top:10px solid #7e22ce; margin:0 auto;"></div>
+                        </div>
+                    `;
+                    let overlay = new kakao.maps.CustomOverlay({ position: new kakao.maps.LatLng(spot.lat, spot.lng), content: contentStr, xAnchor: 0.5, yAnchor: 1 });
+                    overlay.setMap(map); rankOverlays.push(overlay);
+                }
+
+                // 군락지 (올영+다이소) 렌더링
+                if (specialDaisoSpots.length > 0) {
+                    let spot = specialDaisoSpots[0];
+                    let title = "🛍️ 올영+다이소 군락지";
+                    
+                    geocoder.coord2Address(spot.lng, spot.lat, function(result, status) {
+                        let addrName = "펜스 내부 위치";
+                        if (status === kakao.maps.services.Status.OK) addrName = result[0].road_address ? result[0].road_address.address_name : result[0].address.address_name;
+                        sBox.innerHTML += `<div class="text-[13px] font-bold text-slate-700 bg-orange-50 px-2 py-1 rounded border border-orange-200 shadow-sm">${title} : <span class="text-orange-600">${addrName}</span></div>`;
+                    });
+
+                    let contentStr = `
+                        <div style="position:relative; z-index:9990; bottom:20px; text-align:center; transform:translateY(-50%);">
+                            <div style="background:#ea580c; color:white; padding:5px 12px; border-radius:8px; font-weight:900; font-size:14px; border:2px solid white; box-shadow:0 3px 10px rgba(0,0,0,0.4); white-space:nowrap;">
+                                ${title}
+                            </div>
+                            <div style="width:0; height:0; border-left:7px solid transparent; border-right:7px solid transparent; border-top:10px solid #ea580c; margin:0 auto;"></div>
+                        </div>
+                    `;
+                    let overlay = new kakao.maps.CustomOverlay({ position: new kakao.maps.LatLng(spot.lat, spot.lng), content: contentStr, xAnchor: 0.5, yAnchor: 1 });
+                    overlay.setMap(map); rankOverlays.push(overlay);
+                }
+
+                if(specialLensSpots.length === 0 && specialDaisoSpots.length === 0) {
+                    sBox.innerHTML = `<div class="text-[12px] text-slate-400 font-bold mt-1">해당 펜스 내에는 기존 군락지가 없습니다.</div>`;
+                }
+
+                document.getElementById('rankingResultBox').classList.remove('hidden');
+                statusEl.innerText = `✅ 분석 완료! [순수 1~3위]와 기존 [군락지 마커]를 분리 표출했습니다.`;
 
             } catch(e) {
                 console.error("분석 에러:", e);
