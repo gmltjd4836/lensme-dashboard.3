@@ -3,10 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>렌즈미 상권 분석 대시보드 (V28.0 순위/군락지 분리 엔진)</title>
-    <link href="[https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css](https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css)" rel="stylesheet">
-    <script src="[https://cdn.tailwindcss.com](https://cdn.tailwindcss.com)"></script>
-    <script src="[https://cdn.plot.ly/plotly-2.27.0.min.js](https://cdn.plot.ly/plotly-2.27.0.min.js)"></script>
+    <title>렌즈미 상권 분석 대시보드 (V29.0 분리 타겟팅 복구본)</title>
+    <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
     <style>
         body { font-family: 'Pretendard', sans-serif; background-color: #f8fafc; }
         ::-webkit-scrollbar { width: 6px; }
@@ -34,10 +34,11 @@
 </head>
 <body class="flex flex-col md:flex-row h-screen text-slate-800">
 
+    <!-- 왼쪽 컨트롤 패널 -->
     <div class="w-full md:w-1/4 bg-white border-r border-gray-200 p-6 flex flex-col shadow-lg z-20 overflow-y-auto">
         <h1 class="text-xl font-extrabold text-slate-800 border-b-4 border-indigo-500 pb-3 mb-4 flex justify-between items-center">
             <span>🗺️ 전국 상권 관제탑</span>
-            <span class="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded-full font-bold">V28.0 🎯</span>
+            <span class="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded-full font-bold">V29.0 🎯</span>
         </h1>
         
         <div class="mb-4 bg-slate-50 p-4 rounded-xl border border-slate-200">
@@ -48,8 +49,8 @@
             </div>
         </div>
 
-        <div class="mb-4 bg-rose-50 p-4 rounded-xl border border-rose-200 flex-grow flex flex-col min-h-[250px]">
-            <label class="block text-sm font-extrabold text-rose-700 mb-2">💾 내 상권 보관함 (전국)</label>
+        <div class="mb-4 bg-rose-50 p-4 rounded-xl border border-rose-200 flex-grow flex flex-col min-h-[200px]">
+            <label class="block text-sm font-extrabold text-rose-700 mb-2">💾 내 상권 보관함</label>
             <div class="flex gap-2 mb-3" id="drawControls">
                 <button onclick="startDrawing()" id="btnStartDraw" class="w-full bg-rose-500 hover:bg-rose-600 text-white px-3 py-2 rounded-lg text-sm font-bold transition shadow-sm">➕ 상권 영토 그리기</button>
                 <button onclick="saveDrawing()" id="btnSaveDraw" class="hidden flex-1 bg-emerald-500 hover:bg-emerald-600 text-white px-3 py-2 rounded-lg text-sm font-bold transition shadow-sm">저장</button>
@@ -79,8 +80,10 @@
                 </div>
 
                 <div id="rankingResultBox" class="mt-3 pt-3 border-t border-indigo-200 hidden">
-                    <p class="text-xs text-indigo-800 font-extrabold mb-2">💎 순수 1~3위 입지 평가</p>
+                    <!-- 순수 1~3위 랭킹 -->
+                    <p class="text-xs text-indigo-800 font-extrabold mb-2">💎 순수 1~3위 입지 평가 (슈퍼명당 제외)</p>
                     <div id="rankingResultText" class="space-y-1 mb-3 border-b border-indigo-100 pb-2"></div>
+                    <!-- 군락지 마커 -->
                     <p class="text-xs text-purple-800 font-extrabold mb-2">👑 기존 군락지 확인 (점수 무관)</p>
                     <div id="specialResultText" class="space-y-1"></div>
                 </div>
@@ -88,6 +91,7 @@
         </div>
     </div>
 
+    <!-- 우측 지도 패널 -->
     <div class="w-full md:w-3/4 flex flex-col bg-slate-50 overflow-hidden relative">
         <div class="flex bg-white px-6 pt-3 border-b border-gray-200 overflow-x-auto whitespace-nowrap z-10">
             <button onclick="switchTab('map')" id="btn-map" class="tab-btn active px-4 py-2 mr-4 text-base hover:text-indigo-500 transition">📍 보행자 메인 동선 분석</button>
@@ -96,10 +100,10 @@
 
         <div id="tab-map" class="flex-grow w-full h-full relative">
             <div id="statusMessage" class="absolute top-4 left-1/2 transform -translate-x-1/2 z-10 bg-white/95 backdrop-blur-sm px-6 py-2 rounded-full shadow-md text-sm font-bold text-slate-700 border border-slate-200 text-center transition-all">
-                🎯 펜스를 치면 [순수 1~3위 입지]와 기존에 뭉쳐있는 [군락지]를 분리해서 마커로 찍어줍니다!
+                🎯 펜스를 치면 [순수 1~3위 입지]와 기존에 뭉쳐있는 [군락지]를 완벽히 분리해 보여줍니다!
             </div>
 
-            <!-- UI -->
+            <!-- 타겟 UI 창 -->
             <div class="absolute top-16 left-4 z-10 bg-white/95 backdrop-blur-sm p-4 rounded-xl shadow-lg border border-slate-200 w-64 max-h-[80vh] overflow-y-auto hidden md:block">
                 <p class="text-xs font-extrabold text-slate-800 mb-2.5 border-b pb-1 flex justify-between"><span>🎯 렌즈 전문 브랜드</span><span class="text-slate-400">전국 누적</span></p>
                 <div class="space-y-2 mb-4">
@@ -138,7 +142,7 @@
         </div>
     </div>
 
-    <!-- 💡 [V28.0] 전국 팩트 수량 (API 45개 한계 돌파를 위한 V17 방식 고정) -->
+    <!-- 💡 전국 팩트 수량 (API 에러 방지 V17 원복) -->
     <script>
         const FALLBACK_COUNTS = {
             'lensme': 286, 'olens': 335, 'hapa': 42, 'winc': 15, 'withlens': 61, 'lensvery': 28, 'lenstown': 79,
@@ -164,7 +168,7 @@
     </script>
 
     <!-- 카카오맵 API -->
-    <script type="text/javascript" src="//[dapi.kakao.com/v2/maps/sdk.js?appkey=c045609510f8b75252389123f086be48&libraries=services,drawing](https://dapi.kakao.com/v2/maps/sdk.js?appkey=c045609510f8b75252389123f086be48&libraries=services,drawing)"></script>
+    <script type="text/javascript" src="//dapi.kakao.com/v2/maps/sdk.js?appkey=c045609510f8b75252389123f086be48&libraries=services,drawing"></script>
 
     <script>
         let mapContainer = document.getElementById('map'); 
@@ -210,7 +214,7 @@
             polygonOptions: { draggable: false, removable: false, editable: true, strokeColor: '#be185d', strokeWeight: 3, fillColor: '#f43f5e', fillOpacity: 0.2 }
         });
 
-        let savedPolygons = JSON.parse(localStorage.getItem('lensmePolygonsV28_0') || '[]');
+        let savedPolygons = JSON.parse(localStorage.getItem('lensmePolygonsV29_0') || '[]');
         let activePolygonPath = null; 
         let activePolygonId = null;
         let renderedPolygons = {}; 
@@ -284,7 +288,7 @@
                     }
                     let id = 'poly_' + Date.now();
                     savedPolygons.push({ id: id, name: name, path: tempDrawnPath, si: si, gu: gu, dong: dong, centerLat: centerLat, centerLng: centerLng });
-                    localStorage.setItem('lensmePolygonsV28_0', JSON.stringify(savedPolygons));
+                    localStorage.setItem('lensmePolygonsV29_0', JSON.stringify(savedPolygons));
                     
                     drawingManager.clear();
                     isDrawingMode = false;
@@ -366,7 +370,7 @@
         function deletePolygon(id) {
             if(!confirm("이 영토를 삭제하시겠습니까?")) return;
             savedPolygons = savedPolygons.filter(p => p.id !== id);
-            localStorage.setItem('lensmePolygonsV28_0', JSON.stringify(savedPolygons));
+            localStorage.setItem('lensmePolygonsV29_0', JSON.stringify(savedPolygons));
             if(activePolygonId === id) clearActivePolygon();
             renderPolygonTree();
         }
@@ -505,7 +509,7 @@
             if(!hex && BRAND_CONFIG[key]) hex = BRAND_CONFIG[key].hex;
             
             let rSize = customHex ? "7" : "10"; 
-            let svgString = `<svg xmlns="[http://www.w3.org/2000/svg](http://www.w3.org/2000/svg)" width="24" height="24"><circle cx="12" cy="12" r="${rSize}" fill="${hex}" stroke="white" stroke-width="2"/></svg>`;
+            let svgString = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24"><circle cx="12" cy="12" r="${rSize}" fill="${hex}" stroke="white" stroke-width="2"/></svg>`;
             let markerImage = new kakao.maps.MarkerImage('data:image/svg+xml;utf-8,' + svgString, new kakao.maps.Size(24, 24), { offset: new kakao.maps.Point(12, 12) });
             
             let marker = new kakao.maps.Marker({ position: new kakao.maps.LatLng(place.y, place.x), image: markerImage });
@@ -555,7 +559,9 @@
                 let rawGates = []; 
                 let anchors = []; 
 
-                statusEl.innerText = `🚇 주변 지하철 출입구 확인 중...`;
+                statusEl.innerText = `🚇 주변 지하철/학교/정류장 유입구 확인 중...`;
+                
+                // 1. 유입로: 지하철
                 await new Promise(resolve => {
                     ps.categorySearch('SW8', function(data, status) {
                         if (status === kakao.maps.services.Status.OK) {
@@ -565,7 +571,7 @@
                     }, { location: centerPos, radius: 1500 });
                 });
 
-                statusEl.innerText = `🚌 주변 버스정류장 유입로 탐지 중...`;
+                // 2. 유입로: 버스
                 await new Promise(resolve => {
                     ps.keywordSearch('버스정류장', function(data, status) {
                         if (status === kakao.maps.services.Status.OK) {
@@ -578,9 +584,9 @@
                     }, { location: centerPos, radius: searchRadius });
                 });
 
+                // 3. 학교 동선 탐색 (남중/남고 제외)
                 let schoolKeywords = ['중학교', '고등학교', '대학교'];
                 for(let i=0; i<schoolKeywords.length; i++) {
-                    statusEl.innerText = `🏫 1020 타겟 학교 탐지 중... [${schoolKeywords[i]}]`;
                     await new Promise(resolve => {
                         ps.keywordSearch(schoolKeywords[i], function(data, status) {
                             if (status === kakao.maps.services.Status.OK) {
@@ -593,13 +599,15 @@
                             resolve();
                         }, { location: centerPos, radius: searchRadius + 300 });
                     });
-                    await delay(100);
+                    await delay(50);
                 }
 
+                statusEl.innerText = `🎯 상권 인프라 및 앵커 시설 스캔 중...`;
+                
+                // 4. 인프라 스캔
                 let activeKeys = Object.keys(BRAND_CONFIG).filter(key => document.getElementById(key) && document.getElementById(key).checked);
                 for (let i = 0; i < activeKeys.length; i++) {
                     let key = activeKeys[i];
-                    statusEl.innerText = `🎯 앵커 시설 조사 중... [${BRAND_CONFIG[key].kw}]`;
                     await new Promise(resolve => {
                         ps.keywordSearch(BRAND_CONFIG[key].kw, function(data, status) {
                             if (status === kakao.maps.services.Status.OK) {
@@ -616,12 +624,11 @@
                             resolve(); 
                         }, { location: centerPos, radius: searchRadius, size: 15 });
                     });
-                    await delay(100); 
+                    await delay(50); 
                 }
 
                 for(let i = 0; i < STEALTH_KEYWORDS.length; i++) {
                     let stealth = STEALTH_KEYWORDS[i];
-                    statusEl.innerText = `🕵️ 코너 및 타겟 핫플 스캔 중... [${stealth.kw}]`;
                     await new Promise(resolve => {
                         ps.keywordSearch(stealth.kw, function(data, status) {
                             if (status === kakao.maps.services.Status.OK) {
@@ -635,7 +642,7 @@
                             resolve(); 
                         }, { location: centerPos, radius: searchRadius, size: 15 });
                     });
-                    await delay(100); 
+                    await delay(50); 
                 }
 
                 let gates = [];
@@ -665,7 +672,7 @@
                 document.getElementById('comp_count').innerText = targetStats.comp + '개';
                 document.getElementById('anchor_count').innerText = targetStats.anchor + '개';
 
-                statusEl.innerText = "🌐 순수 1~3위 명당 연산 및 기존 군락지(클러스터) 분리 중...";
+                statusEl.innerText = "🌐 순위 연산 및 군락지 분리 중...";
 
                 let flowPaths = [];
                 for(let g=0; g<gates.length; g++) {
@@ -742,7 +749,7 @@
                         score = score * 0.3; 
                     }
 
-                    // 💡 [V28.0 핵심] 점수 폭탄 삭제, 마커 표시용 플래그만 설정
+                    // 💡 순수 점수 계산에 +10000 꼼수 제거, 단순 식별만 수행
                     if (localOliveCount >= 1 && (localLensmeCount >= 1 || localOlensCount >= 1)) {
                         pt.isSuperLens = true;
                     } 
@@ -750,7 +757,7 @@
                         pt.isSuperDaiso = true;
                     }
 
-                    pt.score = score; // 오직 순수 인프라+동선 점수만 저장
+                    pt.score = score; // 순수 인프라+동선 점수만 저장
                 }
 
                 gridPoints.sort(function(a, b) { return b.score - a.score; });
@@ -763,21 +770,25 @@
                     let candidate = gridPoints[i];
                     if(candidate.score < 1) continue; 
 
-                    // 군락지 추출 (점수와 무관하게 해당 조건이 있는 곳 중 가장 활성화된 중심부 1곳)
+                    // 1. 군락지(올영+렌즈) 추출 로직
                     if (candidate.isSuperLens && specialLensSpots.length === 0) {
                         specialLensSpots.push(candidate);
+                        continue; // 군락지에 뽑혔으면 순수 1~3위 랭킹에서 제외시킴
                     }
+                    
+                    // 2. 군락지(올영+다이소) 추출 로직
                     if (candidate.isSuperDaiso && specialDaisoSpots.length === 0) {
                         let isOverlap = false;
                         if(specialLensSpots.length > 0) {
-                            if(getDistanceMeters(candidate.lat, candidate.lng, specialLensSpots[0].lat, specialLensSpots[0].lng) < 30) {
-                                isOverlap = true;
-                            }
+                            if(getDistanceMeters(candidate.lat, candidate.lng, specialLensSpots[0].lat, specialLensSpots[0].lng) < 30) isOverlap = true;
                         }
-                        if(!isOverlap) specialDaisoSpots.push(candidate);
+                        if(!isOverlap) {
+                            specialDaisoSpots.push(candidate);
+                            continue; // 군락지에 뽑혔으면 순수 1~3위 랭킹에서 제외시킴
+                        }
                     }
 
-                    // 순수 1위 ~ 3위 랭킹 추출
+                    // 3. 순수 1위~3위 랭킹 추출
                     let tooClose = false;
                     for(let k=0; k<topSpots.length; k++) {
                         if(getDistanceMeters(candidate.lat, candidate.lng, topSpots[k].lat, topSpots[k].lng) < 30) {
@@ -794,12 +805,12 @@
                 rBox.innerHTML = "";
                 sBox.innerHTML = "";
 
-                // 순수 1~3위 렌더링
+                // 순위(1~3위) 렌더링
                 if (topSpots.length > 0) {
                     const rankStyles = [
-                        { title: '💎 1위 명당', bg: '#ef4444' }, 
-                        { title: '⭐ 2위 명당', bg: '#3b82f6' }, 
-                        { title: '✅ 3위 명당', bg: '#10b981' }  
+                        { title: '💎 1위 입지', bg: '#ef4444' }, 
+                        { title: '⭐ 2위 입지', bg: '#3b82f6' }, 
+                        { title: '✅ 3위 입지', bg: '#10b981' }  
                     ];
 
                     for (let idx = 0; idx < topSpots.length; idx++) {
@@ -833,7 +844,7 @@
                     rBox.innerHTML = `<div class="text-xs text-rose-600 font-bold mt-1">분석 조건을 만족하는 1~3위 입지가 없습니다.</div>`;
                 }
 
-                // 군락지 (올영+렌즈) 렌더링
+                // 군락지 렌더링
                 if (specialLensSpots.length > 0) {
                     let spot = specialLensSpots[0];
                     let title = "👑 올영+렌즈 군락지";
@@ -856,10 +867,9 @@
                     overlay.setMap(map); rankOverlays.push(overlay);
                 }
 
-                // 군락지 (올영+다이소) 렌더링
                 if (specialDaisoSpots.length > 0) {
                     let spot = specialDaisoSpots[0];
-                    let title = "🛍️ 올영+다이소 군락지";
+                    let title = "🛍️ 올영+다이소 구역";
                     
                     geocoder.coord2Address(spot.lng, spot.lat, function(result, status) {
                         let addrName = "펜스 내부 위치";
@@ -884,7 +894,7 @@
                 }
 
                 document.getElementById('rankingResultBox').classList.remove('hidden');
-                statusEl.innerText = `✅ 분석 완료! [순수 1~3위]와 기존 [군락지 마커]를 분리 표출했습니다.`;
+                statusEl.innerText = `✅ 분석 완료! 순수 1~3위 입지와 기존 군락지 마커를 분리 완료했습니다.`;
 
             } catch(e) {
                 console.error("분석 에러:", e);
