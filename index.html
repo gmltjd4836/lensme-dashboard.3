@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>렌즈미 상권 분석 대시보드 (V30.0 절대 펜스 엔진)</title>
+    <title>렌즈미 상권 분석 대시보드 (V31.0 타겟 압축 엔진)</title>
     <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
@@ -37,7 +37,7 @@
     <div class="w-full md:w-1/4 bg-white border-r border-gray-200 p-6 flex flex-col shadow-lg z-20 overflow-y-auto">
         <h1 class="text-xl font-extrabold text-slate-800 border-b-4 border-indigo-500 pb-3 mb-4 flex justify-between items-center">
             <span>🗺️ 전국 상권 관제탑</span>
-            <span class="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded-full font-bold">V30.0 🛡️</span>
+            <span class="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded-full font-bold">V31.0 🎯</span>
         </h1>
         
         <div class="mb-4 bg-slate-50 p-4 rounded-xl border border-slate-200">
@@ -79,7 +79,7 @@
                 </div>
 
                 <div id="rankingResultBox" class="mt-3 pt-3 border-t border-indigo-200 hidden">
-                    <p class="text-xs text-indigo-800 font-extrabold mb-2">💎 순수 1~3위 입지 평가 (슈퍼명당 제외)</p>
+                    <p class="text-xs text-indigo-800 font-extrabold mb-2">💎 순수 1~3위 입지 평가 (군락지 제외)</p>
                     <div id="rankingResultText" class="space-y-1 mb-3 border-b border-indigo-100 pb-2"></div>
                     <p class="text-xs text-purple-800 font-extrabold mb-2">👑 기존 군락지 확인 (점수 무관)</p>
                     <div id="specialResultText" class="space-y-1"></div>
@@ -96,7 +96,7 @@
 
         <div id="tab-map" class="flex-grow w-full h-full relative">
             <div id="statusMessage" class="absolute top-4 left-1/2 transform -translate-x-1/2 z-10 bg-white/95 backdrop-blur-sm px-6 py-2 rounded-full shadow-md text-sm font-bold text-slate-700 border border-slate-200 text-center transition-all">
-                🎯 펜스를 치면 외부 앵커를 차단하고 [오직 내부 순위]와 [군락지]만 분리해 보여줍니다!
+                🎯 펜스를 치면 휴대폰 매장을 제외한 핵심 앵커들로만 순수 1~3위 입지와 군락지를 분리해 보여줍니다!
             </div>
 
             <div class="absolute top-16 left-4 z-10 bg-white/95 backdrop-blur-sm p-4 rounded-xl shadow-lg border border-slate-200 w-64 max-h-[80vh] overflow-y-auto hidden md:block">
@@ -194,9 +194,8 @@
             f_davich: { kw: '다비치안경', hex: '%231d4ed8', isOther: true }
         };
 
+        // 💡 V31.0: 휴대폰대리점, 이동통신 키워드 완전 삭제
         const STEALTH_KEYWORDS = [
-            { kw: '휴대폰대리점', weight: 7.0, radius: 80 }, 
-            { kw: '이동통신', weight: 7.0, radius: 80 },
             { kw: '셀프사진관', weight: 5.0, radius: 80 }, 
             { kw: '포토이즘', weight: 5.0, radius: 80 },
             { kw: '가챠샵', weight: 5.0, radius: 80 },
@@ -209,7 +208,7 @@
             polygonOptions: { draggable: false, removable: false, editable: true, strokeColor: '#be185d', strokeWeight: 3, fillColor: '#f43f5e', fillOpacity: 0.2 }
         });
 
-        let savedPolygons = JSON.parse(localStorage.getItem('lensmePolygonsV30_0') || '[]');
+        let savedPolygons = JSON.parse(localStorage.getItem('lensmePolygonsV31_0') || '[]');
         let activePolygonPath = null; 
         let activePolygonId = null;
         let renderedPolygons = {}; 
@@ -283,7 +282,7 @@
                     }
                     let id = 'poly_' + Date.now();
                     savedPolygons.push({ id: id, name: name, path: tempDrawnPath, si: si, gu: gu, dong: dong, centerLat: centerLat, centerLng: centerLng });
-                    localStorage.setItem('lensmePolygonsV30_0', JSON.stringify(savedPolygons));
+                    localStorage.setItem('lensmePolygonsV31_0', JSON.stringify(savedPolygons));
                     
                     drawingManager.clear();
                     isDrawingMode = false;
@@ -365,7 +364,7 @@
         function deletePolygon(id) {
             if(!confirm("이 영토를 삭제하시겠습니까?")) return;
             savedPolygons = savedPolygons.filter(p => p.id !== id);
-            localStorage.setItem('lensmePolygonsV30_0', JSON.stringify(savedPolygons));
+            localStorage.setItem('lensmePolygonsV31_0', JSON.stringify(savedPolygons));
             if(activePolygonId === id) clearActivePolygon();
             renderPolygonTree();
         }
@@ -634,8 +633,7 @@
                     await delay(100); 
                 }
 
-                // 💡 [V30.0 철통 방어 필터 적용] 
-                // 오직 펜스 '안쪽'에 있는 매장만 추출해서 점수에 반영합니다.
+                // 철통 방어 필터 적용: 오직 펜스 안쪽에 있는 매장만 추출해서 점수 반영
                 let validNodes = [];
                 let validAnchors = [];
 
@@ -716,7 +714,6 @@
                     let localDaisoCount = 0;
                     let closestPoiDist = 999; 
 
-                    // 💡 [V30.0] 철저하게 펜스 안쪽에 있는 validNodes로만 점수를 측정합니다.
                     for(let j=0; j<validNodes.length; j++) {
                         let node = validNodes[j];
                         let dist = getDistanceMeters(pt.lat, pt.lng, parseFloat(node.y), parseFloat(node.x));
@@ -891,7 +888,7 @@
                 }
 
                 document.getElementById('rankingResultBox').classList.remove('hidden');
-                statusEl.innerText = `✅ 분석 완료! 오직 [펜스 내부] 시설만으로 1~3위 입지와 군락지를 도출했습니다.`;
+                statusEl.innerText = `✅ 분석 완료! 휴대폰 대리점을 제외하고, 오직 타겟 동선 기반으로 1~3위 입지를 도출했습니다.`;
 
             } catch(e) {
                 console.error("분석 에러:", e);
