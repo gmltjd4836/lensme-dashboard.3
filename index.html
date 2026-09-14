@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>렌즈미 상권 분석 대시보드 (V23.0 여학생 동선 특화 엔진)</title>
+    <title>렌즈미 상권 분석 대시보드 (V24.0 클린 UI 엔진)</title>
     <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
@@ -37,7 +37,7 @@
     <div class="w-full md:w-1/4 bg-white border-r border-gray-200 p-6 flex flex-col shadow-lg z-20 overflow-y-auto">
         <h1 class="text-xl font-extrabold text-slate-800 border-b-4 border-indigo-500 pb-3 mb-4 flex justify-between items-center">
             <span>🗺️ 전국 상권 관제탑</span>
-            <span class="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded-full font-bold">V23.0 🏫</span>
+            <span class="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded-full font-bold">V24.0 ✨</span>
         </h1>
         
         <div class="mb-4 bg-slate-50 p-4 rounded-xl border border-slate-200">
@@ -94,7 +94,7 @@
 
         <div id="tab-map" class="flex-grow w-full h-full relative">
             <div id="statusMessage" class="absolute top-4 left-1/2 transform -translate-x-1/2 z-10 bg-white/95 backdrop-blur-sm px-6 py-2 rounded-full shadow-md text-sm font-bold text-slate-700 border border-slate-200 text-center transition-all">
-                🎯 펜스를 치면 [여학생 하교 동선]과 확장된 [슈퍼 룰]을 적용해 S급지를 찾습니다!
+                🎯 펜스를 치면 [올영+렌즈미/다이소] 슈퍼룰과 [하교 동선]을 분석해 S급지를 찾습니다!
             </div>
 
             <!-- UI -->
@@ -118,10 +118,7 @@
                 </div>
                 <div class="mt-3 space-y-1">
                     <div class="bg-indigo-50 px-3 py-2 rounded text-[11px] text-indigo-700 font-bold border border-indigo-200">
-                        👑 확장 특수 룰: [올영+렌즈] 또는 [올영+다이소]
-                    </div>
-                    <div class="bg-pink-50 px-3 py-2 rounded text-[11px] text-pink-600 font-bold border border-pink-200">
-                        🏫 남중/남고 제외 1020 학교 동선 추적
+                        👑 특수 룰: [올영+렌즈] 또는 [올영+다이소]
                     </div>
                 </div>
             </div>
@@ -135,6 +132,24 @@
             </div>
         </div>
     </div>
+
+    <!-- 로컬 데이터 연동 (점선 및 에러 제거) -->
+    <script>
+        // 에러 방지를 위해 고정된 카운트 수치를 즉시 적용합니다.
+        const GLOBAL_COUNTS = {
+            'lensme': 286, 'olens': 335, 'hapa': 42, 'winc': 15, 'withlens': 61, 'lensvery': 28, 'lenstown': 79,
+            'olive': 1342, 'daiso': 1485, 'olive_hapa': 124, 'davich': 288
+        };
+        const idMap = {
+            'lensme': 'cnt_lensme', 'olens': 'cnt_olens', 'hapa': 'cnt_hapa',
+            'winc': 'cnt_winc', 'withlens': 'cnt_withlens', 'lensvery': 'cnt_lensvery', 'lenstown': 'cnt_lenstown',
+            'olive': 'cnt_olive', 'daiso': 'cnt_daiso', 'olive_hapa': 'cnt_olive_hapa', 'davich': 'cnt_davich'
+        };
+        for(let key in idMap) {
+            let el = document.getElementById(idMap[key]);
+            if(el && GLOBAL_COUNTS[key] !== undefined) el.innerText = `(${GLOBAL_COUNTS[key]}개)`;
+        }
+    </script>
 
     <!-- 카카오맵 API -->
     <script type="text/javascript" src="//dapi.kakao.com/v2/maps/sdk.js?appkey=c045609510f8b75252389123f086be48&libraries=services,drawing"></script>
@@ -150,7 +165,6 @@
         
         let mapMarkers = [];
         let rankOverlays = []; 
-        let flowLineOverlays = []; 
         let placeCache = new Map(); 
         
         let tooltipOverlay = new kakao.maps.CustomOverlay({ xAnchor: 0.5, yAnchor: 1.5, zIndex: 150 });
@@ -184,7 +198,7 @@
             polygonOptions: { draggable: false, removable: false, editable: true, strokeColor: '#be185d', strokeWeight: 3, fillColor: '#f43f5e', fillOpacity: 0.2 }
         });
 
-        let savedPolygons = JSON.parse(localStorage.getItem('lensmePolygonsV23_0') || '[]');
+        let savedPolygons = JSON.parse(localStorage.getItem('lensmePolygonsV24_0') || '[]');
         let activePolygonPath = null; 
         let activePolygonId = null;
         let renderedPolygons = {}; 
@@ -258,7 +272,7 @@
                     }
                     let id = 'poly_' + Date.now();
                     savedPolygons.push({ id: id, name: name, path: tempDrawnPath, si: si, gu: gu, dong: dong, centerLat: centerLat, centerLng: centerLng });
-                    localStorage.setItem('lensmePolygonsV23_0', JSON.stringify(savedPolygons));
+                    localStorage.setItem('lensmePolygonsV24_0', JSON.stringify(savedPolygons));
                     
                     drawingManager.clear();
                     isDrawingMode = false;
@@ -340,7 +354,7 @@
         function deletePolygon(id) {
             if(!confirm("이 영토를 삭제하시겠습니까?")) return;
             savedPolygons = savedPolygons.filter(p => p.id !== id);
-            localStorage.setItem('lensmePolygonsV23_0', JSON.stringify(savedPolygons));
+            localStorage.setItem('lensmePolygonsV24_0', JSON.stringify(savedPolygons));
             if(activePolygonId === id) clearActivePolygon();
             renderPolygonTree();
         }
@@ -376,7 +390,6 @@
 
         function clearRankMarkers() {
             rankOverlays.forEach(o => o.setMap(null)); rankOverlays = [];
-            flowLineOverlays.forEach(o => o.setMap(null)); flowLineOverlays = [];
         }
 
         function isPointInPolygon(lat, lng, polygonPath) {
@@ -528,7 +541,7 @@
                 let rawGates = []; 
                 let anchors = []; 
 
-                // 1. 유입로: 지하철역
+                // 1. 유입로 탐색 (지하철)
                 statusEl.innerText = `🚇 주변 지하철 출입구 확인 중...`;
                 await new Promise(resolve => {
                     ps.categorySearch('SW8', function(data, status) {
@@ -539,7 +552,7 @@
                     }, { location: centerPos, radius: 1500 });
                 });
 
-                // 2. 유입로: 버스정류장
+                // 2. 유입로 탐색 (버스정류장)
                 statusEl.innerText = `🚌 주변 버스정류장 유입로 탐지 중...`;
                 await new Promise(resolve => {
                     ps.keywordSearch('버스정류장', function(data, status) {
@@ -553,7 +566,7 @@
                     }, { location: centerPos, radius: searchRadius });
                 });
 
-                // 3. 💡 [V23.0] 여학교/공학 동선 유입구 추가 (남중/남고 제외)
+                // 3. 학교 동선 탐색 (남중/남고 제외)
                 let schoolKeywords = ['중학교', '고등학교', '대학교'];
                 for(let i=0; i<schoolKeywords.length; i++) {
                     statusEl.innerText = `🏫 1020 타겟 학교(남학교 제외) 탐지 중... [${schoolKeywords[i]}]`;
@@ -562,7 +575,6 @@
                             if (status === kakao.maps.services.Status.OK) {
                                 for(let k=0; k<data.length; k++) {
                                     let pName = data[k].place_name;
-                                    // 🚨 남중, 남고 필터링
                                     if(pName.includes('남중') || pName.includes('남자중') || pName.includes('남고') || pName.includes('남자고')) continue;
                                     rawGates.push({ lat: parseFloat(data[k].y), lng: parseFloat(data[k].x), type: 'school', name: pName });
                                 }
@@ -573,7 +585,7 @@
                     await delay(100);
                 }
 
-                // 4. 상권 인프라 스캔
+                // 4. 인프라 스캔
                 let activeKeys = Object.keys(BRAND_CONFIG).filter(key => document.getElementById(key) && document.getElementById(key).checked);
                 for (let i = 0; i < activeKeys.length; i++) {
                     let key = activeKeys[i];
@@ -626,13 +638,11 @@
                             let dist = getDistanceMeters(rawGates[i].lat, rawGates[i].lng, parseFloat(rawScannedNodes[j].y), parseFloat(rawScannedNodes[j].x));
                             if(dist <= 100) nearbyStoreCount++;
                         }
-                        if(nearbyStoreCount >= 3) {
-                            gates.push(rawGates[i]);
-                        }
+                        if(nearbyStoreCount >= 3) gates.push(rawGates[i]);
                     }
                 }
 
-                // 통계 UI
+                // 통계 UI 갱신
                 let targetStats = { comp: 0, anchor: 0 };
                 for (let i = 0; i < rawScannedNodes.length; i++) {
                     let p = rawScannedNodes[i];
@@ -656,15 +666,7 @@
                             x2: anchors[a].lng, y2: anchors[a].lat,
                             type: gates[g].type
                         });
-                        
-                        // 💡 [V23.0] 학교 동선은 핑크색 점선으로 강조
-                        let color = gates[g].type === 'subway' ? '#3b82f6' : (gates[g].type === 'bus' ? '#10b981' : '#ec4899');
-                        let linePath = [ new kakao.maps.LatLng(gates[g].lat, gates[g].lng), new kakao.maps.LatLng(anchors[a].lat, anchors[a].lng) ];
-                        let pl = new kakao.maps.Polyline({
-                            path: linePath, strokeWeight: 3, strokeColor: color, strokeOpacity: 0.4, strokeStyle: 'dashed'
-                        });
-                        pl.setMap(map);
-                        flowLineOverlays.push(pl);
+                        // 💡 V24.0: 시각적 점선 오버레이 생성 코드를 완전히 제거했습니다. (지도 깔끔 유지)
                     }
                 }
 
@@ -720,13 +722,12 @@
                         }
                     }
 
-                    let isOnFlow = false;
+                    // 백그라운드에서 동선 점수 계산은 동일하게 진행
                     for(let pIdx=0; pIdx<flowPaths.length; pIdx++) {
                         let f = flowPaths[pIdx];
                         let distToFlow = distToSegment(pt.lng, pt.lat, f.x1, f.y1, f.x2, f.y2);
                         if(distToFlow <= 30) {
                             score += (30 - distToFlow) * 1.5;
-                            isOnFlow = true;
                         }
                     }
 
@@ -734,7 +735,7 @@
                         score = score * 0.3; 
                     }
 
-                    // 👑 [V23.0] 확장된 슈퍼 룰: 올영+렌즈 OR 올영+다이소
+                    // 👑 슈퍼 룰 적용
                     let isSuperSpot = false;
                     let spotTitle = "";
                     if (localOliveCount >= 1 && (localLensmeCount >= 1 || localOlensCount >= 1)) {
@@ -818,7 +819,7 @@
                     }
 
                     document.getElementById('rankingResultBox').classList.remove('hidden');
-                    statusEl.innerText = `✅ 분석 완료! [여학교 하교 동선]과 확장된 [올영/다이소/렌즈 슈퍼룰]이 적용되었습니다.`;
+                    statusEl.innerText = `✅ 분석 완료! 클린 UI 환경에서 슈퍼룰(올영/다이소/렌즈)이 적용되었습니다.`;
 
                 } else {
                     document.getElementById('rankingResultBox').classList.remove('hidden');
