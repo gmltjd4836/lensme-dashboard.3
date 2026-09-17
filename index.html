@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>렌즈미 상권 분석 대시보드 (V38.0 밸런스 패치 엔진)</title>
+    <title>렌즈미 상권 분석 대시보드 (V39.0 타겟 인프라 펜스 분리 엔진)</title>
     <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
@@ -37,7 +37,7 @@
     <div class="w-full md:w-1/4 bg-white border-r border-gray-200 p-6 flex flex-col shadow-lg z-20 overflow-y-auto">
         <h1 class="text-xl font-extrabold text-slate-800 border-b-4 border-indigo-500 pb-3 mb-4 flex justify-between items-center">
             <span>🗺️ 전국 상권 관제탑</span>
-            <span class="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded-full font-bold">V38.0 ⚖️</span>
+            <span class="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded-full font-bold">V39.0 🎯</span>
         </h1>
 
         <div class="mb-4">
@@ -105,7 +105,7 @@
 
         <div id="tab-map" class="flex-grow w-full h-full relative">
             <div id="statusMessage" class="absolute top-4 left-1/2 transform -translate-x-1/2 z-10 bg-white/95 backdrop-blur-sm px-6 py-2 rounded-full shadow-md text-sm font-bold text-slate-700 border border-slate-200 text-center transition-all">
-                🎯 펜스를 치면 해당 블록(반경 35m)의 길목/사거리를 분석하여 스마트하게 끊어서 표출합니다!
+                🎯 펜스를 치면 매장은 [펜스 내부만], 학군/교통은 [외부 유입로까지] 구분하여 분석합니다!
             </div>
 
             <div class="absolute top-16 left-4 z-10 bg-white/95 backdrop-blur-sm p-4 rounded-xl shadow-lg border border-slate-200 w-64 max-h-[80vh] overflow-y-auto hidden md:block">
@@ -220,7 +220,7 @@
             polygonOptions: { draggable: false, removable: false, editable: true, strokeColor: '#be185d', strokeWeight: 3, fillColor: '#f43f5e', fillOpacity: 0.2 }
         });
 
-        let savedPolygons = JSON.parse(localStorage.getItem('lensmePolygonsV38_0') || '[]');
+        let savedPolygons = JSON.parse(localStorage.getItem('lensmePolygonsV39_0') || '[]');
         let activePolygonPath = null; 
         let activePolygonId = null;
         let renderedPolygons = {}; 
@@ -294,7 +294,7 @@
                     }
                     let id = 'poly_' + Date.now();
                     savedPolygons.push({ id: id, name: name, path: tempDrawnPath, si: si, gu: gu, dong: dong, centerLat: centerLat, centerLng: centerLng });
-                    localStorage.setItem('lensmePolygonsV38_0', JSON.stringify(savedPolygons));
+                    localStorage.setItem('lensmePolygonsV39_0', JSON.stringify(savedPolygons));
                     
                     drawingManager.clear();
                     isDrawingMode = false;
@@ -376,7 +376,7 @@
         function deletePolygon(id) {
             if(!confirm("이 영토를 삭제하시겠습니까?")) return;
             savedPolygons = savedPolygons.filter(p => p.id !== id);
-            localStorage.setItem('lensmePolygonsV38_0', JSON.stringify(savedPolygons));
+            localStorage.setItem('lensmePolygonsV39_0', JSON.stringify(savedPolygons));
             if(activePolygonId === id) clearActivePolygon();
             renderPolygonTree();
         }
@@ -701,9 +701,9 @@
                 let rawScannedNodes = [];
                 let seenIds = {};
                 let rawGates = []; 
-                let anchors = []; 
 
-                statusEl.innerText = `🚇 주변 유입구(지하철/정류장/학교) 확인 중...`;
+                // 💡 [V39.0] 학군/지하철/정류장은 외부 유입을 위해 펜스 바깥(확장 영역)까지 스캔
+                statusEl.innerText = `🚇 주변 유입구(지하철/정류장/학교) 확장 스캔 중...`;
                 await new Promise(resolve => {
                     ps.categorySearch('SW8', function(data, status) {
                         if (status === kakao.maps.services.Status.OK) {
@@ -780,6 +780,7 @@
                     await delay(50); 
                 }
 
+                // 💡 [V39.0] 올영, 다이소, 렌즈샵, 놀이시설 등 상가 시설은 100% 펜스 내부만 엄격 적용
                 let validNodes = [];
                 let validAnchors = [];
 
@@ -793,6 +794,7 @@
                     }
                 }
 
+                // 유입로(지하철, 학교)는 펜스 외부에서 펜스 내부 앵커로 유입되는 노선 구성
                 let gates = [];
                 for(let i=0; i<rawGates.length; i++) {
                     if(rawGates[i].type === 'subway' || rawGates[i].type === 'school') {
@@ -818,7 +820,7 @@
                 document.getElementById('comp_count').innerText = targetStats.comp + '개';
                 document.getElementById('anchor_count').innerText = targetStats.anchor + '개';
 
-                statusEl.innerText = "🌐 실제 사거리/길목 연산 및 밸런스 패치 적용 중...";
+                statusEl.innerText = "🌐 실제 사거리/길목 연산 및 펜스 이원화 스캔 적용 중...";
 
                 let flowPaths = [];
                 for(let g=0; g<gates.length; g++) {
@@ -898,9 +900,8 @@
                         }
                     }
 
-                    // 💡 [V38.0] 무한 중첩 방지 (점수 상한선 캡 적용)
-                    sStealth = Math.min(sStealth, 450); // 인생네컷이 아무리 많아도 올리브영 1개 점수를 넘을 수 없음
-                    sCoffee = Math.min(sCoffee, 240);   // 저가커피 상한선
+                    sStealth = Math.min(sStealth, 450); 
+                    sCoffee = Math.min(sCoffee, 240);   
 
                     let baseScore = 0.1;
                     let totalScore = baseScore + sOlive + sLens + sDaiso + sStealth + sFlow + sCoffee;
@@ -1041,7 +1042,7 @@
                 }
 
                 document.getElementById('rankingResultBox').classList.remove('hidden');
-                statusEl.innerText = `✅ 점수 밸런스 패치 완료! 놀이시설 중복 획득 점수를 완벽히 제어했습니다.`;
+                statusEl.innerText = `✅ 분석 완료! 인프라(펜스 내부)와 유입원(외부 확장)을 정확히 분리하여 연산했습니다.`;
 
             } catch(e) {
                 console.error("분석 에러:", e);
