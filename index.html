@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>렌즈미 상권 분석 대시보드 (V31.0 타겟 압축 엔진)</title>
+    <title>렌즈미 상권 분석 대시보드 (V32.0 영수증 & 코멘트 엔진)</title>
     <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
@@ -37,7 +37,7 @@
     <div class="w-full md:w-1/4 bg-white border-r border-gray-200 p-6 flex flex-col shadow-lg z-20 overflow-y-auto">
         <h1 class="text-xl font-extrabold text-slate-800 border-b-4 border-indigo-500 pb-3 mb-4 flex justify-between items-center">
             <span>🗺️ 전국 상권 관제탑</span>
-            <span class="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded-full font-bold">V31.0 🎯</span>
+            <span class="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded-full font-bold">V32.0 💡</span>
         </h1>
         
         <div class="mb-4 bg-slate-50 p-4 rounded-xl border border-slate-200">
@@ -80,7 +80,9 @@
 
                 <div id="rankingResultBox" class="mt-3 pt-3 border-t border-indigo-200 hidden">
                     <p class="text-xs text-indigo-800 font-extrabold mb-2">💎 순수 1~3위 입지 평가 (군락지 제외)</p>
-                    <div id="rankingResultText" class="space-y-1 mb-3 border-b border-indigo-100 pb-2"></div>
+                    <!-- V32.0 영수증 및 코멘트가 렌더링될 영역 -->
+                    <div id="rankingResultText" class="space-y-0 mb-3 border-b border-indigo-100 pb-2"></div>
+                    
                     <p class="text-xs text-purple-800 font-extrabold mb-2">👑 기존 군락지 확인 (점수 무관)</p>
                     <div id="specialResultText" class="space-y-1"></div>
                 </div>
@@ -96,7 +98,7 @@
 
         <div id="tab-map" class="flex-grow w-full h-full relative">
             <div id="statusMessage" class="absolute top-4 left-1/2 transform -translate-x-1/2 z-10 bg-white/95 backdrop-blur-sm px-6 py-2 rounded-full shadow-md text-sm font-bold text-slate-700 border border-slate-200 text-center transition-all">
-                🎯 펜스를 치면 휴대폰 매장을 제외한 핵심 앵커들로만 순수 1~3위 입지와 군락지를 분리해 보여줍니다!
+                🎯 펜스를 치면 [상세 점수 영수증]과 [전문가 코멘트]가 포함된 리포트를 제공합니다!
             </div>
 
             <div class="absolute top-16 left-4 z-10 bg-white/95 backdrop-blur-sm p-4 rounded-xl shadow-lg border border-slate-200 w-64 max-h-[80vh] overflow-y-auto hidden md:block">
@@ -119,7 +121,7 @@
                 </div>
                 <div class="mt-3 space-y-1">
                     <div class="bg-indigo-50 px-3 py-2 rounded text-[11px] text-indigo-700 font-bold border border-indigo-200">
-                        👑 기존 군락지 [올영+렌즈] 개별 마커 표출
+                        👑 기존 군락지 [올영+렌즈미] 또는 [올영+오렌즈]
                     </div>
                     <div class="bg-orange-50 px-3 py-2 rounded text-[11px] text-orange-700 font-bold border border-orange-200">
                         🛍️ 기존 군락지 [올영+다이소] 개별 마커 표출
@@ -194,7 +196,7 @@
             f_davich: { kw: '다비치안경', hex: '%231d4ed8', isOther: true }
         };
 
-        // 💡 V31.0: 휴대폰대리점, 이동통신 키워드 완전 삭제
+        // 💡 휴대폰 대리점 삭제 완료. 타겟 인프라 압축
         const STEALTH_KEYWORDS = [
             { kw: '셀프사진관', weight: 5.0, radius: 80 }, 
             { kw: '포토이즘', weight: 5.0, radius: 80 },
@@ -208,7 +210,7 @@
             polygonOptions: { draggable: false, removable: false, editable: true, strokeColor: '#be185d', strokeWeight: 3, fillColor: '#f43f5e', fillOpacity: 0.2 }
         });
 
-        let savedPolygons = JSON.parse(localStorage.getItem('lensmePolygonsV31_0') || '[]');
+        let savedPolygons = JSON.parse(localStorage.getItem('lensmePolygonsV32_0') || '[]');
         let activePolygonPath = null; 
         let activePolygonId = null;
         let renderedPolygons = {}; 
@@ -282,7 +284,7 @@
                     }
                     let id = 'poly_' + Date.now();
                     savedPolygons.push({ id: id, name: name, path: tempDrawnPath, si: si, gu: gu, dong: dong, centerLat: centerLat, centerLng: centerLng });
-                    localStorage.setItem('lensmePolygonsV31_0', JSON.stringify(savedPolygons));
+                    localStorage.setItem('lensmePolygonsV32_0', JSON.stringify(savedPolygons));
                     
                     drawingManager.clear();
                     isDrawingMode = false;
@@ -364,7 +366,7 @@
         function deletePolygon(id) {
             if(!confirm("이 영토를 삭제하시겠습니까?")) return;
             savedPolygons = savedPolygons.filter(p => p.id !== id);
-            localStorage.setItem('lensmePolygonsV31_0', JSON.stringify(savedPolygons));
+            localStorage.setItem('lensmePolygonsV32_0', JSON.stringify(savedPolygons));
             if(activePolygonId === id) clearActivePolygon();
             renderPolygonTree();
         }
@@ -519,6 +521,35 @@
             return true;
         }
 
+        // 💡 주소를 비동기로 안전하게 가져오기 위한 Helper 함수
+        function getAddressAsync(lat, lng) {
+            return new Promise(resolve => {
+                geocoder.coord2Address(lng, lat, function(result, status) {
+                    if (status === kakao.maps.services.Status.OK) {
+                        resolve(result[0].road_address ? result[0].road_address.address_name : result[0].address.address_name);
+                    } else {
+                        resolve("펜스 내부 위치");
+                    }
+                });
+            });
+        }
+
+        // 💡 전문가 코멘트 생성 함수
+        function generateExpertComment(spot) {
+            let maxVal = Math.max(spot.sOlive, spot.sFlow, spot.sStealth);
+            if (spot.sOlive > 80 && spot.sFlow > 80 && spot.sStealth > 40) {
+                return "핵심 대형 앵커, 메인 유입 물길, 놀이/체류 인프라 3박자가 완벽히 맞물린 육각형 A급지입니다. 기본 목적성 매출과 자연 유입 매출을 동시에 쓸어 담을 수 있습니다.";
+            } else if (maxVal === spot.sOlive && spot.sOlive > 0) {
+                return "1020 뷰티 코어 앵커인 '올리브영'의 강력한 낙수효과를 직접 흡수하는 기생/공생 상권입니다. 목적성 고객의 동선이 자연스럽게 이어져 안정적인 매출이 보장됩니다.";
+            } else if (maxVal === spot.sFlow && spot.sFlow > 0) {
+                return "타겟 고객(하교/대중교통)의 1차 이동 물길 정중앙에 위치한 핵심 길목입니다. 워크인(Walk-in) 진입 비율이 극대화되어 신규 유입 및 노출 효과가 매우 뛰어납니다.";
+            } else if (maxVal === spot.sStealth && spot.sStealth > 0) {
+                return "1020 세대가 머무르며 사진을 찍는 '체류형 놀이 인프라'와 밀착된 트렌드 코어 입지입니다. 저관여 상품의 충동구매 및 주말 핫타임 매출이 폭발할 수 있는 자리입니다.";
+            } else {
+                return "주변 인프라와 동선이 균형 있게 배분된 입지로, 타겟 소비층의 기본 수요를 견고하게 흡수할 수 있는 우수 후보지입니다.";
+            }
+        }
+
         async function runGridHotspotScan(targetPath) {
             if(isScanningAPI) return;
             isScanningAPI = true;
@@ -633,7 +664,7 @@
                     await delay(100); 
                 }
 
-                // 철통 방어 필터 적용: 오직 펜스 안쪽에 있는 매장만 추출해서 점수 반영
+                // 펜스 방어 필터 적용
                 let validNodes = [];
                 let validAnchors = [];
 
@@ -672,7 +703,7 @@
                 document.getElementById('comp_count').innerText = targetStats.comp + '개';
                 document.getElementById('anchor_count').innerText = targetStats.anchor + '개';
 
-                statusEl.innerText = "🌐 펜스 내부 한정! 순위 연산 및 군락지 분리 중...";
+                statusEl.innerText = "🌐 영수증 계산 및 전문가 코멘트 생성 중...";
 
                 let flowPaths = [];
                 for(let g=0; g<gates.length; g++) {
@@ -706,12 +737,10 @@
 
                 for(let i=0; i<gridPoints.length; i++) {
                     let pt = gridPoints[i];
-                    let score = 0.1; 
                     
-                    let localOliveCount = 0;
-                    let localLensmeCount = 0; 
-                    let localOlensCount = 0;  
-                    let localDaisoCount = 0;
+                    // 💡 [V32.0] 점수 영수증을 위한 세부 카테고리 분리 저장
+                    let sOlive = 0, sLens = 0, sDaiso = 0, sStealth = 0, sFlow = 0;
+                    let localOliveCount = 0, localLensCount = 0, localDaisoCount = 0;
                     let closestPoiDist = 999; 
 
                     for(let j=0; j<validNodes.length; j++) {
@@ -722,17 +751,16 @@
 
                         if(node.isStealth) {
                             let sData = node.stealthData;
-                            if(dist <= sData.radius) score += (sData.radius - dist) * sData.weight;
+                            if(dist <= sData.radius) sStealth += (sData.radius - dist) * sData.weight;
                         } else if (node.brandKey && BRAND_CONFIG[node.brandKey]) {
                             let cfg = BRAND_CONFIG[node.brandKey];
                             if(cfg.isOlive && dist <= 80) {
-                                score += (80 - dist) * 10.0; localOliveCount++;
+                                sOlive += (80 - dist) * 10.0; localOliveCount++;
                             } else if(cfg.isComp && dist <= 80) {
-                                score += (80 - dist) * 8.0; 
-                                if (node.brandKey === 'f_lensme') localLensmeCount++;
-                                if (node.brandKey === 'f_olens') localOlensCount++;
+                                sLens += (80 - dist) * 8.0; 
+                                localLensCount++;
                             } else if(cfg.isDaiso && dist <= 80) {
-                                score += (80 - dist) * 7.0; localDaisoCount++;
+                                sDaiso += (80 - dist) * 7.0; localDaisoCount++;
                             }
                         }
                     }
@@ -741,22 +769,23 @@
                         let f = flowPaths[pIdx];
                         let distToFlow = distToSegment(pt.lng, pt.lat, f.x1, f.y1, f.x2, f.y2);
                         if(distToFlow <= 30) {
-                            score += (30 - distToFlow) * 1.5;
+                            sFlow += (30 - distToFlow) * 1.5;
                         }
                     }
 
-                    if(closestPoiDist > 15) {
-                        score = score * 0.3; 
-                    }
+                    let baseScore = 0.1;
+                    let totalScore = baseScore + sOlive + sLens + sDaiso + sStealth + sFlow;
+                    let penalty = (closestPoiDist > 15) ? 0.3 : 1.0;
 
-                    if (localOliveCount >= 1 && (localLensmeCount >= 1 || localOlensCount >= 1)) {
-                        pt.isSuperLens = true;
-                    } 
-                    if (localOliveCount >= 1 && localDaisoCount >= 1) {
-                        pt.isSuperDaiso = true;
-                    }
+                    if (localOliveCount >= 1 && localLensCount >= 1) pt.isSuperLens = true;
+                    if (localOliveCount >= 1 && localDaisoCount >= 1) pt.isSuperDaiso = true;
 
-                    pt.score = score; 
+                    pt.score = totalScore * penalty; 
+                    pt.sOlive = sOlive * penalty;
+                    pt.sLens = sLens * penalty;
+                    pt.sDaiso = sDaiso * penalty;
+                    pt.sStealth = sStealth * penalty;
+                    pt.sFlow = sFlow * penalty;
                 }
 
                 gridPoints.sort(function(a, b) { return b.score - a.score; });
@@ -770,37 +799,26 @@
                     if(candidate.score < 1) continue; 
 
                     if (candidate.isSuperLens && specialLensSpots.length === 0) {
-                        specialLensSpots.push(candidate);
-                        continue; 
+                        specialLensSpots.push(candidate); continue; 
                     }
-                    
                     if (candidate.isSuperDaiso && specialDaisoSpots.length === 0) {
                         let isOverlap = false;
-                        if(specialLensSpots.length > 0) {
-                            if(getDistanceMeters(candidate.lat, candidate.lng, specialLensSpots[0].lat, specialLensSpots[0].lng) < 30) isOverlap = true;
-                        }
-                        if(!isOverlap) {
-                            specialDaisoSpots.push(candidate);
-                            continue; 
-                        }
+                        if(specialLensSpots.length > 0 && getDistanceMeters(candidate.lat, candidate.lng, specialLensSpots[0].lat, specialLensSpots[0].lng) < 30) isOverlap = true;
+                        if(!isOverlap) { specialDaisoSpots.push(candidate); continue; }
                     }
 
                     let tooClose = false;
                     for(let k=0; k<topSpots.length; k++) {
-                        if(getDistanceMeters(candidate.lat, candidate.lng, topSpots[k].lat, topSpots[k].lng) < 30) {
-                            tooClose = true; break;
-                        }
+                        if(getDistanceMeters(candidate.lat, candidate.lng, topSpots[k].lat, topSpots[k].lng) < 30) { tooClose = true; break; }
                     }
-                    if(!tooClose && topSpots.length < 3) {
-                        topSpots.push(candidate);
-                    }
+                    if(!tooClose && topSpots.length < 3) topSpots.push(candidate);
                 }
 
                 let rBox = document.getElementById('rankingResultText');
                 let sBox = document.getElementById('specialResultText');
-                rBox.innerHTML = "";
                 sBox.innerHTML = "";
 
+                // 💡 [V32.0] 순수 1~3위 영수증 & 전문가 코멘트 렌더링
                 if (topSpots.length > 0) {
                     const rankStyles = [
                         { title: '💎 1위 명당', bg: '#ef4444' }, 
@@ -808,21 +826,43 @@
                         { title: '✅ 3위 명당', bg: '#10b981' }  
                     ];
 
+                    let rankingHtml = "";
+
                     for (let idx = 0; idx < topSpots.length; idx++) {
                         let spot = topSpots[idx];
                         let rankTitle = rankStyles[idx].title;
-                        
-                        (function(index, targetSpot, title) {
-                            geocoder.coord2Address(targetSpot.lng, targetSpot.lat, function(result, status) {
-                                let addrName = "펜스 내부 위치";
-                                if (status === kakao.maps.services.Status.OK) {
-                                    addrName = result[0].road_address ? result[0].road_address.address_name : result[0].address.address_name;
-                                }
-                                let currentHtml = document.getElementById('rankingResultText').innerHTML;
-                                document.getElementById('rankingResultText').innerHTML = currentHtml + `<div class="text-[13px] font-bold text-slate-700 bg-white px-2 py-1 rounded border border-slate-100 shadow-sm mt-1">${title.split(' ')[1]} : <span class="text-indigo-600">${addrName}</span></div>`;
-                            });
-                        })(idx, spot, rankTitle);
+                        let addrName = await getAddressAsync(spot.lat, spot.lng);
+                        let expertComment = generateExpertComment(spot);
 
+                        let receiptHtml = "";
+                        if(spot.sOlive > 0) receiptHtml += `<div class="flex justify-between items-center text-teal-700"><span>🌿 올리브영 인접 보너스</span><span class="font-black">+${Math.round(spot.sOlive)}점</span></div>`;
+                        if(spot.sFlow > 0) receiptHtml += `<div class="flex justify-between items-center text-blue-600"><span>🌊 유입/하교 동선 적중</span><span class="font-black">+${Math.round(spot.sFlow)}점</span></div>`;
+                        if(spot.sStealth > 0) receiptHtml += `<div class="flex justify-between items-center text-pink-600"><span>📸 1020 놀이시설 인접</span><span class="font-black">+${Math.round(spot.sStealth)}점</span></div>`;
+                        if(spot.sDaiso > 0) receiptHtml += `<div class="flex justify-between items-center text-rose-600"><span>🟥 다이소 인접 보너스</span><span class="font-black">+${Math.round(spot.sDaiso)}점</span></div>`;
+                        if(spot.sLens > 0) receiptHtml += `<div class="flex justify-between items-center text-purple-700"><span>👁️ 경쟁 렌즈샵 밀집도</span><span class="font-black">+${Math.round(spot.sLens)}점</span></div>`;
+                        
+                        if(receiptHtml === "") receiptHtml = `<div class="text-slate-400 text-xs">단일 기준 기본 배점만 적용됨</div>`;
+
+                        rankingHtml += `
+                        <div class="bg-white px-3 py-3 rounded-xl border border-slate-200 shadow-sm mb-3">
+                            <div class="flex justify-between items-center border-b border-slate-100 pb-1.5 mb-1.5">
+                                <span class="text-[14px] text-slate-800 font-extrabold">${rankTitle} <span class="text-indigo-600 text-[12px] font-black ml-1">(총 ${Math.round(spot.score)}점)</span></span>
+                            </div>
+                            <div class="text-[12px] text-slate-600 mb-2 font-bold tracking-tight">📍 ${addrName}</div>
+                            
+                            <div class="bg-slate-50 p-2 rounded-lg text-[11px] space-y-1.5 border border-slate-100 mb-2">
+                                <p class="font-extrabold text-slate-700 mb-1 border-b border-slate-200 pb-1">📊 상세 점수 획득 영수증</p>
+                                ${receiptHtml}
+                            </div>
+                            
+                            <div class="bg-indigo-50/80 p-2.5 rounded-lg text-[11.5px] border border-indigo-100">
+                                <p class="font-extrabold text-indigo-800 mb-1">💬 상권 전문가 코멘트</p>
+                                <p class="text-indigo-700 leading-snug font-medium break-keep">${expertComment}</p>
+                            </div>
+                        </div>
+                        `;
+
+                        // 지도 마커 꽂기
                         let zIndexVal = 9999 - idx; 
                         let contentStr = `
                             <div style="position:relative; z-index:${zIndexVal}; bottom:20px; text-align:center; transform:translateY(-50%);">
@@ -835,19 +875,17 @@
                         let overlay = new kakao.maps.CustomOverlay({ position: new kakao.maps.LatLng(spot.lat, spot.lng), content: contentStr, xAnchor: 0.5, yAnchor: 1 });
                         overlay.setMap(map); rankOverlays.push(overlay);
                     }
+                    rBox.innerHTML = rankingHtml;
                 } else {
                     rBox.innerHTML = `<div class="text-xs text-rose-600 font-bold mt-1">분석 조건을 만족하는 1~3위 입지가 없습니다.</div>`;
                 }
 
+                // 군락지 (올영+렌즈) 렌더링
                 if (specialLensSpots.length > 0) {
                     let spot = specialLensSpots[0];
                     let title = "👑 올영+렌즈 군락지";
-                    
-                    geocoder.coord2Address(spot.lng, spot.lat, function(result, status) {
-                        let addrName = "펜스 내부 위치";
-                        if (status === kakao.maps.services.Status.OK) addrName = result[0].road_address ? result[0].road_address.address_name : result[0].address.address_name;
-                        sBox.innerHTML += `<div class="text-[13px] font-bold text-slate-700 bg-purple-50 px-2 py-1 rounded border border-purple-200 shadow-sm mb-1">${title} : <span class="text-purple-700">${addrName}</span></div>`;
-                    });
+                    let addrName = await getAddressAsync(spot.lat, spot.lng);
+                    sBox.innerHTML += `<div class="text-[12px] font-bold text-slate-700 bg-purple-50 px-2 py-1.5 rounded border border-purple-200 shadow-sm mb-1">${title} <br><span class="text-purple-700 font-medium">${addrName}</span></div>`;
 
                     let contentStr = `
                         <div style="position:relative; z-index:9995; bottom:20px; text-align:center; transform:translateY(-50%);">
@@ -861,15 +899,12 @@
                     overlay.setMap(map); rankOverlays.push(overlay);
                 }
 
+                // 군락지 (올영+다이소) 렌더링
                 if (specialDaisoSpots.length > 0) {
                     let spot = specialDaisoSpots[0];
                     let title = "🛍️ 올영+다이소 군락지";
-                    
-                    geocoder.coord2Address(spot.lng, spot.lat, function(result, status) {
-                        let addrName = "펜스 내부 위치";
-                        if (status === kakao.maps.services.Status.OK) addrName = result[0].road_address ? result[0].road_address.address_name : result[0].address.address_name;
-                        sBox.innerHTML += `<div class="text-[13px] font-bold text-slate-700 bg-orange-50 px-2 py-1 rounded border border-orange-200 shadow-sm">${title} : <span class="text-orange-600">${addrName}</span></div>`;
-                    });
+                    let addrName = await getAddressAsync(spot.lat, spot.lng);
+                    sBox.innerHTML += `<div class="text-[12px] font-bold text-slate-700 bg-orange-50 px-2 py-1.5 rounded border border-orange-200 shadow-sm">${title} <br><span class="text-orange-600 font-medium">${addrName}</span></div>`;
 
                     let contentStr = `
                         <div style="position:relative; z-index:9990; bottom:20px; text-align:center; transform:translateY(-50%);">
@@ -888,7 +923,7 @@
                 }
 
                 document.getElementById('rankingResultBox').classList.remove('hidden');
-                statusEl.innerText = `✅ 분석 완료! 휴대폰 대리점을 제외하고, 오직 타겟 동선 기반으로 1~3위 입지를 도출했습니다.`;
+                statusEl.innerText = `✅ 분석 완료! 상세 점수 영수증 및 전문가 코멘트가 작성되었습니다.`;
 
             } catch(e) {
                 console.error("분석 에러:", e);
