@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>렌즈미 상권 분석 대시보드 (V33.0 정밀 타겟팅 엔진)</title>
+    <title>렌즈미 상권 분석 대시보드 (V34.0 듀얼 타겟팅 마스터 엔진)</title>
     <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
@@ -37,8 +37,17 @@
     <div class="w-full md:w-1/4 bg-white border-r border-gray-200 p-6 flex flex-col shadow-lg z-20 overflow-y-auto">
         <h1 class="text-xl font-extrabold text-slate-800 border-b-4 border-indigo-500 pb-3 mb-4 flex justify-between items-center">
             <span>🗺️ 전국 상권 관제탑</span>
-            <span class="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded-full font-bold">V33.0 🎯</span>
+            <span class="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded-full font-bold">V34.0 👑</span>
         </h1>
+
+        <!-- 💡 [V34.0] 신규 출점 vs 매장 이전 스위치 -->
+        <div class="mb-4">
+            <p class="text-xs text-slate-400 font-bold mb-2">설계 모드 선택 (팀킬 쉴드 설정)</p>
+            <div class="flex gap-2 bg-slate-100 p-1 rounded-lg border border-slate-200">
+                <button id="btnModeNew" onclick="setMode('new')" class="flex-1 bg-white text-indigo-700 shadow-sm px-3 py-1.5 rounded-md text-[13px] font-extrabold transition">🚀 신규 출점</button>
+                <button id="btnModeReloc" onclick="setMode('reloc')" class="flex-1 text-slate-500 hover:text-slate-800 px-3 py-1.5 rounded-md text-[13px] font-bold transition">🚚 매장 이전</button>
+            </div>
+        </div>
         
         <div class="mb-4 bg-slate-50 p-4 rounded-xl border border-slate-200">
             <label class="block text-sm font-extrabold text-indigo-700 mb-2">🎯 상권 검색 이동</label>
@@ -48,7 +57,7 @@
             </div>
         </div>
 
-        <div class="mb-4 bg-rose-50 p-4 rounded-xl border border-rose-200 flex-grow flex flex-col min-h-[250px]">
+        <div class="mb-4 bg-rose-50 p-4 rounded-xl border border-rose-200 flex-grow flex flex-col min-h-[200px]">
             <label class="block text-sm font-extrabold text-rose-700 mb-2">💾 내 상권 보관함</label>
             <div class="flex gap-2 mb-3" id="drawControls">
                 <button onclick="startDrawing()" id="btnStartDraw" class="w-full bg-rose-500 hover:bg-rose-600 text-white px-3 py-2 rounded-lg text-sm font-bold transition shadow-sm">➕ 상권 영토 그리기</button>
@@ -80,7 +89,6 @@
 
                 <div id="rankingResultBox" class="mt-3 pt-3 border-t border-indigo-200 hidden">
                     <p class="text-xs text-indigo-800 font-extrabold mb-2">💎 순수 1~3위 입지 평가 (군락지 제외)</p>
-                    <!-- V32.0 영수증 및 코멘트가 렌더링될 영역 -->
                     <div id="rankingResultText" class="space-y-0 mb-3 border-b border-indigo-100 pb-2"></div>
                     
                     <p class="text-xs text-purple-800 font-extrabold mb-2">👑 기존 군락지 확인 (점수 무관)</p>
@@ -168,6 +176,20 @@
     <script type="text/javascript" src="//dapi.kakao.com/v2/maps/sdk.js?appkey=c045609510f8b75252389123f086be48&libraries=services,drawing"></script>
 
     <script>
+        // 💡 [V34.0] 모드 스위칭 로직
+        let currentMode = 'new'; // 'new' or 'reloc'
+        function setMode(mode) {
+            currentMode = mode;
+            if(mode === 'new') {
+                document.getElementById('btnModeNew').className = "flex-1 bg-white text-indigo-700 shadow-sm px-3 py-1.5 rounded-md text-[13px] font-extrabold transition";
+                document.getElementById('btnModeReloc').className = "flex-1 text-slate-500 hover:text-slate-800 px-3 py-1.5 rounded-md text-[13px] font-bold transition";
+            } else {
+                document.getElementById('btnModeReloc').className = "flex-1 bg-white text-indigo-700 shadow-sm px-3 py-1.5 rounded-md text-[13px] font-extrabold transition";
+                document.getElementById('btnModeNew').className = "flex-1 text-slate-500 hover:text-slate-800 px-3 py-1.5 rounded-md text-[13px] font-bold transition";
+            }
+            if(activePolygonPath) runGridHotspotScan(activePolygonPath);
+        }
+
         let mapContainer = document.getElementById('map'); 
         let currentCenter = new kakao.maps.LatLng(37.498095, 127.027610); 
         let searchCenter = currentCenter; 
@@ -196,12 +218,15 @@
             f_davich: { kw: '다비치안경', hex: '%231d4ed8', isOther: true }
         };
 
-        // 💡 [V33.0] 골목 스내핑 방지: 사진관 가중치 대폭 강등 (1.5), 메인상가 가챠/뽑기방 유지 (5.0)
+        // 💡 [V34.0] 인생네컷 등 사진관 5.0 원복, 저가커피 보행로 감지기 추가
         const STEALTH_KEYWORDS = [
-            { kw: '셀프사진관', weight: 1.5, radius: 80 }, 
-            { kw: '포토이즘', weight: 1.5, radius: 80 },
-            { kw: '가챠샵', weight: 5.0, radius: 80 },
-            { kw: '뽑기방', weight: 5.0, radius: 80 }
+            { kw: '인생네컷', weight: 5.0, radius: 80, type: 'play' },
+            { kw: '셀프사진관', weight: 5.0, radius: 80, type: 'play' }, 
+            { kw: '포토이즘', weight: 5.0, radius: 80, type: 'play' },
+            { kw: '가챠샵', weight: 5.0, radius: 80, type: 'play' },
+            { kw: '뽑기방', weight: 5.0, radius: 80, type: 'play' },
+            { kw: '메가커피', weight: 3.0, radius: 80, type: 'coffee' },
+            { kw: '컴포즈커피', weight: 3.0, radius: 80, type: 'coffee' }
         ];
 
         let drawingManager = new kakao.maps.drawing.DrawingManager({
@@ -210,7 +235,7 @@
             polygonOptions: { draggable: false, removable: false, editable: true, strokeColor: '#be185d', strokeWeight: 3, fillColor: '#f43f5e', fillOpacity: 0.2 }
         });
 
-        let savedPolygons = JSON.parse(localStorage.getItem('lensmePolygonsV33_0') || '[]');
+        let savedPolygons = JSON.parse(localStorage.getItem('lensmePolygonsV34_0') || '[]');
         let activePolygonPath = null; 
         let activePolygonId = null;
         let renderedPolygons = {}; 
@@ -284,7 +309,7 @@
                     }
                     let id = 'poly_' + Date.now();
                     savedPolygons.push({ id: id, name: name, path: tempDrawnPath, si: si, gu: gu, dong: dong, centerLat: centerLat, centerLng: centerLng });
-                    localStorage.setItem('lensmePolygonsV33_0', JSON.stringify(savedPolygons));
+                    localStorage.setItem('lensmePolygonsV34_0', JSON.stringify(savedPolygons));
                     
                     drawingManager.clear();
                     isDrawingMode = false;
@@ -366,7 +391,7 @@
         function deletePolygon(id) {
             if(!confirm("이 영토를 삭제하시겠습니까?")) return;
             savedPolygons = savedPolygons.filter(p => p.id !== id);
-            localStorage.setItem('lensmePolygonsV33_0', JSON.stringify(savedPolygons));
+            localStorage.setItem('lensmePolygonsV34_0', JSON.stringify(savedPolygons));
             if(activePolygonId === id) clearActivePolygon();
             renderPolygonTree();
         }
@@ -534,17 +559,19 @@
         }
 
         function generateExpertComment(spot) {
-            let maxVal = Math.max(spot.sOlive, spot.sFlow, spot.sStealth);
-            if (spot.sOlive > 80 && spot.sFlow > 80 && spot.sStealth > 20) {
-                return "핵심 대형 앵커, 메인 유입 물길, 놀이/체류 인프라 3박자가 완벽히 맞물린 육각형 A급지입니다. 기본 목적성 매출과 자연 유입 매출을 동시에 쓸어 담을 수 있습니다.";
+            let maxVal = Math.max(spot.sOlive, spot.sFlow, spot.sStealth, spot.sCoffee);
+            if (spot.sOlive > 60 && spot.sFlow > 40 && spot.sStealth > 20) {
+                return "핵심 앵커, 메인 물길, 놀이 인프라 3박자가 완벽히 맞물린 육각형 A급지입니다. 기본 목적성 매출과 자연 유입을 동시에 쓸어 담을 수 있습니다.";
             } else if (maxVal === spot.sOlive && spot.sOlive > 0) {
-                return "1020 뷰티 코어 앵커인 '올리브영'의 강력한 낙수효과를 직접 흡수하는 기생/공생 상권입니다. 목적성 고객의 동선이 자연스럽게 이어져 안정적인 매출이 보장됩니다.";
+                return "1020 뷰티 코어 앵커인 '올리브영'의 강력한 낙수효과를 직접 흡수하는 기생/공생 상권입니다. 타겟 고객의 발길이 자연스럽게 이어집니다.";
             } else if (maxVal === spot.sFlow && spot.sFlow > 0) {
-                return "타겟 고객(하교/대중교통)의 1차 이동 물길 정중앙에 위치한 핵심 길목입니다. 워크인(Walk-in) 진입 비율이 극대화되어 신규 유입 및 노출 효과가 매우 뛰어납니다.";
+                return "타겟 고객(하교/대중교통)의 1차 이동 물길 정중앙에 위치한 핵심 길목입니다. 워크인(Walk-in) 진입 비율이 극대화되어 신규 유입 효과가 뛰어납니다.";
             } else if (maxVal === spot.sStealth && spot.sStealth > 0) {
-                return "1020 세대가 머무르며 사진을 찍는 '체류형 놀이 인프라'와 밀착된 트렌드 코어 입지입니다. 저관여 상품의 충동구매 및 주말 핫타임 매출이 폭발할 수 있는 자리입니다.";
+                return "1020 세대가 머무르며 노는 '체류형 놀이 인프라(사진/뽑기)'와 밀착된 코어 입지입니다. 저관여 상품의 충동구매 및 주말 매출 폭발이 예상됩니다.";
+            } else if (maxVal === spot.sCoffee && spot.sCoffee > 0) {
+                return "저가형 커피 브랜드가 포진한 '살아있는 대로변 보행로' 초입입니다. 간판 노출 및 브랜드 인지도 상승에 가장 최적화된 가시성 A급 자리입니다.";
             } else {
-                return "주변 인프라와 동선이 균형 있게 배분된 입지로, 타겟 소비층의 기본 수요를 견고하게 흡수할 수 있는 우수 후보지입니다.";
+                return "주변 인프라와 동선이 균형 있게 배분된 입지로, 타겟 소비층의 수요를 견고하게 흡수할 수 있는 우수 후보지입니다.";
             }
         }
 
@@ -620,7 +647,7 @@
                             resolve();
                         }, { location: centerPos, radius: searchRadius + 300 });
                     });
-                    await delay(100);
+                    await delay(50);
                 }
 
                 let activeKeys = Object.keys(BRAND_CONFIG).filter(key => document.getElementById(key) && document.getElementById(key).checked);
@@ -640,7 +667,7 @@
                             resolve(); 
                         }, { location: centerPos, radius: searchRadius, size: 15 });
                     });
-                    await delay(100); 
+                    await delay(50); 
                 }
 
                 for(let i = 0; i < STEALTH_KEYWORDS.length; i++) {
@@ -659,9 +686,10 @@
                             resolve(); 
                         }, { location: centerPos, radius: searchRadius, size: 15 });
                     });
-                    await delay(100); 
+                    await delay(50); 
                 }
 
+                // 펜스 방어 필터 적용
                 let validNodes = [];
                 let validAnchors = [];
 
@@ -700,7 +728,7 @@
                 document.getElementById('comp_count').innerText = targetStats.comp + '개';
                 document.getElementById('anchor_count').innerText = targetStats.anchor + '개';
 
-                statusEl.innerText = "🌐 영수증 계산 및 전문가 코멘트 생성 중...";
+                statusEl.innerText = "🌐 영수증 계산 및 팀킬 방지 쉴드 작동 중...";
 
                 let flowPaths = [];
                 for(let g=0; g<gates.length; g++) {
@@ -735,9 +763,10 @@
                 for(let i=0; i<gridPoints.length; i++) {
                     let pt = gridPoints[i];
                     
-                    let sOlive = 0, sLens = 0, sDaiso = 0, sStealth = 0, sFlow = 0;
+                    let sOlive = 0, sLens = 0, sDaiso = 0, sStealth = 0, sFlow = 0, sCoffee = 0;
                     let localOliveCount = 0, localLensCount = 0, localDaisoCount = 0;
                     let closestPoiDist = 999; 
+                    let isTeamKill = false; // 💡 팀킬 감지 플래그
 
                     for(let j=0; j<validNodes.length; j++) {
                         let node = validNodes[j];
@@ -747,14 +776,25 @@
 
                         if(node.isStealth) {
                             let sData = node.stealthData;
-                            if(dist <= sData.radius) sStealth += (sData.radius - dist) * sData.weight;
+                            if(dist <= sData.radius) {
+                                if(sData.type === 'coffee') sCoffee += (sData.radius - dist) * sData.weight;
+                                else sStealth += (sData.radius - dist) * sData.weight;
+                            }
                         } else if (node.brandKey && BRAND_CONFIG[node.brandKey]) {
                             let cfg = BRAND_CONFIG[node.brandKey];
                             if(cfg.isOlive && dist <= 80) {
                                 sOlive += (80 - dist) * 10.0; localOliveCount++;
                             } else if(cfg.isComp && dist <= 80) {
-                                sLens += (80 - dist) * 8.0; 
-                                localLensCount++;
+                                // 💡 [V34.0] 신규 출점 모드일 때 기존 렌즈미 반경 100m는 팀킬로 간주
+                                if(node.brandKey === 'f_lensme') {
+                                    if(currentMode === 'new' && dist <= 100) {
+                                        isTeamKill = true;
+                                    } else if(currentMode === 'reloc') {
+                                        sLens += (80 - dist) * 8.0; localLensCount++;
+                                    }
+                                } else {
+                                    sLens += (80 - dist) * 8.0; localLensCount++;
+                                }
                             } else if(cfg.isDaiso && dist <= 80) {
                                 sDaiso += (80 - dist) * 7.0; localDaisoCount++;
                             }
@@ -770,8 +810,10 @@
                     }
 
                     let baseScore = 0.1;
-                    let totalScore = baseScore + sOlive + sLens + sDaiso + sStealth + sFlow;
+                    let totalScore = baseScore + sOlive + sLens + sDaiso + sStealth + sFlow + sCoffee;
+                    
                     let penalty = (closestPoiDist > 15) ? 0.3 : 1.0;
+                    if(isTeamKill) penalty = 0.01; // 팀킬 구역은 99% 감점 처리하여 순위권 아웃
 
                     if (localOliveCount >= 1 && localLensCount >= 1) pt.isSuperLens = true;
                     if (localOliveCount >= 1 && localDaisoCount >= 1) pt.isSuperDaiso = true;
@@ -781,7 +823,9 @@
                     pt.sLens = sLens * penalty;
                     pt.sDaiso = sDaiso * penalty;
                     pt.sStealth = sStealth * penalty;
+                    pt.sCoffee = sCoffee * penalty;
                     pt.sFlow = sFlow * penalty;
+                    pt.isTeamKill = isTeamKill;
                 }
 
                 gridPoints.sort(function(a, b) { return b.score - a.score; });
@@ -794,10 +838,10 @@
                     let candidate = gridPoints[i];
                     if(candidate.score < 1) continue; 
 
-                    if (candidate.isSuperLens && specialLensSpots.length === 0) {
+                    if (candidate.isSuperLens && specialLensSpots.length === 0 && !candidate.isTeamKill) {
                         specialLensSpots.push(candidate); continue; 
                     }
-                    if (candidate.isSuperDaiso && specialDaisoSpots.length === 0) {
+                    if (candidate.isSuperDaiso && specialDaisoSpots.length === 0 && !candidate.isTeamKill) {
                         let isOverlap = false;
                         if(specialLensSpots.length > 0 && getDistanceMeters(candidate.lat, candidate.lng, specialLensSpots[0].lat, specialLensSpots[0].lng) < 30) isOverlap = true;
                         if(!isOverlap) { specialDaisoSpots.push(candidate); continue; }
@@ -835,12 +879,14 @@
                         if(spot.sStealth > 0) receiptHtml += `<div class="flex justify-between items-center text-pink-600"><span>📸 1020 놀이시설 인접</span><span class="font-black">+${Math.round(spot.sStealth)}점</span></div>`;
                         if(spot.sDaiso > 0) receiptHtml += `<div class="flex justify-between items-center text-rose-600"><span>🟥 다이소 인접 보너스</span><span class="font-black">+${Math.round(spot.sDaiso)}점</span></div>`;
                         if(spot.sLens > 0) receiptHtml += `<div class="flex justify-between items-center text-purple-700"><span>👁️ 경쟁 렌즈샵 밀집도</span><span class="font-black">+${Math.round(spot.sLens)}점</span></div>`;
+                        if(spot.sCoffee > 0) receiptHtml += `<div class="flex justify-between items-center text-amber-700"><span>☕ 저가커피(보행로) 보너스</span><span class="font-black">+${Math.round(spot.sCoffee)}점</span></div>`;
                         
                         if(receiptHtml === "") receiptHtml = `<div class="text-slate-400 text-xs">단일 기준 기본 배점만 적용됨</div>`;
 
                         rankingHtml += `
-                        <div class="bg-white px-3 py-3 rounded-xl border border-slate-200 shadow-sm mb-3">
-                            <div class="flex justify-between items-center border-b border-slate-100 pb-1.5 mb-1.5">
+                        <div class="bg-white px-3 py-3 rounded-xl border border-slate-200 shadow-sm mb-3 relative overflow-hidden">
+                            ${currentMode === 'reloc' && idx === 0 ? '<div class="absolute top-0 right-0 bg-rose-500 text-white text-[10px] font-bold px-2 py-1 rounded-bl-lg">추천 이전지</div>' : ''}
+                            <div class="flex justify-between items-center border-b border-slate-100 pb-1.5 mb-1.5 mt-1">
                                 <span class="text-[14px] text-slate-800 font-extrabold">${rankTitle} <span class="text-indigo-600 text-[12px] font-black ml-1">(총 ${Math.round(spot.score)}점)</span></span>
                             </div>
                             <div class="text-[12px] text-slate-600 mb-2 font-bold tracking-tight">📍 ${addrName}</div>
@@ -871,7 +917,10 @@
                     }
                     rBox.innerHTML = rankingHtml;
                 } else {
-                    rBox.innerHTML = `<div class="text-xs text-rose-600 font-bold mt-1">분석 조건을 만족하는 1~3위 입지가 없습니다.</div>`;
+                    let failMsg = currentMode === 'new' 
+                        ? "⚠️ 주변에 기존 렌즈미가 너무 가깝거나 유효한 명당이 없습니다. (팀킬 방지 쉴드 작동 중)"
+                        : "분석 조건을 만족하는 1~3위 입지가 없습니다.";
+                    rBox.innerHTML = `<div class="text-xs text-rose-600 font-bold mt-1">${failMsg}</div>`;
                 }
 
                 if (specialLensSpots.length > 0) {
@@ -915,7 +964,9 @@
                 }
 
                 document.getElementById('rankingResultBox').classList.remove('hidden');
-                statusEl.innerText = `✅ 분석 완료! 상세 점수 영수증 및 전문가 코멘트가 작성되었습니다.`;
+                statusEl.innerText = currentMode === 'new' 
+                    ? `✅ 팀킬 방지 쉴드 작동! 기존 매장을 피해 안전한 신규 1~3위 명당을 도출했습니다.`
+                    : `✅ 이전 모드 작동! 계급장 떼고 해당 상권 내 최고의 A급지를 도출했습니다.`;
 
             } catch(e) {
                 console.error("분석 에러:", e);
