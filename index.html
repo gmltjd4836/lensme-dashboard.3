@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>렌즈미 상권 분석 대시보드 (V37.0 스마트 컷팅 엔진)</title>
+    <title>렌즈미 상권 분석 대시보드 (V38.0 밸런스 패치 엔진)</title>
     <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
@@ -37,10 +37,9 @@
     <div class="w-full md:w-1/4 bg-white border-r border-gray-200 p-6 flex flex-col shadow-lg z-20 overflow-y-auto">
         <h1 class="text-xl font-extrabold text-slate-800 border-b-4 border-indigo-500 pb-3 mb-4 flex justify-between items-center">
             <span>🗺️ 전국 상권 관제탑</span>
-            <span class="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded-full font-bold">V37.0 ✂️</span>
+            <span class="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded-full font-bold">V38.0 ⚖️</span>
         </h1>
 
-        <!-- 설계 모드 선택 스위치 -->
         <div class="mb-4">
             <p class="text-xs text-slate-400 font-bold mb-2">설계 모드 선택 (팀킬 쉴드 설정)</p>
             <div class="flex gap-2 bg-slate-100 p-1 rounded-lg border border-slate-200">
@@ -148,7 +147,6 @@
     </div>
 
     <script>
-        // 💡💡💡 사장님 티맵 앱 키 적용 완료 💡💡💡
         const TMAP_APP_KEY = "mJJ00gscCg39Y6nR0LhUw2yzrIfr7arY65OwUZYk"; 
         
         const FALLBACK_COUNTS = {
@@ -222,7 +220,7 @@
             polygonOptions: { draggable: false, removable: false, editable: true, strokeColor: '#be185d', strokeWeight: 3, fillColor: '#f43f5e', fillOpacity: 0.2 }
         });
 
-        let savedPolygons = JSON.parse(localStorage.getItem('lensmePolygonsV37_0') || '[]');
+        let savedPolygons = JSON.parse(localStorage.getItem('lensmePolygonsV38_0') || '[]');
         let activePolygonPath = null; 
         let activePolygonId = null;
         let renderedPolygons = {}; 
@@ -296,7 +294,7 @@
                     }
                     let id = 'poly_' + Date.now();
                     savedPolygons.push({ id: id, name: name, path: tempDrawnPath, si: si, gu: gu, dong: dong, centerLat: centerLat, centerLng: centerLng });
-                    localStorage.setItem('lensmePolygonsV37_0', JSON.stringify(savedPolygons));
+                    localStorage.setItem('lensmePolygonsV38_0', JSON.stringify(savedPolygons));
                     
                     drawingManager.clear();
                     isDrawingMode = false;
@@ -378,7 +376,7 @@
         function deletePolygon(id) {
             if(!confirm("이 영토를 삭제하시겠습니까?")) return;
             savedPolygons = savedPolygons.filter(p => p.id !== id);
-            localStorage.setItem('lensmePolygonsV37_0', JSON.stringify(savedPolygons));
+            localStorage.setItem('lensmePolygonsV38_0', JSON.stringify(savedPolygons));
             if(activePolygonId === id) clearActivePolygon();
             renderPolygonTree();
         }
@@ -545,7 +543,6 @@
             });
         }
 
-        // 💡 [V37.0] 형태에 따라 이름표를 사거리/길목으로 똑똑하게 바꿔치기!
         function generateExpertComment(spot, shapeType, rankTitle) {
             let isCross = shapeType === 'cross';
             let prefix = isCross ? `이곳은 유동인구가 교차하는 [${rankTitle}]로, ` : `이곳은 타겟이 흐르는 [${rankTitle}] 구간으로, `;
@@ -587,18 +584,16 @@
             }
         }
 
-        // 💡 [V37.0] 스마트 컷팅(가위질) 로직: 35m 초과 또는 펜스 밖은 잘라버림!
         async function drawTmapPedestrianStreet(spot, idx, map, validNodes, rawGates, polygonPath) {
             let color = idx === 0 ? '#ef4444' : (idx === 1 ? '#3b82f6' : '#10b981');
             let rankNum = idx + 1;
             
-            // 명당에서 가장 가까운 앵커/출구 4방향을 찾아 길을 뻗어봄
             let targetPoints = [];
             [...validNodes].sort((a,b) => getDistanceMeters(spot.lat, spot.lng, parseFloat(a.y), parseFloat(a.x)) - getDistanceMeters(spot.lat, spot.lng, parseFloat(b.y), parseFloat(b.x))).slice(0, 3).forEach(n => targetPoints.push({lat: parseFloat(n.y), lng: parseFloat(n.x)}));
             [...rawGates].sort((a,b) => getDistanceMeters(spot.lat, spot.lng, a.lat, a.lng) - getDistanceMeters(spot.lat, spot.lng, b.lat, b.lng)).slice(0, 1).forEach(g => targetPoints.push({lat: g.lat, lng: g.lng}));
 
             let clippedPaths = [];
-            let endPoints = []; // 뻗어나간 길의 끝점들을 모아 사거리인지 판별
+            let endPoints = []; 
 
             if(TMAP_APP_KEY && TMAP_APP_KEY !== "여기에_사장님_티맵_앱키_입력") {
                 for (let i=0; i<targetPoints.length; i++) {
@@ -610,7 +605,6 @@
                                 f.geometry.coordinates.forEach(coord => {
                                     let pLat = coord[1]; let pLng = coord[0];
                                     let dist = getDistanceMeters(spot.lat, spot.lng, pLat, pLng);
-                                    // 💡 핵심 컷팅 로직: 35m 이내 + 펜스 내부 좌표만 그린다!
                                     if (dist <= 35 && isPointInPolygon(pLat, pLng, polygonPath)) {
                                         pathArr.push(new kakao.maps.LatLng(pLat, pLng));
                                     }
@@ -619,14 +613,13 @@
                         });
                         if (pathArr.length > 1) {
                             clippedPaths.push(pathArr);
-                            endPoints.push(pathArr[pathArr.length - 1]); // 길의 마지막 좌표 저장
+                            endPoints.push(pathArr[pathArr.length - 1]); 
                         }
                     }
                     await delay(100); 
                 }
             }
 
-            // 💡 모양 분석 (동적 네이밍)
             let isCross = false;
             if(endPoints.length > 0) {
                 let q1=0, q2=0, q3=0, q4=0;
@@ -637,21 +630,17 @@
                     else if(dx<0 && dy<0) q3=1;
                     else q4=1;
                 });
-                // 3개 이상의 사분면으로 뻗어나가면 사거리/교차로로 판별!
                 if(q1+q2+q3+q4 >= 3) isCross = true;
             } else {
-                // TMAP 실패 시 예비 판별
                 isCross = targetPoints.length >= 3;
             }
 
-            // 그리기 실행
             if (clippedPaths.length > 0) {
                 clippedPaths.forEach(p => {
                     let pl = new kakao.maps.Polyline({path: p, strokeWeight: 10, strokeColor: color, strokeOpacity: 0.7, strokeStyle: 'solid'});
                     pl.setMap(map); rankOverlays.push(pl);
                 });
             } else {
-                // 폴백 (티맵 오류 시 짧은 십자가/직선)
                 let dLat = 0.0002; let dLng = 0.00025;
                 if(isCross) {
                     let p1 = [new kakao.maps.LatLng(spot.lat - dLat, spot.lng), new kakao.maps.LatLng(spot.lat + dLat, spot.lng)];
@@ -663,7 +652,6 @@
                 }
             }
 
-            // 동적 텍스트 생성
             let shapeTitle = isCross ? `${rankNum}위 사거리` : `${rankNum}위 길목(거리)`;
             let badgePrefix = rankNum === 1 ? '💎 ' : (rankNum === 2 ? '⭐ ' : '✅ ');
             let fullTitle = badgePrefix + shapeTitle;
@@ -830,7 +818,7 @@
                 document.getElementById('comp_count').innerText = targetStats.comp + '개';
                 document.getElementById('anchor_count').innerText = targetStats.anchor + '개';
 
-                statusEl.innerText = "🌐 실제 사거리/길목 연산 및 펜스 컷팅 중...";
+                statusEl.innerText = "🌐 실제 사거리/길목 연산 및 밸런스 패치 적용 중...";
 
                 let flowPaths = [];
                 for(let g=0; g<gates.length; g++) {
@@ -910,6 +898,10 @@
                         }
                     }
 
+                    // 💡 [V38.0] 무한 중첩 방지 (점수 상한선 캡 적용)
+                    sStealth = Math.min(sStealth, 450); // 인생네컷이 아무리 많아도 올리브영 1개 점수를 넘을 수 없음
+                    sCoffee = Math.min(sCoffee, 240);   // 저가커피 상한선
+
                     let baseScore = 0.1;
                     let totalScore = baseScore + sOlive + sLens + sDaiso + sStealth + sFlow + sCoffee;
                     
@@ -966,7 +958,6 @@
                         let spot = topSpots[idx];
                         let addrName = await getAddressAsync(spot.lat, spot.lng);
                         
-                        // 💡 [V37.0] 스마트 컷팅 & 동적 사거리/길목 네이밍 적용 함수 호출
                         let shapeData = await drawTmapPedestrianStreet(spot, idx, map, validNodes, rawGates, targetPath);
                         let rankTitle = shapeData.title;
                         let expertComment = generateExpertComment(spot, shapeData.type, rankTitle);
@@ -1050,7 +1041,7 @@
                 }
 
                 document.getElementById('rankingResultBox').classList.remove('hidden');
-                statusEl.innerText = `✅ TMAP 컷팅 완료! 펜스 내 블록 형태에 맞춰 사거리/길목 이름을 자동 부여했습니다.`;
+                statusEl.innerText = `✅ 점수 밸런스 패치 완료! 놀이시설 중복 획득 점수를 완벽히 제어했습니다.`;
 
             } catch(e) {
                 console.error("분석 에러:", e);
