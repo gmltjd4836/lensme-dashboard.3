@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>렌즈미 상권 분석 대시보드 (V36.0 TMAP 실보행로 엔진)</title>
+    <title>렌즈미 상권 분석 대시보드 (V37.0 스마트 컷팅 엔진)</title>
     <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
@@ -37,7 +37,7 @@
     <div class="w-full md:w-1/4 bg-white border-r border-gray-200 p-6 flex flex-col shadow-lg z-20 overflow-y-auto">
         <h1 class="text-xl font-extrabold text-slate-800 border-b-4 border-indigo-500 pb-3 mb-4 flex justify-between items-center">
             <span>🗺️ 전국 상권 관제탑</span>
-            <span class="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded-full font-bold">V36.0 🚶‍♂️</span>
+            <span class="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded-full font-bold">V37.0 ✂️</span>
         </h1>
 
         <!-- 설계 모드 선택 스위치 -->
@@ -88,7 +88,7 @@
                 </div>
 
                 <div id="rankingResultBox" class="mt-3 pt-3 border-t border-indigo-200 hidden">
-                    <p class="text-xs text-indigo-800 font-extrabold mb-2">💎 TMAP 연동 실제 길목 평가</p>
+                    <p class="text-xs text-indigo-800 font-extrabold mb-2">💎 TMAP 스마트 컷팅 길목 평가</p>
                     <div id="rankingResultText" class="space-y-0 mb-3 border-b border-indigo-100 pb-2"></div>
                     
                     <p class="text-xs text-purple-800 font-extrabold mb-2">👑 기존 군락지 확인 (점수 무관)</p>
@@ -106,7 +106,7 @@
 
         <div id="tab-map" class="flex-grow w-full h-full relative">
             <div id="statusMessage" class="absolute top-4 left-1/2 transform -translate-x-1/2 z-10 bg-white/95 backdrop-blur-sm px-6 py-2 rounded-full shadow-md text-sm font-bold text-slate-700 border border-slate-200 text-center transition-all">
-                🎯 펜스를 치면 [TMAP 보행자 길찾기 API]를 연동해 건물을 피해 진짜 사람들이 걷는 길을 형광펜으로 그려줍니다!
+                🎯 펜스를 치면 해당 블록(반경 35m)의 길목/사거리를 분석하여 스마트하게 끊어서 표출합니다!
             </div>
 
             <div class="absolute top-16 left-4 z-10 bg-white/95 backdrop-blur-sm p-4 rounded-xl shadow-lg border border-slate-200 w-64 max-h-[80vh] overflow-y-auto hidden md:block">
@@ -148,7 +148,7 @@
     </div>
 
     <script>
-        // 💡💡💡 사장님 티맵 앱 키(App Key) 적용 완료! 💡💡💡
+        // 💡💡💡 사장님 티맵 앱 키 적용 완료 💡💡💡
         const TMAP_APP_KEY = "mJJ00gscCg39Y6nR0LhUw2yzrIfr7arY65OwUZYk"; 
         
         const FALLBACK_COUNTS = {
@@ -222,7 +222,7 @@
             polygonOptions: { draggable: false, removable: false, editable: true, strokeColor: '#be185d', strokeWeight: 3, fillColor: '#f43f5e', fillOpacity: 0.2 }
         });
 
-        let savedPolygons = JSON.parse(localStorage.getItem('lensmePolygonsV36_0') || '[]');
+        let savedPolygons = JSON.parse(localStorage.getItem('lensmePolygonsV37_0') || '[]');
         let activePolygonPath = null; 
         let activePolygonId = null;
         let renderedPolygons = {}; 
@@ -296,7 +296,7 @@
                     }
                     let id = 'poly_' + Date.now();
                     savedPolygons.push({ id: id, name: name, path: tempDrawnPath, si: si, gu: gu, dong: dong, centerLat: centerLat, centerLng: centerLng });
-                    localStorage.setItem('lensmePolygonsV36_0', JSON.stringify(savedPolygons));
+                    localStorage.setItem('lensmePolygonsV37_0', JSON.stringify(savedPolygons));
                     
                     drawingManager.clear();
                     isDrawingMode = false;
@@ -378,7 +378,7 @@
         function deletePolygon(id) {
             if(!confirm("이 영토를 삭제하시겠습니까?")) return;
             savedPolygons = savedPolygons.filter(p => p.id !== id);
-            localStorage.setItem('lensmePolygonsV36_0', JSON.stringify(savedPolygons));
+            localStorage.setItem('lensmePolygonsV37_0', JSON.stringify(savedPolygons));
             if(activePolygonId === id) clearActivePolygon();
             renderPolygonTree();
         }
@@ -539,15 +539,18 @@
                     if (status === kakao.maps.services.Status.OK) {
                         resolve(result[0].road_address ? result[0].road_address.address_name : result[0].address.address_name);
                     } else {
-                        resolve("펜스 내부 구간");
+                        resolve("펜스 내 핵심 구간");
                     }
                 });
             });
         }
 
-        function generateExpertComment(spot, shapeType) {
-            let prefix = shapeType === 'cross' ? "이곳은 타겟 유동인구가 교차하는 핵심 사거리(교차로)로, " : "이곳은 타겟이 흐르는 핵심 보행로 구간으로, ";
+        // 💡 [V37.0] 형태에 따라 이름표를 사거리/길목으로 똑똑하게 바꿔치기!
+        function generateExpertComment(spot, shapeType, rankTitle) {
+            let isCross = shapeType === 'cross';
+            let prefix = isCross ? `이곳은 유동인구가 교차하는 [${rankTitle}]로, ` : `이곳은 타겟이 흐르는 [${rankTitle}] 구간으로, `;
             let maxVal = Math.max(spot.sOlive, spot.sFlow, spot.sStealth, spot.sCoffee);
+            
             if (spot.sOlive > 60 && spot.sFlow > 40 && spot.sStealth > 20) {
                 return prefix + "대형 앵커, 물길, 놀이 인프라 3박자가 완벽히 맞물린 A급지입니다. 기본 매출과 자연 유입을 동시에 쓸어 담을 수 있습니다.";
             } else if (maxVal === spot.sOlive && spot.sOlive > 0) {
@@ -555,7 +558,7 @@
             } else if (maxVal === spot.sFlow && spot.sFlow > 0) {
                 return prefix + "대중교통 및 하교 인원의 1차 이동 물길 정중앙에 위치하여, 워크인(Walk-in) 노출 및 신규 유입 효과가 뛰어납니다.";
             } else if (maxVal === spot.sStealth && spot.sStealth > 0) {
-                return prefix + "1020 세대가 머무르며 노는 '체류형 인프라(사진/놀이)'와 밀착된 코어 입지입니다. 저관여 상품의 충동구매 및 주말 매출 폭발이 예상됩니다.";
+                return prefix + "1020 세대가 머무르며 노는 '체류형 인프라(사진/놀이)'와 밀착된 코어 입지입니다. 충동구매 및 주말 매출 폭발이 예상됩니다.";
             } else if (maxVal === spot.sCoffee && spot.sCoffee > 0) {
                 return prefix + "저가형 커피 브랜드가 포진한 '살아있는 보행로'입니다. 간판 노출 및 브랜드 인지도 상승에 가장 최적화되었습니다.";
             } else {
@@ -563,7 +566,6 @@
             }
         }
 
-        // 💡 [V36.0] 티맵 보행자 경로 API 호출 함수
         async function fetchTmapPedestrianRoute(startX, startY, endX, endY) {
             if (!TMAP_APP_KEY || TMAP_APP_KEY === "여기에_사장님_티맵_앱키_입력") return null;
             try {
@@ -585,22 +587,19 @@
             }
         }
 
-        // 💡 [V36.0] 건물 통과를 완벽히 막아주는 TMAP 실제 길목 그리기 로직
-        async function drawTmapPedestrianStreet(spot, idx, map, validNodes, rawGates) {
+        // 💡 [V37.0] 스마트 컷팅(가위질) 로직: 35m 초과 또는 펜스 밖은 잘라버림!
+        async function drawTmapPedestrianStreet(spot, idx, map, validNodes, rawGates, polygonPath) {
             let color = idx === 0 ? '#ef4444' : (idx === 1 ? '#3b82f6' : '#10b981');
+            let rankNum = idx + 1;
             
-            // 명당에서 가장 가까운 핵심 앵커 3개(올영/다이소 등)와 가장 가까운 유입구 1개를 추출합니다.
-            let nearbyNodes = [...validNodes].sort((a,b) => getDistanceMeters(spot.lat, spot.lng, parseFloat(a.y), parseFloat(a.x)) - getDistanceMeters(spot.lat, spot.lng, parseFloat(b.y), parseFloat(b.x))).slice(0, 3);
-            let nearbyGates = [...rawGates].sort((a,b) => getDistanceMeters(spot.lat, spot.lng, a.lat, a.lng) - getDistanceMeters(spot.lat, spot.lng, b.lat, b.lng)).slice(0, 1);
-            
+            // 명당에서 가장 가까운 앵커/출구 4방향을 찾아 길을 뻗어봄
             let targetPoints = [];
-            nearbyNodes.forEach(n => targetPoints.push({lat: parseFloat(n.y), lng: parseFloat(n.x)}));
-            nearbyGates.forEach(g => targetPoints.push({lat: g.lat, lng: g.lng}));
+            [...validNodes].sort((a,b) => getDistanceMeters(spot.lat, spot.lng, parseFloat(a.y), parseFloat(a.x)) - getDistanceMeters(spot.lat, spot.lng, parseFloat(b.y), parseFloat(b.x))).slice(0, 3).forEach(n => targetPoints.push({lat: parseFloat(n.y), lng: parseFloat(n.x)}));
+            [...rawGates].sort((a,b) => getDistanceMeters(spot.lat, spot.lng, a.lat, a.lng) - getDistanceMeters(spot.lat, spot.lng, b.lat, b.lng)).slice(0, 1).forEach(g => targetPoints.push({lat: g.lat, lng: g.lng}));
 
-            let isCross = (targetPoints.length >= 3); // 3곳 이상이면 교차로(사거리) 형태로 판단
-            let drawnPathsCount = 0;
+            let clippedPaths = [];
+            let endPoints = []; // 뻗어나간 길의 끝점들을 모아 사거리인지 판별
 
-            // TMAP API가 작동하면 실제 길목을 그리고, 안 되면 기본 직선을 그립니다.
             if(TMAP_APP_KEY && TMAP_APP_KEY !== "여기에_사장님_티맵_앱키_입력") {
                 for (let i=0; i<targetPoints.length; i++) {
                     let features = await fetchTmapPedestrianRoute(spot.lng, spot.lat, targetPoints[i].lng, targetPoints[i].lat);
@@ -609,49 +608,77 @@
                         features.forEach(f => {
                             if (f.geometry.type === "LineString") {
                                 f.geometry.coordinates.forEach(coord => {
-                                    pathArr.push(new kakao.maps.LatLng(coord[1], coord[0]));
+                                    let pLat = coord[1]; let pLng = coord[0];
+                                    let dist = getDistanceMeters(spot.lat, spot.lng, pLat, pLng);
+                                    // 💡 핵심 컷팅 로직: 35m 이내 + 펜스 내부 좌표만 그린다!
+                                    if (dist <= 35 && isPointInPolygon(pLat, pLng, polygonPath)) {
+                                        pathArr.push(new kakao.maps.LatLng(pLat, pLng));
+                                    }
                                 });
                             }
                         });
-                        if (pathArr.length > 0) {
-                            let pl = new kakao.maps.Polyline({path: pathArr, strokeWeight: 10, strokeColor: color, strokeOpacity: 0.7, strokeStyle: 'solid'});
-                            pl.setMap(map); rankOverlays.push(pl);
-                            drawnPathsCount++;
+                        if (pathArr.length > 1) {
+                            clippedPaths.push(pathArr);
+                            endPoints.push(pathArr[pathArr.length - 1]); // 길의 마지막 좌표 저장
                         }
                     }
-                    await delay(150); // 티맵 API 초당 호출 제한 방지
+                    await delay(100); 
                 }
             }
 
-            // 티맵 호출 실패 시 기존 방식(임의 십자가/직선) 폴백
-            if (drawnPathsCount === 0) {
-                let dLat = 0.0003; let dLng = 0.00035;
+            // 💡 모양 분석 (동적 네이밍)
+            let isCross = false;
+            if(endPoints.length > 0) {
+                let q1=0, q2=0, q3=0, q4=0;
+                endPoints.forEach(pt => {
+                    let dy = pt.getLat() - spot.lat; let dx = pt.getLng() - spot.lng;
+                    if(dx>=0 && dy>=0) q1=1;
+                    else if(dx<0 && dy>=0) q2=1;
+                    else if(dx<0 && dy<0) q3=1;
+                    else q4=1;
+                });
+                // 3개 이상의 사분면으로 뻗어나가면 사거리/교차로로 판별!
+                if(q1+q2+q3+q4 >= 3) isCross = true;
+            } else {
+                // TMAP 실패 시 예비 판별
+                isCross = targetPoints.length >= 3;
+            }
+
+            // 그리기 실행
+            if (clippedPaths.length > 0) {
+                clippedPaths.forEach(p => {
+                    let pl = new kakao.maps.Polyline({path: p, strokeWeight: 10, strokeColor: color, strokeOpacity: 0.7, strokeStyle: 'solid'});
+                    pl.setMap(map); rankOverlays.push(pl);
+                });
+            } else {
+                // 폴백 (티맵 오류 시 짧은 십자가/직선)
+                let dLat = 0.0002; let dLng = 0.00025;
                 if(isCross) {
                     let p1 = [new kakao.maps.LatLng(spot.lat - dLat, spot.lng), new kakao.maps.LatLng(spot.lat + dLat, spot.lng)];
                     let p2 = [new kakao.maps.LatLng(spot.lat, spot.lng - dLng), new kakao.maps.LatLng(spot.lat, spot.lng + dLng)];
-                    [p1, p2].forEach(p => {
-                        let pl = new kakao.maps.Polyline({path: p, strokeWeight: 10, strokeColor: color, strokeOpacity: 0.5, strokeStyle: 'solid'});
-                        pl.setMap(map); rankOverlays.push(pl);
-                    });
+                    [p1, p2].forEach(p => { let pl = new kakao.maps.Polyline({path: p, strokeWeight: 10, strokeColor: color, strokeOpacity: 0.5}); pl.setMap(map); rankOverlays.push(pl); });
                 } else {
                     let p1 = [new kakao.maps.LatLng(spot.lat - dLat, spot.lng - dLng), new kakao.maps.LatLng(spot.lat + dLat, spot.lng + dLng)];
-                    let pl = new kakao.maps.Polyline({path: p1, strokeWeight: 10, strokeColor: color, strokeOpacity: 0.5, strokeStyle: 'solid'});
-                    pl.setMap(map); rankOverlays.push(pl);
+                    let pl = new kakao.maps.Polyline({path: p1, strokeWeight: 10, strokeColor: color, strokeOpacity: 0.5}); pl.setMap(map); rankOverlays.push(pl);
                 }
             }
 
-            let shapeTitle = isCross ? ['💎 1위 사거리', '⭐ 2위 사거리', '✅ 3위 사거리'][idx] : ['💎 1위 메인거리', '⭐ 2위 메인거리', '✅ 3위 메인거리'][idx];
+            // 동적 텍스트 생성
+            let shapeTitle = isCross ? `${rankNum}위 사거리` : `${rankNum}위 길목(거리)`;
+            let badgePrefix = rankNum === 1 ? '💎 ' : (rankNum === 2 ? '⭐ ' : '✅ ');
+            let fullTitle = badgePrefix + shapeTitle;
+
             let badgeStr = `
                 <div style="position:relative; z-index:999; text-align:center;">
                     <div style="background:${color}; color:white; padding:4px 10px; border-radius:6px; font-weight:900; font-size:12px; border:2px solid white; box-shadow:0 3px 6px rgba(0,0,0,0.3); white-space:nowrap;">
-                        ${shapeTitle}
+                        ${fullTitle}
                     </div>
                 </div>
             `;
             let badgeOverlay = new kakao.maps.CustomOverlay({ position: new kakao.maps.LatLng(spot.lat, spot.lng), content: badgeStr, xAnchor: 0.5, yAnchor: 0.5 });
             badgeOverlay.setMap(map); rankOverlays.push(badgeOverlay);
 
-            return { title: shapeTitle, type: isCross ? 'cross' : 'line' };
+            return { title: fullTitle, type: isCross ? 'cross' : 'line' };
         }
 
         async function runGridHotspotScan(targetPath) {
@@ -803,7 +830,7 @@
                 document.getElementById('comp_count').innerText = targetStats.comp + '개';
                 document.getElementById('anchor_count').innerText = targetStats.anchor + '개';
 
-                statusEl.innerText = "🌐 실제 길목/사거리 연산 및 TMAP 경로 호출 중...";
+                statusEl.innerText = "🌐 실제 사거리/길목 연산 및 펜스 컷팅 중...";
 
                 let flowPaths = [];
                 for(let g=0; g<gates.length; g++) {
@@ -939,10 +966,10 @@
                         let spot = topSpots[idx];
                         let addrName = await getAddressAsync(spot.lat, spot.lng);
                         
-                        // 💡 [V36.0] TMAP 호출로 실제 길목/사거리 형광펜 칠하기
-                        let shapeData = await drawTmapPedestrianStreet(spot, idx, map, validNodes, rawGates);
+                        // 💡 [V37.0] 스마트 컷팅 & 동적 사거리/길목 네이밍 적용 함수 호출
+                        let shapeData = await drawTmapPedestrianStreet(spot, idx, map, validNodes, rawGates, targetPath);
                         let rankTitle = shapeData.title;
-                        let expertComment = generateExpertComment(spot, shapeData.type);
+                        let expertComment = generateExpertComment(spot, shapeData.type, rankTitle);
 
                         let receiptHtml = "";
                         if(spot.sOlive > 0) receiptHtml += `<div class="flex justify-between items-center text-teal-700"><span>🌿 올리브영 인접 보너스</span><span class="font-black">+${Math.round(spot.sOlive)}점</span></div>`;
@@ -960,7 +987,7 @@
                             <div class="flex justify-between items-center border-b border-slate-100 pb-1.5 mb-1.5 mt-1">
                                 <span class="text-[14px] text-slate-800 font-extrabold">${rankTitle} <span class="text-indigo-600 text-[12px] font-black ml-1">(총 ${Math.round(spot.score)}점)</span></span>
                             </div>
-                            <div class="text-[12px] text-slate-600 mb-2 font-bold tracking-tight">📍 구간 중심: ${addrName} 주변</div>
+                            <div class="text-[12px] text-slate-600 mb-2 font-bold tracking-tight">📍 구간: ${addrName} 주변</div>
                             
                             <div class="bg-slate-50 p-2 rounded-lg text-[11px] space-y-1.5 border border-slate-100 mb-2">
                                 <p class="font-extrabold text-slate-700 mb-1 border-b border-slate-200 pb-1">📊 상세 점수 획득 영수증</p>
@@ -1023,7 +1050,7 @@
                 }
 
                 document.getElementById('rankingResultBox').classList.remove('hidden');
-                statusEl.innerText = `✅ TMAP 실보행로 연동 성공! 건물을 피해 실제 사람이 걷는 길 모양으로 도출했습니다.`;
+                statusEl.innerText = `✅ TMAP 컷팅 완료! 펜스 내 블록 형태에 맞춰 사거리/길목 이름을 자동 부여했습니다.`;
 
             } catch(e) {
                 console.error("분석 에러:", e);
