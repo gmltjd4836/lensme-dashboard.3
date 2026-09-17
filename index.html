@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>렌즈미 상권 분석 대시보드 (V41.1 동선 최우선 스캔 엔진)</title>
+    <title>렌즈미 상권 분석 대시보드 (V42.0 스마트 랭킹 & 분산 엔진)</title>
     <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
@@ -37,7 +37,7 @@
     <div class="w-full md:w-1/4 bg-white border-r border-gray-200 p-6 flex flex-col shadow-lg z-20 overflow-y-auto">
         <h1 class="text-xl font-extrabold text-slate-800 border-b-4 border-indigo-500 pb-3 mb-4 flex justify-between items-center">
             <span>🗺️ 전국 상권 관제탑</span>
-            <span class="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded-full font-bold">V41.1 🎯</span>
+            <span class="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded-full font-bold">V42.0 👑</span>
         </h1>
 
         <div class="mb-4">
@@ -87,7 +87,7 @@
                 </div>
 
                 <div id="rankingResultBox" class="mt-3 pt-3 border-t border-indigo-200 hidden">
-                    <p class="text-xs text-indigo-800 font-extrabold mb-2">💎 실제 보행로 기반 길목 평가</p>
+                    <p class="text-xs text-indigo-800 font-extrabold mb-2">💎 실제 보행로 및 시너지 랭킹</p>
                     <div id="rankingResultText" class="space-y-0 mb-3 border-b border-indigo-100 pb-2"></div>
                 </div>
             </div>
@@ -102,7 +102,7 @@
 
         <div id="tab-map" class="flex-grow w-full h-full relative">
             <div id="statusMessage" class="absolute top-4 left-1/2 transform -translate-x-1/2 z-10 bg-white/95 backdrop-blur-sm px-6 py-2 rounded-full shadow-md text-sm font-bold text-slate-700 border border-slate-200 text-center transition-all">
-                🎯 펜스를 치면 [실제 보행로]를 도출하고 그 길 위에서만 점수를 연산합니다!
+                🎯 펜스를 치면 [실제 보행로 추출 + 코너/시너지 보너스 + 블록 분산] 로직으로 평가합니다!
             </div>
 
             <div class="absolute top-16 left-4 z-10 bg-white/95 backdrop-blur-sm p-4 rounded-xl shadow-lg border border-slate-200 w-64 max-h-[80vh] overflow-y-auto hidden md:block">
@@ -209,7 +209,7 @@
             polygonOptions: { draggable: false, removable: false, editable: true, strokeColor: '#be185d', strokeWeight: 3, fillColor: '#f43f5e', fillOpacity: 0.2 }
         });
 
-        let savedPolygons = JSON.parse(localStorage.getItem('lensmePolygonsV41_1') || '[]');
+        let savedPolygons = JSON.parse(localStorage.getItem('lensmePolygonsV42_0') || '[]');
         let activePolygonPath = null; 
         let activePolygonId = null;
         let renderedPolygons = {}; 
@@ -283,7 +283,7 @@
                     }
                     let id = 'poly_' + Date.now();
                     savedPolygons.push({ id: id, name: name, path: tempDrawnPath, si: si, gu: gu, dong: dong, centerLat: centerLat, centerLng: centerLng });
-                    localStorage.setItem('lensmePolygonsV41_1', JSON.stringify(savedPolygons));
+                    localStorage.setItem('lensmePolygonsV42_0', JSON.stringify(savedPolygons));
                     
                     drawingManager.clear();
                     isDrawingMode = false;
@@ -365,7 +365,7 @@
         function deletePolygon(id) {
             if(!confirm("이 영토를 삭제하시겠습니까?")) return;
             savedPolygons = savedPolygons.filter(p => p.id !== id);
-            localStorage.setItem('lensmePolygonsV41_1', JSON.stringify(savedPolygons));
+            localStorage.setItem('lensmePolygonsV42_0', JSON.stringify(savedPolygons));
             if(activePolygonId === id) clearActivePolygon();
             renderPolygonTree();
         }
@@ -394,6 +394,7 @@
             document.getElementById('anchor_count').innerText = "-개";
             document.getElementById('rankingResultBox').classList.add('hidden');
             document.getElementById('rankingResultText').innerHTML = '';
+            document.getElementById('specialResultText').innerHTML = '';
             Object.values(renderedPolygons).forEach(p => p.setOptions({ fillColor: '#f43f5e', fillOpacity: 0.1, strokeWeight: 2 }));
             clearRankMarkers(); 
             triggerScan();
@@ -536,7 +537,9 @@
             let prefix = isCross ? `이곳은 유동인구가 교차하는 [${rankTitle}]로, ` : `이곳은 타겟이 흐르는 [${rankTitle}] 구간으로, `;
             let maxVal = Math.max(spot.sOlive, spot.sFlow, spot.sStealth, spot.sCoffee);
             
-            if (spot.sOlive > 60 && spot.sFlow > 40 && spot.sStealth > 20) {
+            if (spot.isSynergy) {
+                return prefix + "올리브영, 다이소, 경쟁 렌즈샵이 모두 모여있는 '뷰티 3대장 콤보' 특A급 생태계입니다. 막강한 집객 시너지가 폭발하는 자리입니다.";
+            } else if (spot.sOlive > 60 && spot.sFlow > 40 && spot.sStealth > 20) {
                 return prefix + "대형 앵커, 물길, 놀이 인프라 3박자가 완벽히 맞물린 A급지입니다. 기본 매출과 자연 유입을 동시에 쓸어 담을 수 있습니다.";
             } else if (maxVal === spot.sOlive && spot.sOlive > 0) {
                 return prefix + "뷰티 코어 '올리브영'의 강력한 낙수효과를 직접 흡수하는 공생 상권입니다. 목적성 고객의 동선이 자연스럽게 이어집니다.";
@@ -804,7 +807,7 @@
                 document.getElementById('comp_count').innerText = targetStats.comp + '개';
                 document.getElementById('anchor_count').innerText = targetStats.anchor + '개';
 
-                statusEl.innerText = `🌐 TMAP 실 보행로(선) 추출 및 점수 연산 중...`;
+                statusEl.innerText = `🌐 TMAP 실 보행로(선) 추출 및 스마트 랭킹 연산 중...`;
                 
                 let gridPoints = []; 
                 let flowPaths = []; 
@@ -815,7 +818,6 @@
                     }
                 }
 
-                // 1. 가장 가까운 유입구 2개, 핵심 앵커 2개 선정
                 let topGates = [...gates].sort((a,b) => getDistanceMeters(a.lat, a.lng, cLat, cLng) - getDistanceMeters(b.lat, b.lng, cLat, cLng)).slice(0, 2);
                 let topAnchors = [...validAnchors].sort((a,b) => getDistanceMeters(a.lat, a.lng, cLat, cLng) - getDistanceMeters(b.lat, b.lng, cLat, cLng)).slice(0, 2);
 
@@ -853,7 +855,7 @@
                 for(let i=0; i<gridPoints.length; i++) {
                     let pt = gridPoints[i];
                     
-                    let sOlive = 0, sLens = 0, sDaiso = 0, sStealth = 0, sFlow = 0, sCoffee = 0;
+                    let sOlive = 0, sLens = 0, sDaiso = 0, sStealth = 0, sFlow = 0, sCoffee = 0, sCorner = 0;
                     let localOliveCount = 0, localLensCount = 0, localDaisoCount = 0;
                     let closestPoiDist = 999; 
                     let isTeamKill = false; 
@@ -890,19 +892,34 @@
                         }
                     }
 
+                    // 💡 [V42.0] 교차로(Corner) 가산점 판별: 주변에 3개 이상의 개별 동선 끝점이 모여있는가?
+                    let closeFlowEnds = new Set();
                     for(let pIdx=0; pIdx<flowPaths.length; pIdx++) {
                         let f = flowPaths[pIdx];
                         let distToFlow = distToSegment(pt.lng, pt.lat, f.x1, f.y1, f.x2, f.y2);
                         if(distToFlow <= 30) {
                             sFlow += (30 - distToFlow) * 1.5;
+                            closeFlowEnds.add(`${f.x1},${f.y1}`);
+                            closeFlowEnds.add(`${f.x2},${f.y2}`);
                         }
+                    }
+                    if(closeFlowEnds.size >= 3) {
+                        sCorner = 15; // 교차로/허브 보너스
                     }
 
                     sStealth = Math.min(sStealth, 450); 
                     sCoffee = Math.min(sCoffee, 240);   
+                    
+                    // 💡 [V42.0] 3대장 콤보 폭발 점수
+                    let isSynergy = false;
+                    let synergyBonus = 0;
+                    if (localOliveCount >= 1 && localDaisoCount >= 1 && localLensCount >= 1) {
+                        isSynergy = true;
+                        synergyBonus = 30;
+                    }
 
                     let baseScore = 0.1;
-                    let totalScore = baseScore + sOlive + sLens + sDaiso + sStealth + sFlow + sCoffee;
+                    let totalScore = baseScore + sOlive + sLens + sDaiso + sStealth + sFlow + sCoffee + sCorner + synergyBonus;
                     
                     let penalty = (closestPoiDist > 15) ? 0.3 : 1.0;
                     if(isTeamKill) penalty = 0.01; 
@@ -914,6 +931,8 @@
                     pt.sStealth = sStealth * penalty;
                     pt.sCoffee = sCoffee * penalty;
                     pt.sFlow = sFlow * penalty;
+                    pt.sCorner = sCorner * penalty;
+                    pt.isSynergy = isSynergy;
                     pt.isTeamKill = isTeamKill;
                 }
 
@@ -925,7 +944,7 @@
                     let candidate = gridPoints[i];
                     if(candidate.score < 1) continue; 
 
-                    // 💡 [V41.1 필터] 지하철역 출입구(반경 25m) 마커 표출 제외 로직
+                    // 지하철역 출입구(반경 25m) 마커 표출 제외
                     let isNearSubway = false;
                     for(let g=0; g<rawGates.length; g++) {
                         if(rawGates[g].type === 'subway') {
@@ -934,11 +953,14 @@
                             }
                         }
                     }
-                    if(isNearSubway) continue; // 지하철 역사는 후보지에서 완전히 탈락
+                    if(isNearSubway) continue;
 
+                    // 💡 [V42.0] 1~3위 강제 분산 (120m 룰)
                     let tooClose = false;
                     for(let k=0; k<topSpots.length; k++) {
-                        if(getDistanceMeters(candidate.lat, candidate.lng, topSpots[k].lat, topSpots[k].lng) < 40) { tooClose = true; break; }
+                        if(getDistanceMeters(candidate.lat, candidate.lng, topSpots[k].lat, topSpots[k].lng) < 120) { 
+                            tooClose = true; break; 
+                        }
                     }
                     if(!tooClose && topSpots.length < 3) topSpots.push(candidate);
                 }
@@ -963,6 +985,9 @@
                         if(spot.sDaiso > 0) receiptHtml += `<div class="flex justify-between items-center text-rose-600"><span>🟥 다이소 인접 보너스</span><span class="font-black">+${Math.round(spot.sDaiso)}점</span></div>`;
                         if(spot.sLens > 0) receiptHtml += `<div class="flex justify-between items-center text-purple-700"><span>👁️ 경쟁 렌즈샵 밀집도</span><span class="font-black">+${Math.round(spot.sLens)}점</span></div>`;
                         if(spot.sCoffee > 0) receiptHtml += `<div class="flex justify-between items-center text-amber-700"><span>☕ 저가커피(보행로) 보너스</span><span class="font-black">+${Math.round(spot.sCoffee)}점</span></div>`;
+                        // V42 신규 보너스 표출
+                        if(spot.sCorner > 0) receiptHtml += `<div class="flex justify-between items-center text-indigo-700"><span>🔀 교차로/허브 가산점</span><span class="font-black">+${Math.round(spot.sCorner)}점</span></div>`;
+                        if(spot.isSynergy) receiptHtml += `<div class="flex justify-between items-center text-fuchsia-600"><span>💥 3대장 콤보 (올+다+렌)</span><span class="font-black">+30점</span></div>`;
                         
                         if(receiptHtml === "") receiptHtml = `<div class="text-slate-400 text-xs">단일 기준 기본 배점만 적용됨</div>`;
 
@@ -995,7 +1020,7 @@
                 }
 
                 document.getElementById('rankingResultBox').classList.remove('hidden');
-                statusEl.innerText = `✅ [V41.1] 지하철역 필터링 및 진짜 보행로 기반 채점을 완료했습니다!`;
+                statusEl.innerText = `✅ [V42.0] 교차로 보너스, 3대장 시너지, 1~3위 분산 배치(120m) 적용 완료!`;
 
             } catch(e) {
                 console.error("분석 에러:", e);
