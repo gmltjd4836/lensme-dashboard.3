@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>렌즈미 상권 분석 대시보드 (V41.0 진짜 보행로 기반 V39 엔진)</title>
+    <title>렌즈미 상권 분석 대시보드 (V41.1 동선 최우선 스캔 엔진)</title>
     <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
@@ -37,7 +37,7 @@
     <div class="w-full md:w-1/4 bg-white border-r border-gray-200 p-6 flex flex-col shadow-lg z-20 overflow-y-auto">
         <h1 class="text-xl font-extrabold text-slate-800 border-b-4 border-indigo-500 pb-3 mb-4 flex justify-between items-center">
             <span>🗺️ 전국 상권 관제탑</span>
-            <span class="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded-full font-bold">V41.0 🎯</span>
+            <span class="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded-full font-bold">V41.1 🎯</span>
         </h1>
 
         <div class="mb-4">
@@ -89,9 +89,6 @@
                 <div id="rankingResultBox" class="mt-3 pt-3 border-t border-indigo-200 hidden">
                     <p class="text-xs text-indigo-800 font-extrabold mb-2">💎 실제 보행로 기반 길목 평가</p>
                     <div id="rankingResultText" class="space-y-0 mb-3 border-b border-indigo-100 pb-2"></div>
-                    
-                    <p class="text-xs text-purple-800 font-extrabold mb-2">👑 기존 군락지 확인 (점수 무관)</p>
-                    <div id="specialResultText" class="space-y-1"></div>
                 </div>
             </div>
         </div>
@@ -105,7 +102,7 @@
 
         <div id="tab-map" class="flex-grow w-full h-full relative">
             <div id="statusMessage" class="absolute top-4 left-1/2 transform -translate-x-1/2 z-10 bg-white/95 backdrop-blur-sm px-6 py-2 rounded-full shadow-md text-sm font-bold text-slate-700 border border-slate-200 text-center transition-all">
-                🎯 펜스를 치면 [실제 보행로]를 도출하고 그 길 위에서만 V39 가중치로 점수를 연산합니다!
+                🎯 펜스를 치면 [실제 보행로]를 도출하고 그 길 위에서만 점수를 연산합니다!
             </div>
 
             <div class="absolute top-16 left-4 z-10 bg-white/95 backdrop-blur-sm p-4 rounded-xl shadow-lg border border-slate-200 w-64 max-h-[80vh] overflow-y-auto hidden md:block">
@@ -125,14 +122,6 @@
                     <label class="flex items-center space-x-2 cursor-pointer"><input type="checkbox" id="f_olive" checked onchange="triggerScan()" class="chk-green"><span class="text-[13px] font-bold text-green-600 flex-grow">🟩 일반 올리브영</span><span id="cnt_olive" class="text-[12px] font-bold text-slate-500">(-)</span></label>
                     <label class="flex items-center space-x-2 cursor-pointer"><input type="checkbox" id="f_daiso" checked onchange="triggerScan()" class="chk-red"><span class="text-[13px] font-bold text-rose-600 flex-grow">🟥 다이소</span><span id="cnt_daiso" class="text-[12px] font-bold text-slate-500">(-)</span></label>
                     <label class="flex items-center space-x-2 cursor-pointer"><input type="checkbox" id="f_davich" checked onchange="triggerScan()" class="chk-blue"><span class="text-[13px] font-bold text-blue-700 flex-grow">🟦 다비치안경</span><span id="cnt_davich" class="text-[12px] font-bold text-slate-500">(-)</span></label>
-                </div>
-                <div class="mt-3 space-y-1">
-                    <div class="bg-indigo-50 px-3 py-2 rounded text-[11px] text-indigo-700 font-bold border border-indigo-200">
-                        👑 기존 군락지 [올영+렌즈미/오렌즈]
-                    </div>
-                    <div class="bg-orange-50 px-3 py-2 rounded text-[11px] text-orange-700 font-bold border border-orange-200">
-                        🛍️ 기존 군락지 [올영+다이소]
-                    </div>
                 </div>
             </div>
 
@@ -220,7 +209,7 @@
             polygonOptions: { draggable: false, removable: false, editable: true, strokeColor: '#be185d', strokeWeight: 3, fillColor: '#f43f5e', fillOpacity: 0.2 }
         });
 
-        let savedPolygons = JSON.parse(localStorage.getItem('lensmePolygonsV41_0') || '[]');
+        let savedPolygons = JSON.parse(localStorage.getItem('lensmePolygonsV41_1') || '[]');
         let activePolygonPath = null; 
         let activePolygonId = null;
         let renderedPolygons = {}; 
@@ -294,7 +283,7 @@
                     }
                     let id = 'poly_' + Date.now();
                     savedPolygons.push({ id: id, name: name, path: tempDrawnPath, si: si, gu: gu, dong: dong, centerLat: centerLat, centerLng: centerLng });
-                    localStorage.setItem('lensmePolygonsV41_0', JSON.stringify(savedPolygons));
+                    localStorage.setItem('lensmePolygonsV41_1', JSON.stringify(savedPolygons));
                     
                     drawingManager.clear();
                     isDrawingMode = false;
@@ -376,7 +365,7 @@
         function deletePolygon(id) {
             if(!confirm("이 영토를 삭제하시겠습니까?")) return;
             savedPolygons = savedPolygons.filter(p => p.id !== id);
-            localStorage.setItem('lensmePolygonsV41_0', JSON.stringify(savedPolygons));
+            localStorage.setItem('lensmePolygonsV41_1', JSON.stringify(savedPolygons));
             if(activePolygonId === id) clearActivePolygon();
             renderPolygonTree();
         }
@@ -405,7 +394,6 @@
             document.getElementById('anchor_count').innerText = "-개";
             document.getElementById('rankingResultBox').classList.add('hidden');
             document.getElementById('rankingResultText').innerHTML = '';
-            document.getElementById('specialResultText').innerHTML = '';
             Object.values(renderedPolygons).forEach(p => p.setOptions({ fillColor: '#f43f5e', fillOpacity: 0.1, strokeWeight: 2 }));
             clearRankMarkers(); 
             triggerScan();
@@ -669,14 +657,12 @@
             return { title: fullTitle, type: isCross ? 'cross' : 'line' };
         }
 
-        // 💡💡💡 [V41.0 심장부] TMAP 실제 길(선)을 먼저 찾고, 그 위에서만 V39 가중치 평가 💡💡💡
         async function runGridHotspotScan(targetPath) {
             if(isScanningAPI) return;
             isScanningAPI = true;
             clearRankMarkers();
             document.getElementById('rankingResultBox').classList.add('hidden');
             document.getElementById('rankingResultText').innerHTML = '';
-            document.getElementById('specialResultText').innerHTML = '';
             
             let statusEl = document.getElementById('statusMessage');
             
@@ -818,13 +804,10 @@
                 document.getElementById('comp_count').innerText = targetStats.comp + '개';
                 document.getElementById('anchor_count').innerText = targetStats.anchor + '개';
 
-                // ========================================================
-                // 💡 V41 핵심 업데이트: 허공이 아닌 '실제 TMAP 경로(선)' 위에서만 평가!
-                // ========================================================
-                statusEl.innerText = `🌐 TMAP 실 보행로(선) 추출 및 V39 공식 평가 중...`;
+                statusEl.innerText = `🌐 TMAP 실 보행로(선) 추출 및 점수 연산 중...`;
                 
                 let gridPoints = []; 
-                let flowPaths = []; // 동선 보너스용
+                let flowPaths = []; 
 
                 for(let g=0; g<gates.length; g++) {
                     for(let a=0; a<validAnchors.length; a++) {
@@ -839,16 +822,13 @@
                 if (TMAP_APP_KEY && TMAP_APP_KEY !== "여기에_사장님_티맵_앱키_입력" && topGates.length > 0 && topAnchors.length > 0) {
                     for (let g of topGates) {
                         for (let a of topAnchors) {
-                            // TMAP에 유입구->앵커 실제 보행로 요청
                             let features = await fetchTmapPedestrianRoute(g.lng, g.lat, a.lng, a.lat);
                             if (features) {
                                 features.forEach(f => {
                                     if (f.geometry.type === "LineString") {
                                         f.geometry.coordinates.forEach(coord => {
                                             let pLat = coord[1]; let pLng = coord[0];
-                                            // 보행로 중 '펜스 내부' 좌표만 후보지로 채택 (공터 제외됨)
                                             if (isPointInPolygon(pLat, pLng, targetPath)) {
-                                                // 중복 방지 (15m 간격)
                                                 let tooClose = gridPoints.some(pt => getDistanceMeters(pt.lat, pt.lng, pLat, pLng) < 15);
                                                 if (!tooClose) gridPoints.push({ lat: pLat, lng: pLng, score: 0 });
                                             }
@@ -861,7 +841,6 @@
                     }
                 }
 
-                // 2. TMAP 통신 실패 또는 펜스 내 경로가 없을 경우, 기존(V39) 바둑판 점 생성으로 자동 폴백
                 if(gridPoints.length === 0) {
                     let stepLat = Math.max(latDiff / 30, 0.00002); let stepLng = Math.max(lngDiff / 30, 0.00002);
                     for(let lat = minLat; lat <= maxLat; lat += stepLat) {
@@ -871,9 +850,6 @@
                     }
                 }
 
-                // ========================================================
-                // V39.0 기존 평가 로직 100% 그대로 반영 (그리드(점) -> 보행로(선) 위 좌표들로 대상만 변경)
-                // ========================================================
                 for(let i=0; i<gridPoints.length; i++) {
                     let pt = gridPoints[i];
                     
@@ -931,9 +907,6 @@
                     let penalty = (closestPoiDist > 15) ? 0.3 : 1.0;
                     if(isTeamKill) penalty = 0.01; 
 
-                    if (localOliveCount >= 1 && localLensCount >= 1) pt.isSuperLens = true;
-                    if (localOliveCount >= 1 && localDaisoCount >= 1) pt.isSuperDaiso = true;
-
                     pt.score = totalScore * penalty; 
                     pt.sOlive = sOlive * penalty;
                     pt.sLens = sLens * penalty;
@@ -947,21 +920,21 @@
                 gridPoints.sort(function(a, b) { return b.score - a.score; });
                 
                 let topSpots = [];
-                let specialLensSpots = [];
-                let specialDaisoSpots = [];
 
                 for(let i=0; i<gridPoints.length; i++) {
                     let candidate = gridPoints[i];
                     if(candidate.score < 1) continue; 
 
-                    if (candidate.isSuperLens && specialLensSpots.length === 0 && !candidate.isTeamKill) {
-                        specialLensSpots.push(candidate); continue; 
+                    // 💡 [V41.1 필터] 지하철역 출입구(반경 25m) 마커 표출 제외 로직
+                    let isNearSubway = false;
+                    for(let g=0; g<rawGates.length; g++) {
+                        if(rawGates[g].type === 'subway') {
+                            if(getDistanceMeters(candidate.lat, candidate.lng, rawGates[g].lat, rawGates[g].lng) < 25) {
+                                isNearSubway = true; break;
+                            }
+                        }
                     }
-                    if (candidate.isSuperDaiso && specialDaisoSpots.length === 0 && !candidate.isTeamKill) {
-                        let isOverlap = false;
-                        if(specialLensSpots.length > 0 && getDistanceMeters(candidate.lat, candidate.lng, specialLensSpots[0].lat, specialLensSpots[0].lng) < 30) isOverlap = true;
-                        if(!isOverlap) { specialDaisoSpots.push(candidate); continue; }
-                    }
+                    if(isNearSubway) continue; // 지하철 역사는 후보지에서 완전히 탈락
 
                     let tooClose = false;
                     for(let k=0; k<topSpots.length; k++) {
@@ -971,8 +944,6 @@
                 }
 
                 let rBox = document.getElementById('rankingResultText');
-                let sBox = document.getElementById('specialResultText');
-                sBox.innerHTML = "";
 
                 if (topSpots.length > 0) {
                     let rankingHtml = "";
@@ -1023,48 +994,8 @@
                     rBox.innerHTML = `<div class="text-xs text-rose-600 font-bold mt-1">${failMsg}</div>`;
                 }
 
-                if (specialLensSpots.length > 0) {
-                    let spot = specialLensSpots[0];
-                    let title = "👑 올영+렌즈 군락지";
-                    let addrName = await getAddressAsync(spot.lat, spot.lng);
-                    sBox.innerHTML += `<div class="text-[12px] font-bold text-slate-700 bg-purple-50 px-2 py-1.5 rounded border border-purple-200 shadow-sm mb-1">${title} <br><span class="text-purple-700 font-medium">${addrName}</span></div>`;
-
-                    let contentStr = `
-                        <div style="position:relative; z-index:9995; bottom:20px; text-align:center; transform:translateY(-50%);">
-                            <div style="background:#7e22ce; color:white; padding:5px 12px; border-radius:8px; font-weight:900; font-size:14px; border:2px solid white; box-shadow:0 3px 10px rgba(0,0,0,0.4); white-space:nowrap;">
-                                ${title}
-                            </div>
-                            <div style="width:0; height:0; border-left:7px solid transparent; border-right:7px solid transparent; border-top:10px solid #7e22ce; margin:0 auto;"></div>
-                        </div>
-                    `;
-                    let overlay = new kakao.maps.CustomOverlay({ position: new kakao.maps.LatLng(spot.lat, spot.lng), content: contentStr, xAnchor: 0.5, yAnchor: 1 });
-                    overlay.setMap(map); rankOverlays.push(overlay);
-                }
-
-                if (specialDaisoSpots.length > 0) {
-                    let spot = specialDaisoSpots[0];
-                    let title = "🛍️ 올영+다이소 군락지";
-                    let addrName = await getAddressAsync(spot.lat, spot.lng);
-                    sBox.innerHTML += `<div class="text-[12px] font-bold text-slate-700 bg-orange-50 px-2 py-1.5 rounded border border-orange-200 shadow-sm">${title} <br><span class="text-orange-600 font-medium">${addrName}</span></div>`;
-
-                    let contentStr = `
-                        <div style="position:relative; z-index:9990; bottom:20px; text-align:center; transform:translateY(-50%);">
-                            <div style="background:#ea580c; color:white; padding:5px 12px; border-radius:8px; font-weight:900; font-size:14px; border:2px solid white; box-shadow:0 3px 10px rgba(0,0,0,0.4); white-space:nowrap;">
-                                ${title}
-                            </div>
-                            <div style="width:0; height:0; border-left:7px solid transparent; border-right:7px solid transparent; border-top:10px solid #ea580c; margin:0 auto;"></div>
-                        </div>
-                    `;
-                    let overlay = new kakao.maps.CustomOverlay({ position: new kakao.maps.LatLng(spot.lat, spot.lng), content: contentStr, xAnchor: 0.5, yAnchor: 1 });
-                    overlay.setMap(map); rankOverlays.push(overlay);
-                }
-
-                if(specialLensSpots.length === 0 && specialDaisoSpots.length === 0) {
-                    sBox.innerHTML = `<div class="text-[12px] text-slate-400 font-bold mt-1">해당 펜스 내에는 기존 군락지가 없습니다.</div>`;
-                }
-
                 document.getElementById('rankingResultBox').classList.remove('hidden');
-                statusEl.innerText = `✅ [V41.0 적용] 진짜 보행로(선)를 추출하여 V39 기준으로 채점 완료했습니다!`;
+                statusEl.innerText = `✅ [V41.1] 지하철역 필터링 및 진짜 보행로 기반 채점을 완료했습니다!`;
 
             } catch(e) {
                 console.error("분석 에러:", e);
