@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>렌즈미 상권 분석 대시보드 (V32.0 영수증 & 코멘트 엔진)</title>
+    <title>렌즈미 상권 분석 대시보드 (V33.0 정밀 타겟팅 엔진)</title>
     <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
@@ -37,7 +37,7 @@
     <div class="w-full md:w-1/4 bg-white border-r border-gray-200 p-6 flex flex-col shadow-lg z-20 overflow-y-auto">
         <h1 class="text-xl font-extrabold text-slate-800 border-b-4 border-indigo-500 pb-3 mb-4 flex justify-between items-center">
             <span>🗺️ 전국 상권 관제탑</span>
-            <span class="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded-full font-bold">V32.0 💡</span>
+            <span class="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded-full font-bold">V33.0 🎯</span>
         </h1>
         
         <div class="mb-4 bg-slate-50 p-4 rounded-xl border border-slate-200">
@@ -139,7 +139,7 @@
         </div>
     </div>
 
-    <!-- 💡 전국 팩트 수량 로드 -->
+    <!-- 전국 팩트 수량 로드 -->
     <script>
         const FALLBACK_COUNTS = {
             'lensme': 286, 'olens': 335, 'hapa': 42, 'winc': 15, 'withlens': 61, 'lensvery': 28, 'lenstown': 79,
@@ -196,10 +196,10 @@
             f_davich: { kw: '다비치안경', hex: '%231d4ed8', isOther: true }
         };
 
-        // 💡 휴대폰 대리점 삭제 완료. 타겟 인프라 압축
+        // 💡 [V33.0] 골목 스내핑 방지: 사진관 가중치 대폭 강등 (1.5), 메인상가 가챠/뽑기방 유지 (5.0)
         const STEALTH_KEYWORDS = [
-            { kw: '셀프사진관', weight: 5.0, radius: 80 }, 
-            { kw: '포토이즘', weight: 5.0, radius: 80 },
+            { kw: '셀프사진관', weight: 1.5, radius: 80 }, 
+            { kw: '포토이즘', weight: 1.5, radius: 80 },
             { kw: '가챠샵', weight: 5.0, radius: 80 },
             { kw: '뽑기방', weight: 5.0, radius: 80 }
         ];
@@ -210,7 +210,7 @@
             polygonOptions: { draggable: false, removable: false, editable: true, strokeColor: '#be185d', strokeWeight: 3, fillColor: '#f43f5e', fillOpacity: 0.2 }
         });
 
-        let savedPolygons = JSON.parse(localStorage.getItem('lensmePolygonsV32_0') || '[]');
+        let savedPolygons = JSON.parse(localStorage.getItem('lensmePolygonsV33_0') || '[]');
         let activePolygonPath = null; 
         let activePolygonId = null;
         let renderedPolygons = {}; 
@@ -284,7 +284,7 @@
                     }
                     let id = 'poly_' + Date.now();
                     savedPolygons.push({ id: id, name: name, path: tempDrawnPath, si: si, gu: gu, dong: dong, centerLat: centerLat, centerLng: centerLng });
-                    localStorage.setItem('lensmePolygonsV32_0', JSON.stringify(savedPolygons));
+                    localStorage.setItem('lensmePolygonsV33_0', JSON.stringify(savedPolygons));
                     
                     drawingManager.clear();
                     isDrawingMode = false;
@@ -366,7 +366,7 @@
         function deletePolygon(id) {
             if(!confirm("이 영토를 삭제하시겠습니까?")) return;
             savedPolygons = savedPolygons.filter(p => p.id !== id);
-            localStorage.setItem('lensmePolygonsV32_0', JSON.stringify(savedPolygons));
+            localStorage.setItem('lensmePolygonsV33_0', JSON.stringify(savedPolygons));
             if(activePolygonId === id) clearActivePolygon();
             renderPolygonTree();
         }
@@ -521,7 +521,6 @@
             return true;
         }
 
-        // 💡 주소를 비동기로 안전하게 가져오기 위한 Helper 함수
         function getAddressAsync(lat, lng) {
             return new Promise(resolve => {
                 geocoder.coord2Address(lng, lat, function(result, status) {
@@ -534,10 +533,9 @@
             });
         }
 
-        // 💡 전문가 코멘트 생성 함수
         function generateExpertComment(spot) {
             let maxVal = Math.max(spot.sOlive, spot.sFlow, spot.sStealth);
-            if (spot.sOlive > 80 && spot.sFlow > 80 && spot.sStealth > 40) {
+            if (spot.sOlive > 80 && spot.sFlow > 80 && spot.sStealth > 20) {
                 return "핵심 대형 앵커, 메인 유입 물길, 놀이/체류 인프라 3박자가 완벽히 맞물린 육각형 A급지입니다. 기본 목적성 매출과 자연 유입 매출을 동시에 쓸어 담을 수 있습니다.";
             } else if (maxVal === spot.sOlive && spot.sOlive > 0) {
                 return "1020 뷰티 코어 앵커인 '올리브영'의 강력한 낙수효과를 직접 흡수하는 기생/공생 상권입니다. 목적성 고객의 동선이 자연스럽게 이어져 안정적인 매출이 보장됩니다.";
@@ -664,7 +662,6 @@
                     await delay(100); 
                 }
 
-                // 펜스 방어 필터 적용
                 let validNodes = [];
                 let validAnchors = [];
 
@@ -738,7 +735,6 @@
                 for(let i=0; i<gridPoints.length; i++) {
                     let pt = gridPoints[i];
                     
-                    // 💡 [V32.0] 점수 영수증을 위한 세부 카테고리 분리 저장
                     let sOlive = 0, sLens = 0, sDaiso = 0, sStealth = 0, sFlow = 0;
                     let localOliveCount = 0, localLensCount = 0, localDaisoCount = 0;
                     let closestPoiDist = 999; 
@@ -818,7 +814,6 @@
                 let sBox = document.getElementById('specialResultText');
                 sBox.innerHTML = "";
 
-                // 💡 [V32.0] 순수 1~3위 영수증 & 전문가 코멘트 렌더링
                 if (topSpots.length > 0) {
                     const rankStyles = [
                         { title: '💎 1위 명당', bg: '#ef4444' }, 
@@ -862,7 +857,6 @@
                         </div>
                         `;
 
-                        // 지도 마커 꽂기
                         let zIndexVal = 9999 - idx; 
                         let contentStr = `
                             <div style="position:relative; z-index:${zIndexVal}; bottom:20px; text-align:center; transform:translateY(-50%);">
@@ -880,7 +874,6 @@
                     rBox.innerHTML = `<div class="text-xs text-rose-600 font-bold mt-1">분석 조건을 만족하는 1~3위 입지가 없습니다.</div>`;
                 }
 
-                // 군락지 (올영+렌즈) 렌더링
                 if (specialLensSpots.length > 0) {
                     let spot = specialLensSpots[0];
                     let title = "👑 올영+렌즈 군락지";
@@ -899,7 +892,6 @@
                     overlay.setMap(map); rankOverlays.push(overlay);
                 }
 
-                // 군락지 (올영+다이소) 렌더링
                 if (specialDaisoSpots.length > 0) {
                     let spot = specialDaisoSpots[0];
                     let title = "🛍️ 올영+다이소 군락지";
