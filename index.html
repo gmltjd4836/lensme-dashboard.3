@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>렌즈미 상권 분석 대시보드 V52.3 · 근거 기반 경계</title>
+<title>렌즈미 상권 분석 대시보드 V53 수동상권</title>
 <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css" rel="stylesheet">
 <script src="https://cdn.tailwindcss.com"></script>
 <style>
@@ -31,7 +31,7 @@ details[open]>summary::before{content:'📂 '}
 <div class="w-full md:w-1/4 bg-white border-r border-gray-200 p-6 flex flex-col shadow-lg z-20 overflow-y-auto">
 <h1 class="text-xl font-extrabold text-slate-800 border-b-4 border-indigo-500 pb-3 mb-4 flex justify-between items-center">
 <span>🗺️ 전국 상권 관제탑</span>
-<span class="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded-full font-bold">V52.3</span>
+<span class="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded-full font-bold">V53 MANUAL</span>
 </h1>
 
 <div class="mb-4">
@@ -65,7 +65,7 @@ details[open]>summary::before{content:'📂 '}
 </div>
 </div>
 
-<div class="mb-4 bg-cyan-50 p-4 rounded-xl border border-cyan-200 shadow-sm">
+<div class="hidden mb-4 bg-cyan-50 p-4 rounded-xl border border-cyan-200 shadow-sm" aria-hidden="true">
 <div class="flex justify-between items-center mb-2">
 <label class="block text-sm font-extrabold text-cyan-800">🗺️ 상권 전체영역 자동 탐색</label>
 <span id="autoAreaCount" class="text-[10px] bg-white border border-cyan-200 text-cyan-700 px-2 py-0.5 rounded-full font-black">0개</span>
@@ -79,23 +79,30 @@ details[open]>summary::before{content:'📂 '}
 <div class="text-[10px] leading-snug text-slate-500 mb-2">
 보행축과 연결된 주변 상가·골목·상업 블록을 함께 묶어 상권 영역을 표시합니다. 공식 경계는 원형을 보존하며, 자동 추정 경계는 현장 검토가 필요합니다.
 </div>
-<label class="flex items-center gap-2 bg-white rounded-lg px-2 py-1.5 border border-cyan-200 cursor-pointer text-[10px] font-bold text-cyan-900 mb-2">
-<input id="f_area_evidence" type="checkbox" onchange="toggleV523Evidence()" class="chk-blue">🧪 상권 경계 근거 보기
-</label>
 <p id="areaDataNotice" class="text-[10px] text-slate-500 mb-2"></p>
 <div id="autoAreaList" class="space-y-1.5 max-h-44 overflow-y-auto"></div>
 </div>
 
-<div class="mb-4 bg-rose-50 p-4 rounded-xl border border-rose-200 flex-grow flex flex-col min-h-[200px]">
-<label class="block text-sm font-extrabold text-rose-700 mb-2">💾 내 상권 보관함</label>
+<div class="mb-4 bg-rose-50 p-4 rounded-xl border border-rose-200 flex-grow flex flex-col min-h-[260px]">
+<div class="flex items-center justify-between gap-2 mb-2">
+<label class="block text-sm font-extrabold text-rose-700">✍️ 상권 직접 등록</label>
+<span class="text-[10px] font-black bg-white border border-rose-200 text-rose-600 rounded-full px-2 py-0.5">수동 경계 = 분석 기준</span>
+</div>
+<div class="rounded-lg bg-white/90 border border-rose-100 p-2.5 text-[10.5px] leading-relaxed text-slate-600 mb-3">
+<b class="text-slate-800">① 검색 이동 → ② 지도에서 경계 클릭 → ③ 마지막 점에서 더블클릭 → ④ 꼭짓점 수정 → ⑤ 저장</b><br>
+저장한 상권을 클릭하면 그 경계 안에서만 렌즈샵·앵커시설·보행 길목을 분석합니다. 자동 추정 상권은 사용하지 않습니다.
+</div>
 <div class="flex gap-2 mb-3" id="drawControls">
-<button onclick="startDrawing()" id="btnStartDraw" class="w-full bg-rose-500 hover:bg-rose-600 text-white px-3 py-2 rounded-lg text-sm font-bold transition shadow-sm">➕ 상권 영토 그리기</button>
-<button onclick="saveDrawing()" id="btnSaveDraw" class="hidden flex-1 bg-emerald-500 hover:bg-emerald-600 text-white px-3 py-2 rounded-lg text-sm font-bold transition shadow-sm">저장</button>
+<button onclick="startDrawing()" id="btnStartDraw" class="w-full bg-rose-500 hover:bg-rose-600 text-white px-3 py-2 rounded-lg text-sm font-extrabold transition shadow-sm">➕ 상권 경계 직접 그리기</button>
+<button onclick="saveDrawing()" id="btnSaveDraw" class="hidden flex-1 bg-emerald-500 hover:bg-emerald-600 text-white px-3 py-2 rounded-lg text-sm font-bold transition shadow-sm">✅ 이 경계 저장</button>
 <button onclick="cancelDrawing()" id="btnCancelDraw" class="hidden flex-1 bg-slate-500 hover:bg-slate-600 text-white px-3 py-2 rounded-lg text-sm font-bold transition shadow-sm">취소</button>
 </div>
-<div class="flex gap-2 mb-2">
-<button onclick="exportAreas()" class="text-xs underline">상권 백업</button>
-<label class="text-xs underline cursor-pointer">백업 가져오기<input type="file" accept=".json" class="hidden" onchange="importAreas(this)"></label>
+<div class="flex items-center justify-between gap-2 mb-2 px-1">
+<div class="flex gap-3">
+<button onclick="exportAreas()" class="text-xs underline font-bold text-slate-600">⬇ JSON 백업</button>
+<label class="text-xs underline cursor-pointer font-bold text-slate-600">⬆ 백업 복원<input type="file" accept=".json" class="hidden" onchange="importAreas(this)"></label>
+</div>
+<span class="text-[9px] text-slate-400">브라우저에도 자동 저장</span>
 </div>
 <div id="savedPolygonTree" class="flex-grow overflow-y-auto space-y-1 bg-white p-2 rounded border border-rose-100 shadow-inner text-sm"></div>
 </div>
@@ -584,27 +591,57 @@ for(const[e,n]of[["btnModeNew","new"],["btnModeReloc","reloc"]])
 document.getElementById(e).className="flex-1 px-3 py-1.5 rounded-md text-[13px] font-bold "+(n===t?"bg-white text-indigo-700 shadow-sm":"text-slate-500");
 document.getElementById("relocationPanel").classList.toggle("hidden","reloc"!==t),Rt(),
 document.getElementById("rankingResultBox").classList.add("hidden"),"reloc"!==t||a?w&&ce(w):loadRelocationStores().catch((()=>{}))}
+let redrawTarget=null;
+
 function startDrawing(){
 if(T)return alert("현재 분석 중입니다. 분석이 끝난 뒤 다시 눌러주세요.");
 I=!0,S=null,clearActivePolygon(!0),
 document.getElementById("btnStartDraw").classList.add("hidden"),document.getElementById("btnSaveDraw").classList.remove("hidden"),
-document.getElementById("btnCancelDraw").classList.remove("hidden"),document.getElementById("statusMessage").innerText="🖍️ 클릭하여 펜스를 치고, 완료할 때 더블클릭하세요.",
+document.getElementById("btnCancelDraw").classList.remove("hidden"),document.getElementById("statusMessage").innerText="🖍️ 상권 외곽을 순서대로 클릭하고 마지막 점에서 더블클릭하세요. 완료 후 꼭짓점을 조정할 수 있습니다.",
 vt.select(kakao.maps.drawing.OverlayType.POLYGON)}
-function cancelDrawing(){T||(I=!1,S=null,vt.clear(),Rt(),document.getElementById("btnStartDraw").classList.remove("hidden"),
-document.getElementById("btnSaveDraw").classList.add("hidden"),document.getElementById("btnCancelDraw").classList.add("hidden"),
-document.getElementById("statusMessage").innerText="지도를 자유롭게 탐색하세요.",Ft())}
-function saveDrawing(){
+function cancelDrawing(){
+if(T)return;
+I=!1,S=null,vt.clear(),Rt();
+document.getElementById("btnStartDraw").classList.remove("hidden"),
+document.getElementById("btnSaveDraw").classList.add("hidden"),document.getElementById("btnCancelDraw").classList.add("hidden");
+if(redrawTarget){
+const original=redrawTarget;redrawTarget=null;
+const restored=Lt.some(t=>t.id===original.id)?Lt:[...Lt,original];
+X(restored),Ct(),selectSavedPolygon(original.id),document.getElementById("statusMessage").innerText="경계 수정을 취소하고 기존 상권을 복원했습니다.";
+}else document.getElementById("statusMessage").innerText="지도를 자유롭게 탐색하세요.",Ft()
+}
+async function saveDrawing(){
 if(T)return alert("분석이 끝난 뒤 저장해주세요.");
 const t=vt.getData()[kakao.maps.drawing.OverlayType.POLYGON]||[];
 if(!t.length)return alert("먼저 경계를 그려주세요.");
 S=t.at(-1).points.map((t=>({lat:t.y,lng:t.x})));const e=H(S);
 if(!j(e))return alert("유효한 경계를 그려주세요.");
 if(window.turf?.kinks&&turf.kinks(e).features.length)return alert("경계선이 서로 교차합니다. 수정 후 저장해주세요.");
-const n=prompt("상권 이름을 입력하세요:","새 상권");if(!n?.trim())return;
-const a=K(e),o="poly_"+Date.now(),r={id:o,name:n.trim(),path:S,geometry:e.geometry,si:"직접 등록",gu:"전체",dong:"거리 상권",centerLat:a.lat,centerLng:a.lng,
-reviewStatus:"사용자 작성",savedAt:(new Date).toISOString()};
-X([...Lt,r])&&(vt.clear(),I=!1,S=null,document.getElementById("btnStartDraw").classList.remove("hidden"),
-document.getElementById("btnSaveDraw").classList.add("hidden"),document.getElementById("btnCancelDraw").classList.add("hidden"),Ct(),selectSavedPolygon(o))}
+const old=redrawTarget,defaultName=old?.name||"새 상권",n=prompt("상권 이름을 입력하세요:",defaultName);if(!n?.trim())return;
+const a=K(e),region=await dt(a.lng,a.lat),o=old?.id||("poly_"+Date.now()),r={...(old||{}),id:o,name:n.trim(),path:S,geometry:e.geometry,
+si:region.si||old?.si||"직접 등록",gu:region.gu||old?.gu||"전체",dong:region.dong||old?.dong||"거리 상권",centerLat:a.lat,centerLng:a.lng,
+reviewStatus:"사용자 직접 작성",savedAt:(new Date).toISOString()};
+const next=old?[...Lt.filter(t=>t.id!==old.id),r]:[...Lt,r];
+X(next)&&(redrawTarget=null,vt.clear(),I=!1,S=null,document.getElementById("btnStartDraw").classList.remove("hidden"),
+document.getElementById("btnSaveDraw").classList.add("hidden"),document.getElementById("btnCancelDraw").classList.add("hidden"),Ct(),selectSavedPolygon(o),
+document.getElementById("statusMessage").innerText=`✅ ${n.trim()} 경계를 저장했습니다. 이 상권 안에서 분석합니다.`)
+}
+
+function renamePolygon(id){
+if(T)return alert("분석 종료 후 이름을 변경해주세요.");
+const area=Lt.find(t=>t.id===id);if(!area)return;
+const name=prompt("상권 이름 변경:",area.name);if(!name?.trim()||name.trim()===area.name)return;
+const next=Lt.map(t=>t.id===id?{...t,name:name.trim()}:t);
+X(next)&&(Ct(),b===id&&(document.getElementById("targetLocationInput").innerText=name.trim()))
+}
+function redrawPolygon(id){
+if(T)return alert("분석 종료 후 경계를 수정해주세요.");
+const area=Lt.find(t=>t.id===id);if(!area)return;
+if(!confirm(`\"${area.name}\" 경계를 다시 그릴까요?\n취소하면 기존 경계가 복원됩니다.`))return;
+redrawTarget=JSON.parse(JSON.stringify(area));
+X(Lt.filter(t=>t.id!==id)),Ct(),clearActivePolygon(!0),startDrawing(),
+document.getElementById("statusMessage").innerText=`✏️ ${area.name}: 새 경계를 그린 뒤 꼭짓점을 조정하고 저장하세요.`
+}
 
 function Ct(){
 let t=document.getElementById("savedPolygonTree");
@@ -622,7 +659,7 @@ s.innerHTML=`<summary>${V(a)} <span class="text-rose-500 text-xs">(${o.length})<
 let i=s.querySelector(".tree-indent");
 o.forEach((t=>{
 let e=document.createElement("div");e.className="flex justify-between items-center py-1 border-b border-gray-100 last:border-0",
-e.innerHTML=`<span class="font-bold text-rose-600 cursor-pointer hover:underline flex-grow" onclick="selectSavedPolygon('${t.id}')">📍 ${V(t.name)}</span><div class="flex gap-1 ml-2"><button onclick="deletePolygon('${t.id}')" class="text-[10px] bg-slate-200 px-1.5 py-0.5 rounded text-slate-600 hover:bg-slate-300">삭제</button></div>`,
+e.innerHTML=`<span class="font-bold text-rose-600 cursor-pointer hover:underline flex-grow" onclick="selectSavedPolygon('${t.id}')">📍 ${V(t.name)}</span><div class="flex gap-1 ml-2"><button onclick="renamePolygon('${t.id}')" class="text-[10px] bg-indigo-50 border border-indigo-100 px-1.5 py-0.5 rounded text-indigo-600 hover:bg-indigo-100">이름</button><button onclick="redrawPolygon('${t.id}')" class="text-[10px] bg-amber-50 border border-amber-100 px-1.5 py-0.5 rounded text-amber-700 hover:bg-amber-100">경계수정</button><button onclick="deletePolygon('${t.id}')" class="text-[10px] bg-slate-200 px-1.5 py-0.5 rounded text-slate-600 hover:bg-slate-300">삭제</button></div>`,
 i.appendChild(e);
 let n=W(t.geometry||t.path,{strokeWeight:2,strokeColor:"#be185d",strokeOpacity:.8,fillOpacity:.1,fillColor:"#f43f5e"},(()=>selectSavedPolygon(t.id)));
 !1!==document.getElementById("f_area_user")?.checked&&n.setMap(f),k[t.id]=n;
@@ -631,7 +668,7 @@ o=new kakao.maps.CustomOverlay({position:new kakao.maps.LatLng(t.centerLat,t.cen
 !1!==document.getElementById("f_area_user")?.checked&&o.setMap(f),x[t.id]=o})),r.appendChild(s)}
 o.appendChild(a)}t.appendChild(a)}}
 
-function deletePolygon(t){if(confirm("이 영토를 삭제하시겠습니까?"))return T?alert("분석 종료 후 삭제해주세요."):void(X(Lt.filter((e=>e.id!==t)))&&(b===t&&clearActivePolygon(),Ct()))}
+function deletePolygon(t){if(confirm("이 상권 경계를 삭제하시겠습니까?"))return T?alert("분석 종료 후 삭제해주세요."):void(X(Lt.filter((e=>e.id!==t)))&&(b===t&&clearActivePolygon(),Ct()))}
 function selectSavedPolygon(t){
 if(T)return alert("현재 분석이 진행 중입니다. 분석이 끝난 뒤 다시 눌러주세요.");
 let n=Lt.find((e=>e.id===t));if(!n)return;
@@ -1044,853 +1081,9 @@ S=n.points.map((t=>({lat:t.y,lng:t.x}))),
 document.getElementById("btnStartDraw").classList.add("hidden"),
 document.getElementById("btnSaveDraw").classList.remove("hidden"),
 document.getElementById("btnCancelDraw").classList.remove("hidden"),
-document.getElementById("statusMessage").textContent="경계 꼭짓점을 수정한 뒤 저장하세요. 저장한 경계로 분석합니다."}));
+document.getElementById("statusMessage").textContent="✏️ 꼭짓점을 드래그해 실제 상권 경계에 맞춘 뒤 ‘이 경계 저장’을 누르세요."}));
 
 kakao.maps.event.addListener(f,"idle",(async function(){I||w||T||await Ht()}));
-/* =========================
-   V52 BUPYEONG SKELETON TEST
-   - 부평문화의거리 / 부평테마의거리 검증 전용
-   - TMAP 실제 보행경로에서 Skeleton 생성
-   - 주변 POI를 Skeleton에 배타적으로 귀속
-   - Skeleton 기준 Voronoi로 중첩 영역 분할
-   ========================= */
-const V52_CFG={
-  seedRadius:420,
-  poiSearchRadius:1050,
-  maxRoutesPerSeed:16,
-  routeDelay:95,
-  skeletonPoiRadius:55,
-  skeletonConnectMeters:8,
-  skeletonMaxFromSeed:420,
-  poiAssignMax:82,
-  poiMaxFromSeed:320,
-  baseCorridorBuffer:34,
-  poiBuffer:18,
-  connectorBuffer:11,
-  finalClipRadius:420,
-  minAreaM2:3500
-};
-
-async function v52AddressPoint(address){
-  return new Promise(resolve=>{
-    let done=false;
-    const finish=v=>{if(!done){done=true;resolve(v)}};
-    const tm=setTimeout(()=>finish(null),5000);
-    try{
-      p.addressSearch(address,(data,status)=>{
-        clearTimeout(tm);
-        if(status===kakao.maps.services.Status.OK&&data?.length){
-          finish({lat:+data[0].y,lng:+data[0].x});
-        }else finish(null);
-      });
-    }catch(_){clearTimeout(tm);finish(null)}
-  });
-}
-
-async function v52KeywordPoint(name,center){
-  const rows=await Z(name,{location:center,radius:3000,sort:kakao.maps.services.SortBy.DISTANCE},2);
-  if(!rows?.length)return null;
-  return {lat:+rows[0].y,lng:+rows[0].x};
-}
-
-async function v52ResolveBupyeongSeeds(){
-  const center=f.getCenter();
-  const defs=[
-    {id:'v52_culture',name:'부평문화의거리',address:'인천광역시 부평구 부평문화로80번길 6-7',color:'#2563eb',source:'부평구청 공식 거리명'},
-    {id:'v52_theme',name:'부평테마의거리',address:'인천광역시 부평구 경원대로1403번길 33',color:'#ea580c',source:'부평구청 공식 거리명'}
-  ];
-  const out=[];
-  for(const d of defs){
-    let pt=await v52AddressPoint(d.address);
-    if(!pt)pt=await v52KeywordPoint(d.name,center);
-    if(pt)out.push({...d,...pt,official:true});
-  }
-  return out;
-}
-
-function v52PoiWeight(poi){
-  const s=`${poi.name||''} ${poi.category||''}`;
-  if(/올리브영|화장품|패션|의류|렌즈|안경|사진|미용/.test(s))return 1.55;
-  if(/백화점|쇼핑|영화|오락|노래|주점/.test(s))return 1.35;
-  if(/카페|음식|편의점/.test(s))return .85;
-  return .65;
-}
-
-function v52ClusterPois(points,eps=65,minPts=3){
-  const unvisited=new Set(points.map((_,i)=>i)),groups=[];
-  while(unvisited.size){
-    const first=unvisited.values().next().value;unvisited.delete(first);
-    const q=[first],idxs=[first];
-    while(q.length){
-      const i=q.shift(),a=points[i];
-      for(const j of [...unvisited]){
-        const b=points[j];
-        if(Pt(a.lat,a.lng,b.lat,b.lng)<=eps){unvisited.delete(j);q.push(j);idxs.push(j)}
-      }
-    }
-    if(idxs.length>=minPts){
-      const arr=idxs.map(i=>points[i]);
-      const sw=arr.reduce((s,p)=>s+v52PoiWeight(p),0)||1;
-      groups.push({
-        points:arr,
-        lat:arr.reduce((s,p)=>s+p.lat*v52PoiWeight(p),0)/sw,
-        lng:arr.reduce((s,p)=>s+p.lng*v52PoiWeight(p),0)/sw,
-        score:sw,
-        count:arr.length
-      });
-    }
-  }
-  return groups.sort((a,b)=>b.score-a.score);
-}
-
-async function v52CollectGates(center){
-  const stationRows=await tt('SW8',{location:center,radius:1500,sort:kakao.maps.services.SortBy.DISTANCE},2);
-  const exits=await qt(et(stationRows));
-  const bus=await Z('버스정류장',{location:center,radius:1400,sort:kakao.maps.services.SortBy.DISTANCE},2);
-  const parking=await Z('공영주차장',{location:center,radius:1200,sort:kakao.maps.services.SortBy.DISTANCE},1);
-  let gates=[
-    ...exits,
-    ...bus.slice(0,18).map(x=>({lat:+x.y,lng:+x.x,type:'bus',name:x.place_name})),
-    ...parking.slice(0,5).map(x=>({lat:+x.y,lng:+x.x,type:'parking',name:x.place_name}))
-  ];
-  return Vt(gates,12);
-}
-
-function v52PickGatesForSeed(gates,seed){
-  const priority={subway_exit:5,subway:4,bus:2,parking:1};
-  return [...gates]
-    .filter(g=>Pt(g.lat,g.lng,seed.lat,seed.lng)<=1500)
-    .sort((a,b)=>(priority[b.type]||0)-(priority[a.type]||0)||Pt(a.lat,a.lng,seed.lat,seed.lng)-Pt(b.lat,b.lng,seed.lat,seed.lng))
-    .slice(0,6);
-}
-
-function v52PickTargetsForSeed(seed,pois){
-  const near=pois.filter(p=>Pt(p.lat,p.lng,seed.lat,seed.lng)<=V52_CFG.seedRadius);
-  const clusters=v52ClusterPois(near,62,3).slice(0,4).map((c,i)=>({lat:c.lat,lng:c.lng,name:`${seed.name} 상업밀집 ${i+1}`,kind:'mall',cluster:c}));
-  const top=[...near]
-    .map(p=>({...p,_w:v52PoiWeight(p)}))
-    .sort((a,b)=>b._w-a._w||Pt(a.lat,a.lng,seed.lat,seed.lng)-Pt(b.lat,b.lng,seed.lat,seed.lng));
-  const selected=[];
-  for(const p of top){
-    if(selected.some(q=>Pt(p.lat,p.lng,q.lat,q.lng)<45))continue;
-    selected.push({lat:p.lat,lng:p.lng,name:p.name,kind:'mall'});
-    if(selected.length>=4)break;
-  }
-  return [{lat:seed.lat,lng:seed.lng,name:seed.name,kind:'seed'},...clusters,...selected].slice(0,8);
-}
-
-async function v52RoutesForSeed(seed,gates,pois,statusEl,token){
-  const gs=v52PickGatesForSeed(gates,seed),targets=v52PickTargetsForSeed(seed,pois),pairs=[];
-  for(const g0 of gs)pairs.push({gate:g0,dest:targets[0],weight:Yt(g0.type)*1.5});
-  for(const d0 of targets.slice(1,4))for(const g0 of gs.slice(0,3))pairs.push({gate:g0,dest:d0,weight:Yt(g0.type)*1.15});
-  for(const d0 of targets.slice(1,5))pairs.push({gate:{lat:seed.lat,lng:seed.lng,type:'seed',name:seed.name},dest:d0,weight:1});
-  const unique=[],seen=new Set;
-  for(const p0 of pairs){
-    const k0=`${p0.gate.name}|${p0.dest.name}`;
-    if(seen.has(k0)||Pt(p0.gate.lat,p0.gate.lng,p0.dest.lat,p0.dest.lng)<35)continue;
-    seen.add(k0);unique.push(p0);
-    if(unique.length>=V52_CFG.maxRoutesPerSeed)break;
-  }
-  const routes=[];
-  let seq=1;
-  for(let i0=0;i0<unique.length;i0++){
-    U(token);
-    const pair=unique[i0];
-    statusEl.textContent=`🚶 ${seed.name} 실제 보행경로 수집 중... (${i0+1}/${unique.length})`;
-    const coords=Xt(await Wt(pair.gate.lng,pair.gate.lat,pair.dest.lng,pair.dest.lat));
-    if(coords.length>=2)routes.push({id:`${seed.id}_R${seq++}`,gate:pair.gate,dest:pair.dest,coords,samples:Gt(coords,9),weight:pair.weight,name:`${pair.gate.name} → ${pair.dest.name}`});
-    await z(V52_CFG.routeDelay);
-  }
-  return routes;
-}
-
-function v52LocalPoiCount(mid,pois,r=55){
-  let count=0,weighted=0;
-  for(const p0 of pois){
-    const d0=Pt(mid.lat,mid.lng,p0.lat,p0.lng);
-    if(d0<=r){count++;weighted+=v52PoiWeight(p0)*Math.max(.25,1-d0/r)}
-  }
-  return {count,weighted};
-}
-
-function v52BuildSkeleton(seed,routes,pois){
-  if(!routes.length)return[];
-  const clip=F(turf.buffer(turf.point([seed.lng,seed.lat]),V52_CFG.skeletonMaxFromSeed/1000,{units:'kilometers',steps:32}));
-  let segs=ee(te(routes,clip));
-  for(const s0 of segs){
-    const pc=v52LocalPoiCount(s0.mid,pois,V52_CFG.skeletonPoiRadius);
-    s0.poiLocal=pc.count;s0.poiWeight=pc.weight;s0.routeCount=s0.routeMap.size;
-    s0.skelScore=1.35*Math.min(4,s0.routeCount)+.8*Math.min(4,s0.poiWeight);
-  }
-  let active=segs.filter(s0=>s0.routeCount>=2||(s0.routeCount>=1&&s0.poiWeight>=1.1));
-  if(active.length<8)active=segs.filter(s0=>s0.routeCount>=1&&s0.poiWeight>=.55);
-  if(active.length<4)active=[...segs].sort((a,b)=>b.skelScore-a.skelScore).slice(0,Math.min(18,segs.length));
-  // 연결 그래프
-  active.forEach(s0=>s0._nb=[]);
-  for(let i0=0;i0<active.length;i0++)for(let j0=i0+1;j0<active.length;j0++){
-    const a0=active[i0],b0=active[j0];
-    if(ht(a0,b0)<=V52_CFG.skeletonConnectMeters){a0._nb.push(j0);b0._nb.push(i0)}
-  }
-  const seen=new Set,components=[];
-  for(let i0=0;i0<active.length;i0++){
-    if(seen.has(i0))continue;
-    const q=[i0],comp=[];seen.add(i0);
-    while(q.length){const k0=q.shift();comp.push(active[k0]);for(const nx of active[k0]._nb)if(!seen.has(nx)){seen.add(nx);q.push(nx)}}
-    components.push(comp);
-  }
-  components.sort((a,b)=>{
-    const sa=a.reduce((s,x)=>s+x.skelScore,0)-.008*Math.min(...a.map(x=>Pt(x.mid.lat,x.mid.lng,seed.lat,seed.lng)));
-    const sb=b.reduce((s,x)=>s+x.skelScore,0)-.008*Math.min(...b.map(x=>Pt(x.mid.lat,x.mid.lng,seed.lat,seed.lng)));
-    return sb-sa;
-  });
-  return components[0]||[];
-}
-
-function v52DistToSkeleton(p0,skeleton){
-  let best=Infinity,bestSeg=null;
-  for(const s0 of skeleton){
-    const d0=Et(s0,p0);
-    if(d0<best){best=d0;bestSeg=s0}
-  }
-  return {distance:best,segment:bestSeg};
-}
-
-function v52AssignPois(seeds,pois){
-  const groups=Object.fromEntries(seeds.map(s=>[s.id,[]]));
-  for(const p0 of pois){
-    let best=null;
-    for(const s0 of seeds){
-      if(!s0.skeleton?.length)continue;
-      const ds=v52DistToSkeleton(p0,s0.skeleton);
-      const seedDist=Pt(p0.lat,p0.lng,s0.lat,s0.lng);
-      if(ds.distance>V52_CFG.poiAssignMax||seedDist>V52_CFG.poiMaxFromSeed)continue;
-      const strength=ds.segment?Math.min(4,ds.segment.routeCount||1):1;
-      const cost=ds.distance+.11*Math.min(seedDist,260)-4.5*strength;
-      if(!best||cost<best.cost)best={seed:s0,cost,skelDist:ds.distance,segment:ds.segment};
-    }
-    if(best)groups[best.seed.id].push({...p0,skelDist:best.skelDist});
-  }
-  return groups;
-}
-
-function v52UnionFeatures(features){
-  const good=features.filter(Boolean);
-  if(!good.length)return null;
-  let cur=good[0];
-  for(let i0=1;i0<good.length;i0++){
-    try{cur=turf.union(turf.featureCollection([cur,good[i0]]))||cur}catch(_){ }
-  }
-  return cur;
-}
-
-function v52SkeletonFeature(skeleton){
-  const lines=skeleton.map(s0=>[[s0.a.lng,s0.a.lat],[s0.b.lng,s0.b.lat]]);
-  return lines.length?turf.multiLineString(lines):null;
-}
-
-function v52CandidateArea(seed,assigned){
-  const sk=v52SkeletonFeature(seed.skeleton);
-  if(!sk)return null;
-  const pieces=[turf.buffer(sk,V52_CFG.baseCorridorBuffer/1000,{units:'kilometers',steps:8})];
-  for(const p0 of assigned){
-    const r0=V52_CFG.poiBuffer*(p0.skelDist<35?1.1:.9);
-    pieces.push(turf.buffer(turf.point([p0.lng,p0.lat]),r0/1000,{units:'kilometers',steps:6}));
-    const near=v52DistToSkeleton(p0,seed.skeleton).segment;
-    if(near&&p0.skelDist>24){
-      const conn=turf.lineString([[p0.lng,p0.lat],[near.mid.lng,near.mid.lat]]);
-      pieces.push(turf.buffer(conn,V52_CFG.connectorBuffer/1000,{units:'kilometers',steps:6}));
-    }
-  }
-  let area=v52UnionFeatures(pieces);
-  if(!area)return null;
-  try{
-    const clip=turf.buffer(turf.point([seed.lng,seed.lat]),V52_CFG.finalClipRadius/1000,{units:'kilometers',steps:48});
-    area=turf.intersect(turf.featureCollection([area,clip]))||area;
-  }catch(_){ }
-  try{area=turf.simplify(area,{tolerance:0.000025,highQuality:true})}catch(_){ }
-  return area;
-}
-
-function v52TerritoryMasks(seeds,candidates){
-  try{
-    const pts=[];
-    for(const s0 of seeds){
-      const sk=s0.skeleton||[];
-      for(let i0=0;i0<sk.length;i0+=2){
-        const m0=sk[i0].mid;pts.push(turf.point([m0.lng,m0.lat],{seedId:s0.id}))
-      }
-      pts.push(turf.point([s0.lng,s0.lat],{seedId:s0.id}));
-    }
-    if(pts.length<4)return null;
-    const all=candidates.filter(Boolean);
-    let bb=turf.bbox(v52UnionFeatures(all));
-    const pad=.004;bb=[bb[0]-pad,bb[1]-pad,bb[2]+pad,bb[3]+pad];
-    const vor=turf.voronoi(turf.featureCollection(pts),{bbox:bb});
-    if(!vor?.features?.length)return null;
-    const by=Object.fromEntries(seeds.map(s=>[s.id,[]]));
-    for(const cell of vor.features){
-      if(!cell)continue;
-      let sid=cell.properties?.seedId;
-      if(!sid){
-        const c0=turf.centroid(cell).geometry.coordinates;
-        let best=null;
-        for(const p0 of pts){
-          const d0=turf.distance(turf.point(c0),p0,{units:'kilometers'});
-          if(!best||d0<best.d){best={d:d0,id:p0.properties.seedId}}
-        }
-        sid=best?.id;
-      }
-      if(sid&&by[sid])by[sid].push(cell);
-    }
-    const masks={};
-    for(const s0 of seeds)masks[s0.id]=v52UnionFeatures(by[s0.id]);
-    return masks;
-  }catch(err){console.warn('V52 territory mask failed',err);return null}
-}
-
-function v52FinalizeAreas(seeds,assigned){
-  const candidates=seeds.map(s=>v52CandidateArea(s,assigned[s.id]||[]));
-  const masks=v52TerritoryMasks(seeds,candidates);
-  const areas=[];
-  seeds.forEach((s0,idx)=>{
-    let geom=candidates[idx];
-    if(!geom)return;
-    if(masks?.[s0.id])try{geom=turf.intersect(turf.featureCollection([geom,masks[s0.id]]))||geom}catch(_){ }
-    if(!geom)return;
-    const areaM2=Math.round(turf.area(geom));
-    if(areaM2<V52_CFG.minAreaM2)return;
-    const ctr=K(geom),routeIds=new Set;
-    (s0.skeleton||[]).forEach(seg=>seg.routeMap?.forEach((_,rid)=>routeIds.add(rid)));
-    areas.push({
-      id:`v52_${s0.id}`,
-      name:s0.name,
-      type:'network_official_named',
-      source:`${s0.source} + TMAP 실제 보행 Skeleton + 주변 상업시설`,
-      centerLat:ctr.lat,centerLng:ctr.lng,
-      path:F(geom),geometry:geom.geometry,
-      segments:[],
-      skeletonSegments:s0.skeleton,
-      commercialPois:assigned[s0.id]||[],
-      poiCount:(assigned[s0.id]||[]).length,
-      networkLength:Math.round((s0.skeleton||[]).reduce((sum,x)=>sum+Pt(x.a.lat,x.a.lng,x.b.lat,x.b.lng),0)),
-      routeCount:routeIds.size,
-      confidence:Math.min(.95,.58+.025*Math.min(routeIds.size,8)+.008*Math.min((assigned[s0.id]||[]).length,20)),
-      color:s0.color,
-      areaM2,
-      exclusive:true
-    });
-  });
-  return areas;
-}
-
-async function v52DiscoverTradeAreas(){
-  if(T)return alert('현재 다른 분석이 진행 중입니다. 잠시 후 다시 눌러주세요.');
-  $(!0);const token=++O;r=new AbortController;w=null;b=null;R=null;
-  document.getElementById('targetLocationInput').textContent='V52.1 부평 상권 형태 정제 중';
-  document.getElementById('rankingResultBox').classList.add('hidden');
-  const btn=document.getElementById('btnDiscoverAreas'),status=document.getElementById('statusMessage');
-  if(btn){btn.disabled=true;btn.textContent='부평 보행기준 상권 계산 중...'}
-  Rt();It();
-  try{
-    status.textContent='📍 1/6 부평문화의거리·부평테마의거리 기준점 확인 중...';
-    const seeds=await v52ResolveBupyeongSeeds();U(token);
-    if(seeds.length<2)throw new Error('부평문화의거리/테마의거리 기준점을 모두 찾지 못했습니다.');
-    // 검증본은 부평역 일대로 자동 이동
-    const bounds=new kakao.maps.LatLngBounds();seeds.forEach(s=>bounds.extend(new kakao.maps.LatLng(s.lat,s.lng)));f.setBounds(bounds,80,80,80,80);
-    const ctr=new kakao.maps.LatLng((seeds[0].lat+seeds[1].lat)/2,(seeds[0].lng+seeds[1].lng)/2);
-    status.textContent='🏬 2/6 주변 상업시설과 보행 유입구 수집 중...';
-    const [pois,gates]=await Promise.all([ut(ctr.getLat(),ctr.getLng(),V52_CFG.poiSearchRadius,2),v52CollectGates(ctr)]);U(token);
-    if(pois.length<10)throw new Error(`상업시설 검색 결과가 너무 적습니다. 확보 POI ${pois.length}개`);
-    status.textContent='🚶 3/6 상권별 TMAP 실제 보행경로 생성 중...';
-    for(const s0 of seeds){
-      s0.routes=await v52RoutesForSeed(s0,gates,pois,status,token);U(token);
-      const localPois=pois.filter(p0=>Pt(p0.lat,p0.lng,s0.lat,s0.lng)<=V52_CFG.seedRadius);
-      s0.skeleton=v52BuildSkeleton(s0,s0.routes,localPois);
-    }
-    const bad=seeds.filter(s=>s.skeleton.length<4);
-    if(bad.length)throw new Error(`${bad.map(s=>s.name).join(', ')}의 실제 보행 기준선을 충분히 만들지 못했습니다.`);
-    status.textContent='🧭 4/6 주변 상가를 가장 가까운 보행 Skeleton에 배정 중...';
-    const assigned=v52AssignPois(seeds,pois);U(token);
-    status.textContent='🗺️ 5/6 Skeleton 주변 상업영역을 상권 전체면으로 확장 중...';
-    v=v52FinalizeAreas(seeds,assigned);U(token);
-    if(v.length<2)throw new Error(`최종 상권 면 생성이 부족합니다. 생성 ${v.length}개`);
-    status.textContent='✂️ 6/6 두 상권의 중첩 영역을 Skeleton 거리 기준으로 분리 중...';
-    St();
-    document.getElementById('areaDataNotice').textContent=`V52.1 부평 검증 · Skeleton 정제 + 상업밀도 적응형 폭 · 상업 POI ${pois.length}개 · 문화 ${assigned.v52_culture?.length||0}개 / 테마 ${assigned.v52_theme?.length||0}개 귀속`;
-    status.textContent='✅ V52.1 상권 형태 정제 완료 · 상권 면을 클릭하면 내부 길목 분석을 시작합니다.';
-  }catch(err){
-    console.error('V52.1 상권 생성 실패',err);v=[];St();
-    status.textContent='⚠️ V52.1 상권 생성 실패: '+(err?.message||String(err));
-  }finally{
-    if(btn){btn.disabled=false;btn.textContent='부평역 V52.1 상권 전체영역 찾기'}
-    $(!1);c=null;
-  }
-}
-
-
-/* =========================
-   V52.1 SHAPE REFINEMENT
-   - 가느다란 꼬리/약한 말단 Skeleton 제거
-   - 상업시설 밀도에 따라 상권 폭 자동 조절
-   - 좁은 목 제거 + 작은 홈 메우기 + 메인 상권 덩어리 유지
-   - Skeleton은 내부 계산용, 화면에는 최종 면만 표시
-   ========================= */
-Object.assign(V52_CFG,{
-  refinedSeedRadius:350,
-  refinedSkeletonMax:315,
-  refinedKeepNearSeed:105,
-  refinedWeakTailStart:135,
-  refinedConnectMeters:9,
-  refinedMinSkeletonSegments:5,
-  adaptiveBaseWidth:24,
-  adaptiveMaxWidth:58,
-  adaptivePoiDepth:78,
-  adaptivePoiBuffer:15,
-  adaptiveClipRadius:350,
-  openingMeters:9,
-  closingMeters:7,
-  minMainComponentM2:1800,
-  minSecondaryRatio:.32
-});
-
-function v521SegSupport(seg){
-  return 1.25*Math.min(4,seg.routeCount||0)+.85*Math.min(4,seg.poiWeight||0);
-}
-
-function v521SkeletonComponents(segs){
-  if(!segs.length)return[];
-  segs.forEach(s=>s.__v521nb=[]);
-  for(let i=0;i<segs.length;i++)for(let j=i+1;j<segs.length;j++){
-    if(ht(segs[i],segs[j])<=V52_CFG.refinedConnectMeters){
-      segs[i].__v521nb.push(j);segs[j].__v521nb.push(i);
-    }
-  }
-  const seen=new Set,comps=[];
-  for(let i=0;i<segs.length;i++){
-    if(seen.has(i))continue;
-    const q=[i],c=[];seen.add(i);
-    while(q.length){
-      const k=q.shift();c.push(segs[k]);
-      for(const nx of segs[k].__v521nb)if(!seen.has(nx)){seen.add(nx);q.push(nx)}
-    }
-    comps.push(c);
-  }
-  return comps;
-}
-
-function v521PruneSkeleton(seed,skeleton){
-  if(!skeleton?.length)return[];
-  let pool=skeleton.filter(seg=>{
-    const d=Pt(seg.mid.lat,seg.mid.lng,seed.lat,seed.lng),support=v521SegSupport(seg);
-    if(d<=V52_CFG.refinedKeepNearSeed)return true;
-    if(d>V52_CFG.refinedSkeletonMax)return false;
-    if((seg.routeCount||0)>=3)return true;
-    if((seg.routeCount||0)>=2&&(seg.poiWeight||0)>=.45)return true;
-    if((seg.poiWeight||0)>=1.45&&support>=2.1)return true;
-    return false;
-  });
-  if(pool.length<V52_CFG.refinedMinSkeletonSegments){
-    pool=[...skeleton]
-      .filter(seg=>Pt(seg.mid.lat,seg.mid.lng,seed.lat,seed.lng)<=V52_CFG.refinedSkeletonMax)
-      .sort((a,b)=>(v521SegSupport(b)-.004*Pt(b.mid.lat,b.mid.lng,seed.lat,seed.lng))-(v521SegSupport(a)-.004*Pt(a.mid.lat,a.mid.lng,seed.lat,seed.lng)))
-      .slice(0,Math.min(22,skeleton.length));
-  }
-  let comps=v521SkeletonComponents(pool);
-  if(!comps.length)return pool;
-  comps.sort((a,b)=>{
-    const score=c=>c.reduce((sum,s)=>sum+v521SegSupport(s),0)-.01*Math.min(...c.map(s=>Pt(s.mid.lat,s.mid.lng,seed.lat,seed.lng)));
-    return score(b)-score(a);
-  });
-  let main=comps[0];
-  // 약한 말단 가지 반복 제거: 중심에서 멀고 route/POI 지지가 낮은 degree-1 세그먼트
-  for(let pass=0;pass<4;pass++){
-    const idx=new Map(main.map((s,i)=>[s,i]));
-    const deg=main.map(()=>0);
-    for(let i=0;i<main.length;i++)for(let j=i+1;j<main.length;j++)if(ht(main[i],main[j])<=V52_CFG.refinedConnectMeters){deg[i]++;deg[j]++}
-    const drop=new Set;
-    main.forEach((seg,i)=>{
-      const d=Pt(seg.mid.lat,seg.mid.lng,seed.lat,seed.lng);
-      const weak=(seg.routeCount||0)<=1&&(seg.poiWeight||0)<1.05;
-      const medium=(seg.routeCount||0)<=2&&(seg.poiWeight||0)<.45;
-      if(deg[i]<=1&&d>V52_CFG.refinedWeakTailStart&&(weak||(d>235&&medium)))drop.add(seg);
-    });
-    if(!drop.size)break;
-    const next=main.filter(s=>!drop.has(s));
-    if(next.length<V52_CFG.refinedMinSkeletonSegments)break;
-    main=next;
-  }
-  return main;
-}
-
-const v52BuildSkeletonBase=v52BuildSkeleton;
-v52BuildSkeleton=function(seed,routes,pois){
-  return v521PruneSkeleton(seed,v52BuildSkeletonBase(seed,routes,pois));
-};
-
-function v521AdaptiveWidth(seg,assigned){
-  let weighted=0,count=0;
-  for(const p0 of assigned||[]){
-    const d=Et(seg,p0);
-    if(d>V52_CFG.adaptivePoiDepth)continue;
-    const fall=Math.max(.08,1-d/V52_CFG.adaptivePoiDepth);
-    weighted+=v52PoiWeight(p0)*fall;count++;
-  }
-  const support=Math.min(1.25,(seg.routeCount||0)/3)+Math.min(1.15,(seg.poiWeight||0)/2.2);
-  return it(V52_CFG.adaptiveBaseWidth+weighted*4.1+support*5.5,V52_CFG.adaptiveBaseWidth,V52_CFG.adaptiveMaxWidth);
-}
-
-function v521CleanGeometry(area,seed){
-  if(!area)return null;
-  let g=area;
-  // Morphological opening: 18m보다 얇은 꼬리/목을 상당 부분 제거
-  try{
-    const shrunk=turf.buffer(g,-V52_CFG.openingMeters/1000,{units:'kilometers',steps:8});
-    if(shrunk)g=turf.buffer(shrunk,V52_CFG.openingMeters/1000,{units:'kilometers',steps:8})||g;
-  }catch(_){ }
-  // Closing: 작은 톱니/패임을 정리
-  try{
-    const grown=turf.buffer(g,V52_CFG.closingMeters/1000,{units:'kilometers',steps:8});
-    if(grown){const closed=turf.buffer(grown,-V52_CFG.closingMeters/1000,{units:'kilometers',steps:8});if(closed)g=closed}
-  }catch(_){ }
-  // 반경 밖 잔여 꼬리 제거
-  try{
-    const clip=turf.buffer(turf.point([seed.lng,seed.lat]),V52_CFG.adaptiveClipRadius/1000,{units:'kilometers',steps:48});
-    g=turf.intersect(turf.featureCollection([g,clip]))||g;
-  }catch(_){ }
-  // MultiPolygon이면 seed가 포함된 주 덩어리를 우선, 큰 보조 덩어리만 유지
-  try{
-    const feats=[];
-    if(g.geometry?.type==='Polygon')feats.push(g);
-    else if(g.geometry?.type==='MultiPolygon')g.geometry.coordinates.forEach(c=>feats.push(turf.polygon(c)));
-    if(feats.length>1){
-      feats.sort((a,b)=>turf.area(b)-turf.area(a));
-      const seedPt=turf.point([seed.lng,seed.lat]);
-      let primary=feats.find(x=>{try{return turf.booleanPointInPolygon(seedPt,x)}catch(_){return false}})||feats[0];
-      const mainArea=turf.area(primary),keep=[primary];
-      for(const x of feats){
-        if(x===primary)continue;
-        const a=turf.area(x);
-        if(a<Math.max(V52_CFG.minMainComponentM2,mainArea*V52_CFG.minSecondaryRatio))continue;
-        const c=turf.centroid(x).geometry.coordinates;
-        const d=Pt(seed.lat,seed.lng,c[1],c[0]);
-        if(d<210)keep.push(x);
-      }
-      g=v52UnionFeatures(keep)||primary;
-    }
-  }catch(_){ }
-  try{g=turf.simplify(g,{tolerance:.000045,highQuality:true})||g}catch(_){ }
-  return g;
-}
-
-v52CandidateArea=function(seed,assigned){
-  const skeleton=v521PruneSkeleton(seed,seed.skeleton||[]);
-  if(!skeleton.length)return null;
-  seed.skeleton=skeleton;
-  const pieces=[];
-  // 모든 Skeleton을 같은 폭으로 칠하지 않고, 주변 상업 깊이에 따라 폭을 다르게 생성
-  for(const seg of skeleton){
-    const width=v521AdaptiveWidth(seg,assigned);
-    const line=turf.lineString([[seg.a.lng,seg.a.lat],[seg.b.lng,seg.b.lat]]);
-    pieces.push(turf.buffer(line,width/1000,{units:'kilometers',steps:8}));
-  }
-  // Skeleton에 실제로 붙어 있는 상업시설만 면적 확장에 사용. 긴 직선 connector는 만들지 않음.
-  for(const p0 of assigned||[]){
-    const ds=v52DistToSkeleton(p0,skeleton);
-    if(ds.distance>V52_CFG.adaptivePoiDepth)continue;
-    const r=V52_CFG.adaptivePoiBuffer+(ds.distance<35?5:0)+Math.min(4,v52PoiWeight(p0)*1.5);
-    pieces.push(turf.buffer(turf.point([p0.lng,p0.lat]),r/1000,{units:'kilometers',steps:8}));
-  }
-  let area=v52UnionFeatures(pieces);
-  return v521CleanGeometry(area,seed);
-};
-
-const v52TerritoryMasksBase=v52TerritoryMasks;
-v52FinalizeAreas=function(seeds,assigned){
-  const candidates=seeds.map(s=>v52CandidateArea(s,assigned[s.id]||[]));
-  const masks=v52TerritoryMasksBase(seeds,candidates);
-  const areas=[];
-  seeds.forEach((s0,idx)=>{
-    let geom=candidates[idx];
-    if(!geom)return;
-    if(masks?.[s0.id])try{geom=turf.intersect(turf.featureCollection([geom,masks[s0.id]]))||geom}catch(_){ }
-    geom=v521CleanGeometry(geom,s0);
-    if(!geom)return;
-    const areaM2=Math.round(turf.area(geom));
-    if(areaM2<V52_CFG.minAreaM2)return;
-    const ctr=K(geom),routeIds=new Set;
-    (s0.skeleton||[]).forEach(seg=>seg.routeMap?.forEach((_,rid)=>routeIds.add(rid)));
-    areas.push({
-      id:`v521_${s0.id}`,name:s0.name,type:'network_official_named',
-      source:`${s0.source} + TMAP 보행 Skeleton 정제 + 상업밀도 적응형 폭`,
-      centerLat:ctr.lat,centerLng:ctr.lng,path:F(geom),geometry:geom.geometry,
-      segments:[],skeletonSegments:s0.skeleton,commercialPois:assigned[s0.id]||[],
-      poiCount:(assigned[s0.id]||[]).length,
-      networkLength:Math.round((s0.skeleton||[]).reduce((sum,x)=>sum+Pt(x.a.lat,x.a.lng,x.b.lat,x.b.lng),0)),
-      routeCount:routeIds.size,
-      confidence:Math.min(.95,.6+.025*Math.min(routeIds.size,8)+.008*Math.min((assigned[s0.id]||[]).length,20)),
-      color:s0.color,areaM2,exclusive:true,shapeRefined:true
-    });
-  });
-  return areas;
-};
-
-// V52 화면 문구 및 탐색 함수 교체
-try{
-  document.title='렌즈미 상권 분석 대시보드 V52.1 · 상권 형태 정제';
-  const badge=document.querySelector('h1 span:last-child');if(badge)badge.textContent='V52.1';
-  const areaLabel=document.querySelector('#btnDiscoverAreas')?.parentElement?.querySelector('label');if(areaLabel)areaLabel.textContent='🗺️ V52.1 부평 상권 형태 정제';
-  const btn52=document.getElementById('btnDiscoverAreas');if(btn52)btn52.textContent='부평역 V52.1 상권 전체영역 찾기';
-  const note=document.querySelector('#autoAreaList')?.previousElementSibling?.previousElementSibling;
-  if(note&&note.tagName==='DIV')note.innerHTML='실제 보행 Skeleton은 <b>내부 계산에만 사용</b>하고, 약한 꼬리·좁은 목을 제거한 뒤 상업시설이 퍼진 깊이에 맞춰 <b>상권 전체 면</b>을 정제해 표시합니다.';
-}catch(_){ }
-discoverTradeAreas=v52DiscoverTradeAreas;
-
-
-
-/* =========================
-   V52.3 EVIDENCE-BASED MINIMAL REFINEMENT
-   - V52.1의 위치/크기 판단은 유지
-   - 중심부는 건드리지 않고 근거가 약한 말단만 제거
-   - 강한 형태 보정(opening/closing) 제거
-   - 겹침은 Skeleton 기반 배타 귀속 유지
-   - 검증모드: 유지 Skeleton / 제거 말단 / 귀속 POI 표시
-   ========================= */
-Object.assign(V52_CFG,{
-  v523SafetyMaxRadius:365,
-  v523CoreRadius:105,
-  v523TailStart:135,
-  v523WeakPoiWeight:.82,
-  v523WeakPoiCount:1,
-  v523MinRouteCount:2,
-  v523MinKeepSegments:4,
-  v523MinComponentM2:1450,
-  v523SecondaryRatio:.38,
-  v523SimplifyTolerance:.000018,
-  v523EvidencePoiLimit:120
-});
-
-let v523EvidenceOverlays=[];
-let v523LastSeeds=[];
-let v523LastAssigned={};
-
-function v523ClearEvidence(){
-  v523EvidenceOverlays.forEach(o=>{try{o.setMap(null)}catch(_){}});
-  v523EvidenceOverlays=[];
-}
-
-function v523EvidenceStrong(seg,seed){
-  const d=Pt(seg.mid.lat,seg.mid.lng,seed.lat,seed.lng);
-  return d<=V52_CFG.v523CoreRadius || (seg.routeCount||0)>=V52_CFG.v523MinRouteCount || (seg.poiWeight||0)>=1.15 || (seg.poiLocal||0)>=3;
-}
-
-function v523ConnectedComponents(segs){
-  if(!segs?.length)return[];
-  const nb=segs.map(()=>[]);
-  for(let i=0;i<segs.length;i++)for(let j=i+1;j<segs.length;j++){
-    if(ht(segs[i],segs[j])<=V52_CFG.refinedConnectMeters){nb[i].push(j);nb[j].push(i)}
-  }
-  const seen=new Set(),out=[];
-  for(let i=0;i<segs.length;i++){
-    if(seen.has(i))continue;
-    const q=[i],c=[];seen.add(i);
-    while(q.length){const k=q.shift();c.push(segs[k]);for(const x of nb[k])if(!seen.has(x)){seen.add(x);q.push(x)}}
-    out.push(c);
-  }
-  return out;
-}
-
-function v523PruneSkeleton(seed,skeleton){
-  if(!skeleton?.length){seed._v523Removed=[];return[]}
-  const removed=[];
-  // 1) 안전 반경 밖은 강한 근거가 있을 때만 유지. 중심부/강한 경로는 보존.
-  let pool=skeleton.filter(seg=>{
-    const d=Pt(seg.mid.lat,seg.mid.lng,seed.lat,seed.lng);
-    const strong=v523EvidenceStrong(seg,seed);
-    const keep=d<=V52_CFG.v523SafetyMaxRadius || strong;
-    if(!keep)removed.push(seg);
-    return keep;
-  });
-  // 2) seed 근처 또는 강한 근거가 포함된 주 연결 덩어리 선택.
-  let comps=v523ConnectedComponents(pool);
-  if(comps.length>1){
-    const score=c=>{
-      const near=Math.min(...c.map(s=>Pt(s.mid.lat,s.mid.lng,seed.lat,seed.lng)));
-      const strong=c.filter(s=>v523EvidenceStrong(s,seed)).length;
-      const evidence=c.reduce((z,s)=>z+v521SegSupport(s),0);
-      return evidence+2.2*strong-.008*near;
-    };
-    comps.sort((a,b)=>score(b)-score(a));
-    const main=comps[0];
-    for(const c of comps.slice(1))removed.push(...c);
-    pool=main;
-  }
-  // 3) 말단 가지를 반복 제거. 거리만으로 자르지 않고 '말단+약한 보행+약한 상가'가 모두 맞아야 제거.
-  for(let pass=0;pass<5;pass++){
-    if(pool.length<=V52_CFG.v523MinKeepSegments)break;
-    const deg=pool.map(()=>0);
-    for(let i=0;i<pool.length;i++)for(let j=i+1;j<pool.length;j++)if(ht(pool[i],pool[j])<=V52_CFG.refinedConnectMeters){deg[i]++;deg[j]++}
-    const drop=[];
-    pool.forEach((seg,i)=>{
-      const d=Pt(seg.mid.lat,seg.mid.lng,seed.lat,seed.lng);
-      if(d<=V52_CFG.v523TailStart || deg[i]>1 || v523EvidenceStrong(seg,seed))return;
-      const weakRoute=(seg.routeCount||0)<=1;
-      const weakPoi=(seg.poiWeight||0)<V52_CFG.v523WeakPoiWeight && (seg.poiLocal||0)<=V52_CFG.v523WeakPoiCount;
-      if(weakRoute&&weakPoi)drop.push(seg);
-    });
-    if(!drop.length || pool.length-drop.length<V52_CFG.v523MinKeepSegments)break;
-    const ds=new Set(drop);removed.push(...drop);pool=pool.filter(s=>!ds.has(s));
-  }
-  seed._v523Removed=removed;
-  return pool;
-}
-
-// 원래 V52 Skeleton에서 V52.1의 강한 형태정제를 거치지 않고, V52.3 근거 기반 pruning만 적용
-v52BuildSkeleton=function(seed,routes,pois){
-  return v523PruneSkeleton(seed,v52BuildSkeletonBase(seed,routes,pois));
-};
-
-function v523MinimalCleanGeometry(area,seed){
-  if(!area)return null;
-  let g=area;
-  // 모양을 억지로 깎지 않는다. 분리된 작은 위성 덩어리만 제거한다.
-  try{
-    const feats=[];
-    if(g.geometry?.type==='Polygon')feats.push(g);
-    else if(g.geometry?.type==='MultiPolygon')g.geometry.coordinates.forEach(c=>feats.push(turf.polygon(c)));
-    if(feats.length>1){
-      const seedPt=turf.point([seed.lng,seed.lat]);
-      feats.sort((a,b)=>turf.area(b)-turf.area(a));
-      const primary=feats.find(x=>{try{return turf.booleanPointInPolygon(seedPt,x)}catch(_){return false}})||feats[0];
-      const mainArea=turf.area(primary),keep=[primary];
-      for(const x of feats){
-        if(x===primary)continue;
-        const a=turf.area(x);
-        if(a<Math.max(V52_CFG.v523MinComponentM2,mainArea*V52_CFG.v523SecondaryRatio))continue;
-        const c=turf.centroid(x).geometry.coordinates;
-        if(Pt(seed.lat,seed.lng,c[1],c[0])<230)keep.push(x);
-      }
-      g=v52UnionFeatures(keep)||primary;
-    }
-  }catch(_){ }
-  // 약 2m 수준의 아주 약한 simplify만 적용. opening/closing은 사용하지 않는다.
-  try{g=turf.simplify(g,{tolerance:V52_CFG.v523SimplifyTolerance,highQuality:true})||g}catch(_){ }
-  return g;
-}
-
-// V52.1의 적응형 폭은 유지하되, 형태를 강하게 열고 닫지 않는다.
-v52CandidateArea=function(seed,assigned){
-  const skeleton=v523PruneSkeleton(seed,seed.skeleton||[]);
-  if(!skeleton.length)return null;
-  seed.skeleton=skeleton;
-  const pieces=[];
-  for(const seg of skeleton){
-    const width=v521AdaptiveWidth(seg,assigned);
-    const line=turf.lineString([[seg.a.lng,seg.a.lat],[seg.b.lng,seg.b.lat]]);
-    pieces.push(turf.buffer(line,width/1000,{units:'kilometers',steps:8}));
-  }
-  for(const p0 of assigned||[]){
-    const ds=v52DistToSkeleton(p0,skeleton);
-    if(ds.distance>V52_CFG.adaptivePoiDepth)continue;
-    const r=V52_CFG.adaptivePoiBuffer+(ds.distance<35?5:0)+Math.min(4,v52PoiWeight(p0)*1.5);
-    pieces.push(turf.buffer(turf.point([p0.lng,p0.lat]),r/1000,{units:'kilometers',steps:8}));
-  }
-  return v523MinimalCleanGeometry(v52UnionFeatures(pieces),seed);
-};
-
-v52FinalizeAreas=function(seeds,assigned){
-  const candidates=seeds.map(s=>v52CandidateArea(s,assigned[s.id]||[]));
-  const masks=v52TerritoryMasksBase(seeds,candidates);
-  const areas=[];
-  seeds.forEach((s0,idx)=>{
-    let geom=candidates[idx];
-    if(!geom)return;
-    // 겹치는 부분만 Skeleton 기반 배타영역으로 자른다. 비겹침 부분은 그대로 둔다.
-    if(masks?.[s0.id])try{geom=turf.intersect(turf.featureCollection([geom,masks[s0.id]]))||geom}catch(_){ }
-    geom=v523MinimalCleanGeometry(geom,s0);
-    if(!geom)return;
-    const areaM2=Math.round(turf.area(geom));
-    if(areaM2<V52_CFG.minAreaM2)return;
-    const ctr=K(geom),routeIds=new Set;
-    (s0.skeleton||[]).forEach(seg=>seg.routeMap?.forEach((_,rid)=>routeIds.add(rid)));
-    areas.push({
-      id:`v523_${s0.id}`,name:s0.name,type:'network_official_named',
-      source:`${s0.source} + TMAP 보행 Skeleton + 근거 기반 최소 정제`,
-      centerLat:ctr.lat,centerLng:ctr.lng,path:F(geom),geometry:geom.geometry,
-      segments:[],skeletonSegments:s0.skeleton,removedSkeletonSegments:s0._v523Removed||[],commercialPois:assigned[s0.id]||[],
-      poiCount:(assigned[s0.id]||[]).length,
-      networkLength:Math.round((s0.skeleton||[]).reduce((sum,x)=>sum+Pt(x.a.lat,x.a.lng,x.b.lat,x.b.lng),0)),
-      routeCount:routeIds.size,
-      confidence:Math.min(.95,.6+.025*Math.min(routeIds.size,8)+.008*Math.min((assigned[s0.id]||[]).length,20)),
-      color:s0.color,areaM2,exclusive:true,evidenceRefined:true
-    });
-  });
-  return areas;
-};
-
-function v523DotOverlay(lat,lng,color,title){
-  const el=document.createElement('div');
-  el.title=title||'';
-  el.style.cssText=`width:7px;height:7px;border-radius:50%;background:${color};border:1px solid white;box-shadow:0 1px 3px rgba(0,0,0,.35);`;
-  return new kakao.maps.CustomOverlay({position:new kakao.maps.LatLng(lat,lng),content:el,xAnchor:.5,yAnchor:.5,zIndex:95});
-}
-
-function v523RenderEvidence(){
-  v523ClearEvidence();
-  if(!document.getElementById('f_area_evidence')?.checked)return;
-  for(const a0 of v){
-    const color=a0.color||'#2563eb';
-    for(const seg of a0.skeletonSegments||[]){
-      const strong=(seg.routeCount||0)>=2||(seg.poiWeight||0)>=1.15;
-      const pl=new kakao.maps.Polyline({
-        path:[new kakao.maps.LatLng(seg.a.lat,seg.a.lng),new kakao.maps.LatLng(seg.b.lat,seg.b.lng)],
-        strokeWeight:strong?5:3,strokeColor:color,strokeOpacity:strong?.9:.55,strokeStyle:'solid',zIndex:90
-      });
-      pl.setMap(f);v523EvidenceOverlays.push(pl);
-    }
-    for(const seg of a0.removedSkeletonSegments||[]){
-      const pl=new kakao.maps.Polyline({
-        path:[new kakao.maps.LatLng(seg.a.lat,seg.a.lng),new kakao.maps.LatLng(seg.b.lat,seg.b.lng)],
-        strokeWeight:3,strokeColor:'#64748b',strokeOpacity:.7,strokeStyle:'shortdash',zIndex:91
-      });
-      pl.setMap(f);v523EvidenceOverlays.push(pl);
-    }
-    const pois=(a0.commercialPois||[]).slice(0,V52_CFG.v523EvidencePoiLimit);
-    for(const p0 of pois){const ov=v523DotOverlay(p0.lat,p0.lng,color,p0.name);ov.setMap(f);v523EvidenceOverlays.push(ov)}
-  }
-}
-
-function toggleV523Evidence(){v523RenderEvidence()}
-
-const v523StBase=St;
-St=function(){v523StBase();v523RenderEvidence()};
-
-const v523ClearActiveBase=clearActivePolygon;
-clearActivePolygon=function(){v523ClearActiveBase();if(document.getElementById('f_area_evidence')?.checked)v523RenderEvidence()};
-
-const v523DiscoverBase=v52DiscoverTradeAreas;
-v52DiscoverTradeAreas=async function(){
-  await v523DiscoverBase();
-  // base 함수가 성공하면 v에 최종 영역이 들어 있음. 근거 표시 데이터는 area 객체에서 직접 사용.
-  const status=document.getElementById('statusMessage');
-  if(v?.length){
-    const evidence=v.map(a=>`${a.name}: 유지축 ${a.skeletonSegments?.length||0} / 제거말단 ${a.removedSkeletonSegments?.length||0} / 상가 ${a.poiCount||0}`).join(' · ');
-    document.getElementById('areaDataNotice').textContent=`V52.3 근거 기반 최소 정제 · ${evidence}`;
-    status.textContent='✅ V52.3 상권 경계 생성 완료 · 필요하면 [상권 경계 근거 보기]로 유지/제거 근거를 확인하세요.';
-    v523RenderEvidence();
-  }
-};
-
-try{
-  document.title='렌즈미 상권 분석 대시보드 V52.3 · 근거 기반 경계';
-  const badge=document.querySelector('h1 span:last-child');if(badge)badge.textContent='V52.3';
-  const areaLabel=document.querySelector('#btnDiscoverAreas')?.parentElement?.querySelector('label');if(areaLabel)areaLabel.textContent='🗺️ V52.3 부평 상권 경계 검증';
-  const btn52=document.getElementById('btnDiscoverAreas');if(btn52)btn52.textContent='부평역 V52.3 근거 기반 상권 찾기';
-  const note=document.querySelector('#autoAreaList')?.previousElementSibling?.previousElementSibling;
-  if(note&&note.tagName==='DIV')note.innerHTML='V52.1의 상권 위치를 유지하면서 <b>말단 + 보행근거 약함 + 상업근거 약함</b>이 동시에 성립할 때만 제거합니다. <b>상권 경계 근거 보기</b>에서 유지축·제거축·귀속 상가를 확인할 수 있습니다.';
-}catch(_){ }
-
-discoverTradeAreas=v52DiscoverTradeAreas;
-
 Ct();
 Ft();
 </script>
