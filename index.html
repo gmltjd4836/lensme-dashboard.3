@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>렌즈미 상권 분석 대시보드 (V42.1 스마트 랭킹 & 버그픽스 엔진)</title>
+    <title>렌즈미 상권 분석 대시보드 (V42.2 하이브리드 카운터 엔진)</title>
     <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
@@ -37,7 +37,7 @@
     <div class="w-full md:w-1/4 bg-white border-r border-gray-200 p-6 flex flex-col shadow-lg z-20 overflow-y-auto">
         <h1 class="text-xl font-extrabold text-slate-800 border-b-4 border-indigo-500 pb-3 mb-4 flex justify-between items-center">
             <span>🗺️ 전국 상권 관제탑</span>
-            <span class="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded-full font-bold">V42.1 🛠️</span>
+            <span class="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded-full font-bold">V42.2 📡</span>
         </h1>
 
         <div class="mb-4">
@@ -106,20 +106,20 @@
             </div>
 
             <div class="absolute top-16 left-4 z-10 bg-white/95 backdrop-blur-sm p-4 rounded-xl shadow-lg border border-slate-200 w-64 max-h-[80vh] overflow-y-auto hidden md:block">
-                <p class="text-xs font-extrabold text-slate-800 mb-2.5 border-b pb-1 flex justify-between"><span>🎯 렌즈 전문 브랜드</span><span class="text-slate-400">전국 누적</span></p>
+                <p class="text-xs font-extrabold text-slate-800 mb-2.5 border-b pb-1 flex justify-between"><span>🎯 렌즈 전문 브랜드</span><span class="text-[10px] text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded">전국 누적</span></p>
                 <div class="space-y-2 mb-4">
                     <label class="flex items-center space-x-2 cursor-pointer"><input type="checkbox" id="f_lensme" onchange="triggerScan()" class="chk-purple" checked><span class="text-[13px] font-bold text-purple-700 flex-grow">🟣 렌즈미</span><span id="cnt_lensme" class="text-[12px] font-bold text-slate-500">(-)</span></label>
                     <label class="flex items-center space-x-2 cursor-pointer"><input type="checkbox" id="f_olens" onchange="triggerScan()" class="chk-orange" checked><span class="text-[13px] font-bold text-orange-600 flex-grow">🟠 오렌즈</span><span id="cnt_olens" class="text-[12px] font-bold text-slate-500">(-)</span></label>
-                    <label class="flex items-center space-x-2 cursor-pointer"><input type="checkbox" id="f_hapa" onchange="triggerScan()" class="chk-pink" checked><span class="text-[13px] font-bold text-pink-500 flex-grow">🌸 하파크리스틴</span><span id="cnt_hapa" class="text-[12px] font-bold text-slate-500">(-)</span></label>
-                    <label class="flex items-center space-x-2 cursor-pointer"><input type="checkbox" id="f_winc" onchange="triggerScan()" class="chk-blue" checked><span class="text-[13px] font-bold text-blue-600 flex-grow">🔵 윙크렌즈</span><span id="cnt_winc" class="text-[12px] font-bold text-slate-500">(-)</span></label>
-                    <label class="flex items-center space-x-2 cursor-pointer"><input type="checkbox" id="f_withlens" onchange="triggerScan()" class="chk-emerald" checked><span class="text-[13px] font-bold text-emerald-600 flex-grow">🟢 위드렌즈</span><span id="cnt_withlens" class="text-[12px] font-bold text-slate-500">(-)</span></label>
-                    <label class="flex items-center space-x-2 cursor-pointer"><input type="checkbox" id="f_lensvery" onchange="triggerScan()" class="chk-yellow" checked><span class="text-[13px] font-bold text-yellow-600 flex-grow">🟡 렌즈베리</span><span id="cnt_lensvery" class="text-[12px] font-bold text-slate-500">(-)</span></label>
-                    <label class="flex items-center space-x-2 cursor-pointer"><input type="checkbox" id="f_lenstown" onchange="triggerScan()" class="chk-red" checked><span class="text-[13px] font-bold text-red-600 flex-grow">🔴 렌즈타운</span><span id="cnt_lenstown" class="text-[12px] font-bold text-slate-500">(-)</span></label>
+                    <label class="flex items-center space-x-2 cursor-pointer"><input type="checkbox" id="f_hapa" onchange="triggerScan()" class="chk-pink" checked><span class="text-[13px] font-bold text-pink-500 flex-grow">🌸 하파크리스틴</span><span id="cnt_hapa" class="text-[12px] font-bold text-blue-500">로딩중..</span></label>
+                    <label class="flex items-center space-x-2 cursor-pointer"><input type="checkbox" id="f_winc" onchange="triggerScan()" class="chk-blue" checked><span class="text-[13px] font-bold text-blue-600 flex-grow">🔵 윙크렌즈</span><span id="cnt_winc" class="text-[12px] font-bold text-blue-500">로딩중..</span></label>
+                    <label class="flex items-center space-x-2 cursor-pointer"><input type="checkbox" id="f_withlens" onchange="triggerScan()" class="chk-emerald" checked><span class="text-[13px] font-bold text-emerald-600 flex-grow">🟢 위드렌즈</span><span id="cnt_withlens" class="text-[12px] font-bold text-blue-500">로딩중..</span></label>
+                    <label class="flex items-center space-x-2 cursor-pointer"><input type="checkbox" id="f_lensvery" onchange="triggerScan()" class="chk-yellow" checked><span class="text-[13px] font-bold text-yellow-600 flex-grow">🟡 렌즈베리</span><span id="cnt_lensvery" class="text-[12px] font-bold text-blue-500">로딩중..</span></label>
+                    <label class="flex items-center space-x-2 cursor-pointer"><input type="checkbox" id="f_lenstown" onchange="triggerScan()" class="chk-red" checked><span class="text-[13px] font-bold text-red-600 flex-grow">🔴 렌즈타운</span><span id="cnt_lenstown" class="text-[12px] font-bold text-blue-500">로딩중..</span></label>
                 </div>
-                <p class="text-xs font-extrabold text-slate-800 mb-2 border-b pb-1 mt-3 flex justify-between"><span>🌿 핵심 집객시설</span><span class="text-slate-400">전국 누적</span></p>
+                <p class="text-xs font-extrabold text-slate-800 mb-2 border-b pb-1 mt-3 flex justify-between"><span>🌿 핵심 집객시설</span><span class="text-[10px] text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded">전국 누적</span></p>
                 <div class="space-y-2">
-                    <label class="flex items-center space-x-2 cursor-pointer"><input type="checkbox" id="f_olive_hapa" checked onchange="triggerScan()" class="chk-green"><span class="text-[13px] font-bold text-teal-700 flex-grow">🌿 올영(하파크리스틴)</span><span id="cnt_olive_hapa" class="text-[12px] font-bold text-slate-500">(-)</span></label>
-                    <label class="flex items-center space-x-2 cursor-pointer"><input type="checkbox" id="f_olive" checked onchange="triggerScan()" class="chk-green"><span class="text-[13px] font-bold text-green-600 flex-grow">🟩 일반 올리브영</span><span id="cnt_olive" class="text-[12px] font-bold text-slate-500">(-)</span></label>
+                    <label class="flex items-center space-x-2 cursor-pointer"><input type="checkbox" id="f_olive" checked onchange="triggerScan()" class="chk-green"><span class="text-[13px] font-bold text-green-600 flex-grow">🟩 올리브영</span><span id="cnt_olive" class="text-[12px] font-bold text-slate-500">(-)</span></label>
+                    <label class="flex items-center space-x-2 cursor-pointer"><input type="checkbox" id="f_olive_hapa" checked onchange="triggerScan()" class="chk-green"><span class="text-[13px] font-bold text-teal-700 flex-grow">🌿 올영(하파크리스틴)</span><span id="cnt_olive_hapa" class="text-[12px] font-bold text-blue-500">로딩중..</span></label>
                     <label class="flex items-center space-x-2 cursor-pointer"><input type="checkbox" id="f_daiso" checked onchange="triggerScan()" class="chk-red"><span class="text-[13px] font-bold text-rose-600 flex-grow">🟥 다이소</span><span id="cnt_daiso" class="text-[12px] font-bold text-slate-500">(-)</span></label>
                     <label class="flex items-center space-x-2 cursor-pointer"><input type="checkbox" id="f_davich" checked onchange="triggerScan()" class="chk-blue"><span class="text-[13px] font-bold text-blue-700 flex-grow">🟦 다비치안경</span><span id="cnt_davich" class="text-[12px] font-bold text-slate-500">(-)</span></label>
                 </div>
@@ -135,23 +135,12 @@
         </div>
     </div>
 
-    <script>
-        const TMAP_APP_KEY = "mJJ00gscCg39Y6nR0LhUw2yzrIfr7arY65OwUZYk"; 
-        
-        const FALLBACK_COUNTS = {
-            'lensme': 286, 'olens': 335, 'hapa': 42, 'winc': 15, 'withlens': 61, 'lensvery': 28, 'lenstown': 79,
-            'olive': 1342, 'daiso': 1485, 'olive_hapa': 124, 'davich': 288
-        };
-        for(let key in FALLBACK_COUNTS) {
-            let el = document.getElementById('cnt_' + key);
-            if(el) el.innerText = `(${FALLBACK_COUNTS[key].toLocaleString()}개)`;
-        }
-    </script>
-
     <!-- 카카오맵 API -->
     <script type="text/javascript" src="//dapi.kakao.com/v2/maps/sdk.js?appkey=c045609510f8b75252389123f086be48&libraries=services,drawing"></script>
 
     <script>
+        const TMAP_APP_KEY = "mJJ00gscCg39Y6nR0LhUw2yzrIfr7arY65OwUZYk"; 
+
         let currentMode = 'new'; 
         function setMode(mode) {
             currentMode = mode;
@@ -173,6 +162,54 @@
         let ps = new kakao.maps.services.Places(); 
         let geocoder = new kakao.maps.services.Geocoder();
         
+        // =========================================================================
+        // 💡 [V42.2] 하이브리드 전국 누적 카운터 (고정 팩트 데이터 + 실시간 API 스캔)
+        // =========================================================================
+        
+        // 1. 대형 매장: 사장님이 확인해주신 팩트 데이터 고정
+        const STATIC_COUNTS = {
+            'lensme': 242, 
+            'olens': 372, 
+            'olive': 1369, 
+            'daiso': 1600, 
+            'davich': 321
+        };
+        for(let key in STATIC_COUNTS) {
+            let el = document.getElementById('cnt_' + key);
+            if(el) el.innerText = `(${STATIC_COUNTS[key].toLocaleString()}개)`;
+        }
+
+        // 2. 수량 변동이 심한 신흥 매장: 카카오 API로 실시간 Total Count 긁어오기
+        const DYNAMIC_BRANDS = [
+            { id: 'hapa', kw: '하파크리스틴' },
+            { id: 'winc', kw: '윙크 렌즈' },
+            { id: 'withlens', kw: '위드렌즈' },
+            { id: 'lensvery', kw: '렌즈베리' },
+            { id: 'lenstown', kw: '렌즈타운' },
+            { id: 'olive_hapa', kw: '올리브영 하파크리스틴' }
+        ];
+
+        function fetchLiveCounts() {
+            DYNAMIC_BRANDS.forEach(brand => {
+                // 바운더리를 주지 않고 키워드 검색 시 전국 대상 누적 결과를 반환합니다.
+                ps.keywordSearch(brand.kw, function(data, status, pagination) {
+                    let el = document.getElementById('cnt_' + brand.id);
+                    if (status === kakao.maps.services.Status.OK && el && pagination) {
+                        el.innerText = `(${pagination.totalCount.toLocaleString()}개)`;
+                        el.classList.remove('text-blue-500');
+                        el.classList.add('text-slate-500');
+                    } else if (el) {
+                        el.innerText = `(0개)`;
+                        el.classList.remove('text-blue-500');
+                        el.classList.add('text-slate-500');
+                    }
+                });
+            });
+        }
+        // 대시보드 로드 시 1회 실시간 카운트 긁어오기 실행
+        fetchLiveCounts();
+        // =========================================================================
+
         let mapMarkers = [];
         let rankOverlays = []; 
         let placeCache = new Map(); 
@@ -386,7 +423,6 @@
             runGridHotspotScan(activePolygonPath); 
         }
 
-        // 💡💡💡 [버그 픽스] 삭제된 군락지 HTML을 조작하려던 에러 코드 제거 완료 💡💡💡
         function clearActivePolygon() {
             activePolygonId = null; activePolygonPath = null; tempDrawnPath = null;
             document.getElementById('targetLocationInput').innerText = "선택 없음 (자유 탐색)";
@@ -395,7 +431,6 @@
             document.getElementById('anchor_count').innerText = "-개";
             document.getElementById('rankingResultBox').classList.add('hidden');
             document.getElementById('rankingResultText').innerHTML = '';
-            // (에러의 원인이었던 specialResultText 초기화 로직은 여기서 완전히 제거했습니다)
             Object.values(renderedPolygons).forEach(p => p.setOptions({ fillColor: '#f43f5e', fillOpacity: 0.1, strokeWeight: 2 }));
             clearRankMarkers(); 
             triggerScan();
@@ -1021,7 +1056,7 @@
                 }
 
                 document.getElementById('rankingResultBox').classList.remove('hidden');
-                statusEl.innerText = `✅ [V42.1] 버그 픽스 및 정상 분석 완료!`;
+                statusEl.innerText = `✅ [V42.2] 전국 매장 수 카운트 갱신 및 보행로 랭킹 분석 완료!`;
 
             } catch(e) {
                 console.error("분석 에러:", e);
