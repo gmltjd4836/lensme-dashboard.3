@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>렌즈미 상권 분석 대시보드 (V43.0 100점 만점 & 40m 초밀착 룰)</title>
+    <title>렌즈미 상권 분석 대시보드 (V43.0 100점 만점 & 무결점 픽스)</title>
     <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
@@ -692,6 +692,10 @@
                 cLat /= targetPath.length; cLng /= targetPath.length;
                 let centerPos = new kakao.maps.LatLng(cLat, cLng);
 
+                // 💡 [버그 픽스] 비상용 바둑판 그리드용 변수 선언 누락 문제 해결!
+                let latDiff = maxLat - minLat;
+                let lngDiff = maxLng - minLng;
+
                 let maxRadius = 50;
                 for(let i=0; i<targetPath.length; i++) {
                     let d = getDistanceMeters(targetPath[i].lat, targetPath[i].lng, cLat, cLng);
@@ -886,8 +890,8 @@
                         if(dist <= 40) {
                             if(node.isStealth) {
                                 let sData = node.stealthData;
-                                if(sData.type === 'coffee') sCoffee += ((40 - dist) / 40) * 3.0; // 커피 최대 3점
-                                else sStealth += ((40 - dist) / 40) * 7.0; // 놀이시설 최대 7점
+                                if(sData.type === 'coffee') sCoffee += ((40 - dist) / 40) * 3.0; 
+                                else sStealth += ((40 - dist) / 40) * 7.0; 
                             } else if (node.brandKey && BRAND_CONFIG[node.brandKey]) {
                                 let cfg = BRAND_CONFIG[node.brandKey];
                                 if(cfg.isOlive) {
@@ -1029,7 +1033,7 @@
                 }
 
                 document.getElementById('rankingResultBox').classList.remove('hidden');
-                statusEl.innerText = `✅ [V43.0] 100점 만점제 & 40m 초밀착 룰 정밀 분석 완료!`;
+                statusEl.innerText = `✅ [V43.0 무결점 픽스] 100점 만점제 & 40m 룰 완벽 작동 중!`;
 
             } catch(e) {
                 console.error("분석 에러:", e);
