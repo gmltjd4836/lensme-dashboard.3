@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>렌즈미 상권 분석 대시보드 (V42.3 스코어 밸런스 완성형)</title>
+    <title>렌즈미 상권 분석 대시보드 (V43.0 100점 만점 & 40m 초밀착 룰)</title>
     <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
@@ -37,7 +37,7 @@
     <div class="w-full md:w-1/4 bg-white border-r border-gray-200 p-6 flex flex-col shadow-lg z-20 overflow-y-auto">
         <h1 class="text-xl font-extrabold text-slate-800 border-b-4 border-indigo-500 pb-3 mb-4 flex justify-between items-center">
             <span>🗺️ 전국 상권 관제탑</span>
-            <span class="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded-full font-bold">V42.3 🏆</span>
+            <span class="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded-full font-bold">V43.0 💯</span>
         </h1>
 
         <div class="mb-4">
@@ -87,8 +87,8 @@
                 </div>
 
                 <div id="rankingResultBox" class="mt-3 pt-3 border-t border-indigo-200 hidden">
-                    <p class="text-xs text-indigo-800 font-extrabold mb-2">💎 리얼 보행로 및 시너지 랭킹</p>
-                    <div id="rankingResultText" class="space-y-0 mb-3 border-b border-indigo-100 pb-2"></div>
+                    <p class="text-xs text-indigo-800 font-extrabold mb-2">💎 100점 만점 랭킹 결과</p>
+                    <div id="rankingResultText" class="space-y-0 mb-3 pb-2"></div>
                 </div>
             </div>
         </div>
@@ -96,13 +96,12 @@
 
     <div class="w-full md:w-3/4 flex flex-col bg-slate-50 overflow-hidden relative">
         <div class="flex bg-white px-6 pt-3 border-b border-gray-200 overflow-x-auto whitespace-nowrap z-10">
-            <button onclick="switchTab('map')" id="btn-map" class="tab-btn active px-4 py-2 mr-4 text-base hover:text-indigo-500 transition">📍 보행자 메인 동선 분석</button>
-            <button onclick="switchTab('radar')" id="btn-radar" class="tab-btn px-4 py-2 mr-4 text-base hover:text-indigo-500 transition">📊 입지 매력도</button>
+            <button onclick="switchTab('map')" id="btn-map" class="tab-btn active px-4 py-2 mr-4 text-base hover:text-indigo-500 transition">📍 100점 만점 보행 동선 랭킹</button>
         </div>
 
         <div id="tab-map" class="flex-grow w-full h-full relative">
             <div id="statusMessage" class="absolute top-4 left-1/2 transform -translate-x-1/2 z-10 bg-white/95 backdrop-blur-sm px-6 py-2 rounded-full shadow-md text-sm font-bold text-slate-700 border border-slate-200 text-center transition-all">
-                🎯 펜스를 치면 [리얼 보행로 추출 + 코너/시너지 보너스 적용] 로직으로 정밀 평가합니다!
+                🎯 펜스를 치면 [40m 초밀착 룰 & 100점 만점제]로 정밀 채점합니다!
             </div>
 
             <div class="absolute top-16 left-4 z-10 bg-white/95 backdrop-blur-sm p-4 rounded-xl shadow-lg border border-slate-200 w-64 max-h-[80vh] overflow-y-auto hidden md:block">
@@ -126,12 +125,6 @@
             </div>
 
             <div id="map" class="w-full h-full"></div>
-        </div>
-
-        <div id="tab-radar" class="hidden flex-grow w-full p-8 overflow-y-auto">
-            <div class="flex flex-col md:flex-row gap-6">
-                <div class="w-full md:w-2/3 bg-white p-4 rounded-xl shadow-sm border border-slate-200" style="height: 500px;"><div id="radarChart" class="w-full h-full"></div></div>
-            </div>
         </div>
     </div>
 
@@ -162,7 +155,7 @@
         let ps = new kakao.maps.services.Places(); 
         let geocoder = new kakao.maps.services.Geocoder();
         
-        // 💡 하이브리드 전국 누적 카운터 (고정 팩트 데이터 + 실시간 API 스캔)
+        // 💡 [V42.2 하이브리드 카운터]
         const STATIC_COUNTS = {
             'lensme': 242, 
             'olens': 372, 
@@ -223,13 +216,13 @@
         };
 
         const STEALTH_KEYWORDS = [
-            { kw: '인생네컷', weight: 5.0, radius: 80, type: 'play' },
-            { kw: '셀프사진관', weight: 5.0, radius: 80, type: 'play' }, 
-            { kw: '포토이즘', weight: 5.0, radius: 80, type: 'play' },
-            { kw: '가챠샵', weight: 5.0, radius: 80, type: 'play' },
-            { kw: '뽑기방', weight: 5.0, radius: 80, type: 'play' },
-            { kw: '메가커피', weight: 3.0, radius: 80, type: 'coffee' },
-            { kw: '컴포즈커피', weight: 3.0, radius: 80, type: 'coffee' }
+            { kw: '인생네컷', weight: 5.0, radius: 40, type: 'play' },
+            { kw: '셀프사진관', weight: 5.0, radius: 40, type: 'play' }, 
+            { kw: '포토이즘', weight: 5.0, radius: 40, type: 'play' },
+            { kw: '가챠샵', weight: 5.0, radius: 40, type: 'play' },
+            { kw: '뽑기방', weight: 5.0, radius: 40, type: 'play' },
+            { kw: '메가커피', weight: 3.0, radius: 40, type: 'coffee' },
+            { kw: '컴포즈커피', weight: 3.0, radius: 40, type: 'coffee' }
         ];
 
         let drawingManager = new kakao.maps.drawing.DrawingManager({
@@ -238,7 +231,7 @@
             polygonOptions: { draggable: false, removable: false, editable: true, strokeColor: '#be185d', strokeWeight: 3, fillColor: '#f43f5e', fillOpacity: 0.2 }
         });
 
-        let savedPolygons = JSON.parse(localStorage.getItem('lensmePolygonsV42_3') || '[]');
+        let savedPolygons = JSON.parse(localStorage.getItem('lensmePolygonsV43_0') || '[]');
         let activePolygonPath = null; 
         let activePolygonId = null;
         let renderedPolygons = {}; 
@@ -312,7 +305,7 @@
                     }
                     let id = 'poly_' + Date.now();
                     savedPolygons.push({ id: id, name: name, path: tempDrawnPath, si: si, gu: gu, dong: dong, centerLat: centerLat, centerLng: centerLng });
-                    localStorage.setItem('lensmePolygonsV42_3', JSON.stringify(savedPolygons));
+                    localStorage.setItem('lensmePolygonsV43_0', JSON.stringify(savedPolygons));
                     
                     drawingManager.clear();
                     isDrawingMode = false;
@@ -394,7 +387,7 @@
         function deletePolygon(id) {
             if(!confirm("이 영토를 삭제하시겠습니까?")) return;
             savedPolygons = savedPolygons.filter(p => p.id !== id);
-            localStorage.setItem('lensmePolygonsV42_3', JSON.stringify(savedPolygons));
+            localStorage.setItem('lensmePolygonsV43_0', JSON.stringify(savedPolygons));
             if(activePolygonId === id) clearActivePolygon();
             renderPolygonTree();
         }
@@ -560,22 +553,15 @@
             });
         }
 
-        function generateExpertComment(spot, shapeType, rankTitle) {
-            let isCross = shapeType === 'cross';
-            let prefix = isCross ? `이곳은 유동인구가 교차하는 [${rankTitle}]로, ` : `이곳은 타겟이 흐르는 [${rankTitle}] 구간으로, `;
-            
-            if (spot.isSynergy) {
-                return prefix + "올리브영, 다이소, 경쟁 렌즈샵이 모두 모여있는 '뷰티 3대장 콤보' 특A급 생태계입니다. 막강한 집객 시너지가 폭발하는 완벽한 자리입니다.";
-            } else if (spot.sCorner >= 200) {
-                return prefix + "주요 동선이 교차하는 최상급 코너(사거리) 명당입니다. 워크인 노출과 목적성 고객 유입을 동시에 쓸어 담을 수 있습니다.";
-            } else if (spot.sOlive > 60 && spot.sFlow > 40) {
-                return prefix + "대형 앵커(올리브영)와 메인 물길이 완벽히 맞물린 A급지입니다. 강력한 낙수효과가 예상됩니다.";
-            } else if (spot.sFlow > 0) {
-                return prefix + "대중교통 및 하교 인원의 1차 이동 물길 정중앙에 위치하여, 노출 및 신규 유입 효과가 뛰어납니다.";
-            } else if (spot.sStealth > 0 || spot.sCoffee > 0) {
-                return prefix + "1020 체류형 인프라(사진/놀이/저가커피)와 밀착된 코어 입지입니다. 목적성 구매 및 주말 매출 상승이 예상됩니다.";
+        function generateExpertComment(totalScore, spot) {
+            if (totalScore >= 85) {
+                return "상위 1% 초정밀 핵심 입지입니다. 목적성 뷰티 고객, 1020 유동인구, 가시성, 완벽한 낙수효과를 모두 기대할 수 있는 A급 상권입니다.";
+            } else if (totalScore >= 70) {
+                return "앵커 시설 및 동선이 훌륭하게 뒷받침되는 B+급 상권입니다. 안정적인 매출과 자연 유입이 기대되는 우수한 입지입니다.";
+            } else if (totalScore >= 50) {
+                return "특정 조건(동선 또는 앵커)에 의존하는 C급 입지입니다. 단일 집객력은 있으나 주변 시너지나 체류 시간이 다소 부족할 수 있습니다.";
             } else {
-                return prefix + "주변 앵커 시설과 동선이 균형 있게 배분된 입지로, 타겟 소비층을 견고하게 흡수할 수 있는 후보지입니다.";
+                return "메인 앵커나 주 동선과 물리적으로 거리가 멀어 목적성 방문 유도가 필요한 D급 상권입니다. 전략적인 재검토가 필요합니다.";
             }
         }
 
@@ -832,7 +818,7 @@
                 document.getElementById('comp_count').innerText = targetStats.comp + '개';
                 document.getElementById('anchor_count').innerText = targetStats.anchor + '개';
 
-                statusEl.innerText = `🌐 TMAP 실 보행로(선) 추출 및 스마트 랭킹 연산 중...`;
+                statusEl.innerText = `🌐 TMAP 실 보행로(선) 추출 및 100점 만점 평가 중...`;
                 
                 let gridPoints = []; 
                 let flowPaths = []; 
@@ -878,12 +864,12 @@
                 }
 
                 // ========================================================
-                // 💡 [V42.3] 밸런스 패치 완료 & 불필요한 감점 페널티 삭제
+                // 💡 [V43.0] 100점 만점제 완벽 압축 평가 (40m 초밀착 룰)
                 // ========================================================
                 for(let i=0; i<gridPoints.length; i++) {
                     let pt = gridPoints[i];
                     
-                    let sOlive = 0, sLens = 0, sDaiso = 0, sStealth = 0, sFlow = 0, sCoffee = 0, sCorner = 0;
+                    let sOlive = 0, sLens = 0, sDaiso = 0, sStealth = 0, sCoffee = 0;
                     let localOliveCount = 0, localLensCount = 0, localDaisoCount = 0;
                     let isTeamKill = false; 
 
@@ -891,73 +877,75 @@
                         let node = validNodes[j];
                         let dist = getDistanceMeters(pt.lat, pt.lng, parseFloat(node.y), parseFloat(node.x));
                         
-                        if(node.isStealth) {
-                            let sData = node.stealthData;
-                            if(dist <= sData.radius) {
-                                // 💡 너프: 커피 0.5 가중치, 놀이시설 2.0 가중치
-                                if(sData.type === 'coffee') sCoffee += (sData.radius - dist) * 0.5;
-                                else sStealth += (sData.radius - dist) * 2.0;
-                            }
-                        } else if (node.brandKey && BRAND_CONFIG[node.brandKey]) {
-                            let cfg = BRAND_CONFIG[node.brandKey];
-                            if(cfg.isOlive && dist <= 80) {
-                                sOlive += (80 - dist) * 10.0; localOliveCount++;
-                            } else if(cfg.isComp && dist <= 80) {
-                                if(node.brandKey === 'f_lensme') {
-                                    if(currentMode === 'new' && dist <= 100) {
-                                        isTeamKill = true;
-                                    } else if(currentMode === 'reloc') {
-                                        sLens += (80 - dist) * 8.0; localLensCount++;
-                                    }
-                                } else {
-                                    sLens += (80 - dist) * 8.0; localLensCount++;
+                        // 100m 이내 팀킬 쉴드 검사 (신규출점 모드 시)
+                        if (node.brandKey === 'f_lensme' && currentMode === 'new' && dist <= 100) {
+                            isTeamKill = true;
+                        }
+
+                        // 💡 핵심: 40m 초과 시 점수 아예 없음 (0점)
+                        if(dist <= 40) {
+                            if(node.isStealth) {
+                                let sData = node.stealthData;
+                                if(sData.type === 'coffee') sCoffee += ((40 - dist) / 40) * 3.0; // 커피 최대 3점
+                                else sStealth += ((40 - dist) / 40) * 7.0; // 놀이시설 최대 7점
+                            } else if (node.brandKey && BRAND_CONFIG[node.brandKey]) {
+                                let cfg = BRAND_CONFIG[node.brandKey];
+                                if(cfg.isOlive) {
+                                    sOlive += ((40 - dist) / 40) * 18.0; localOliveCount++;
+                                } else if(cfg.isComp) {
+                                    sLens += ((40 - dist) / 40) * 12.0; localLensCount++;
+                                } else if(cfg.isDaiso) {
+                                    sDaiso += ((40 - dist) / 40) * 10.0; localDaisoCount++;
                                 }
-                            } else if(cfg.isDaiso && dist <= 80) {
-                                sDaiso += (80 - dist) * 7.0; localDaisoCount++;
                             }
                         }
                     }
 
+                    // 카테고리별 만점 상한선(Cap) 적용
+                    sOlive = Math.min(sOlive, 18);
+                    sLens = Math.min(sLens, 12);
+                    sDaiso = Math.min(sDaiso, 10);
+                    sStealth = Math.min(sStealth, 7); 
+                    sCoffee = Math.min(sCoffee, 3);   
+                    
+                    let sFlow = 0;
                     let closeFlowEnds = new Set();
                     for(let pIdx=0; pIdx<flowPaths.length; pIdx++) {
                         let f = flowPaths[pIdx];
                         let distToFlow = distToSegment(pt.lng, pt.lat, f.x1, f.y1, f.x2, f.y2);
                         if(distToFlow <= 30) {
-                            sFlow += (30 - distToFlow) * 1.5;
+                            sFlow += ((30 - distToFlow) / 30) * 10.0; // 물길 최대 10점
                             closeFlowEnds.add(`${f.x1},${f.y1}`);
                             closeFlowEnds.add(`${f.x2},${f.y2}`);
                         }
                     }
+                    sFlow = Math.min(sFlow, 10);
+
+                    let sCorner = 0;
                     if(closeFlowEnds.size >= 3) {
-                        sCorner = 200; // 💡 상향: 코너 자리 +200점
+                        sCorner = 20; // 코너 자리 최대 20점
                     }
 
-                    // 💡 너프: 커피 상한선 40점, 놀이시설 100점
-                    sStealth = Math.min(sStealth, 100); 
-                    sCoffee = Math.min(sCoffee, 40);   
-                    
-                    let isSynergy = false;
-                    let synergyBonus = 0;
+                    let sSynergy = 0;
                     if (localOliveCount >= 1 && localDaisoCount >= 1 && localLensCount >= 1) {
-                        isSynergy = true;
-                        synergyBonus = 500; // 💡 상향: 3대장 콤보 +500점
+                        sSynergy = 20; // 3대장 생태계 조건 충족 20점
                     }
 
-                    let totalScore = sOlive + sLens + sDaiso + sStealth + sFlow + sCoffee + sCorner + synergyBonus;
+                    // 총점 산출 (Max 100점)
+                    let totalScore = sOlive + sLens + sDaiso + sStealth + sCoffee + sFlow + sCorner + sSynergy;
                     
-                    // 💡 버그 픽스: 건물과 도로의 거리 차이로 인한 부당한 70% 페널티(0.3 곱하기) 삭제
-                    let penalty = 1.0;
-                    if(isTeamKill) penalty = 0.01; 
+                    if(isTeamKill) totalScore *= 0.01; 
 
-                    pt.score = totalScore * penalty; 
-                    pt.sOlive = sOlive * penalty;
-                    pt.sLens = sLens * penalty;
-                    pt.sDaiso = sDaiso * penalty;
-                    pt.sStealth = sStealth * penalty;
-                    pt.sCoffee = sCoffee * penalty;
-                    pt.sFlow = sFlow * penalty;
-                    pt.sCorner = sCorner * penalty;
-                    pt.isSynergy = isSynergy;
+                    pt.score = totalScore; 
+                    
+                    // 영수증 표출용 데이터 바인딩
+                    pt.catAnchor = sOlive + sLens + sDaiso; // Max 40
+                    pt.catFlow = sFlow + sCorner;           // Max 30
+                    pt.catSynergy = sSynergy;               // Max 20
+                    pt.catInfra = sStealth + sCoffee;       // Max 10
+                    
+                    pt.detailOlive = sOlive; pt.detailLens = sLens; pt.detailDaiso = sDaiso;
+                    pt.detailCorner = sCorner; pt.detailFlow = sFlow; pt.detailSynergy = sSynergy; pt.detailInfra = sStealth + sCoffee;
                     pt.isTeamKill = isTeamKill;
                 }
 
@@ -969,6 +957,7 @@
                     let candidate = gridPoints[i];
                     if(candidate.score < 1) continue; 
 
+                    // 지하철역(25m) 필터
                     let isNearSubway = false;
                     for(let g=0; g<rawGates.length; g++) {
                         if(rawGates[g].type === 'subway') {
@@ -979,6 +968,7 @@
                     }
                     if(isNearSubway) continue;
 
+                    // 1~3위 강제 분산 (120m)
                     let tooClose = false;
                     for(let k=0; k<topSpots.length; k++) {
                         if(getDistanceMeters(candidate.lat, candidate.lng, topSpots[k].lat, topSpots[k].lng) < 120) { 
@@ -999,31 +989,27 @@
                         
                         let shapeData = await drawTmapPedestrianStreet(spot, idx, map, validNodes, rawGates, targetPath);
                         let rankTitle = shapeData.title;
-                        let expertComment = generateExpertComment(spot, shapeData.type, rankTitle);
+                        let expertComment = generateExpertComment(spot.score, spot);
+                        let finalScore = Math.round(spot.score);
 
-                        let receiptHtml = "";
-                        if(spot.sOlive > 0) receiptHtml += `<div class="flex justify-between items-center text-teal-700"><span>🌿 올리브영 인접 보너스</span><span class="font-black">+${Math.round(spot.sOlive)}점</span></div>`;
-                        if(spot.sFlow > 0) receiptHtml += `<div class="flex justify-between items-center text-blue-600"><span>🌊 유입/하교 동선 적중</span><span class="font-black">+${Math.round(spot.sFlow)}점</span></div>`;
-                        if(spot.sStealth > 0) receiptHtml += `<div class="flex justify-between items-center text-pink-600"><span>📸 1020 놀이시설 인접</span><span class="font-black">+${Math.round(spot.sStealth)}점</span></div>`;
-                        if(spot.sDaiso > 0) receiptHtml += `<div class="flex justify-between items-center text-rose-600"><span>🟥 다이소 인접 보너스</span><span class="font-black">+${Math.round(spot.sDaiso)}점</span></div>`;
-                        if(spot.sLens > 0) receiptHtml += `<div class="flex justify-between items-center text-purple-700"><span>👁️ 경쟁 렌즈샵 밀집도</span><span class="font-black">+${Math.round(spot.sLens)}점</span></div>`;
-                        if(spot.sCoffee > 0) receiptHtml += `<div class="flex justify-between items-center text-amber-700"><span>☕ 저가커피(보행로) 보너스</span><span class="font-black">+${Math.round(spot.sCoffee)}점</span></div>`;
-                        
-                        if(spot.sCorner > 0) receiptHtml += `<div class="flex justify-between items-center text-indigo-700"><span>🔀 교차로/허브 가산점</span><span class="font-black">+${Math.round(spot.sCorner)}점</span></div>`;
-                        if(spot.isSynergy) receiptHtml += `<div class="flex justify-between items-center text-fuchsia-600"><span>💥 3대장 콤보 (올+다+렌)</span><span class="font-black">+500점</span></div>`;
-                        
-                        if(receiptHtml === "") receiptHtml = `<div class="text-slate-400 text-xs">기본 배점만 적용됨</div>`;
+                        // 100점 만점 기준 영수증 HTML
+                        let receiptHtml = `
+                            <div class="flex justify-between items-center text-teal-700"><span>🌿 핵심 앵커 파워 (Max 40)</span><span class="font-black">${Math.round(spot.catAnchor)}점</span></div>
+                            <div class="flex justify-between items-center text-indigo-700"><span>🔀 길목 동선 파워 (Max 30)</span><span class="font-black">${Math.round(spot.catFlow)}점</span></div>
+                            <div class="flex justify-between items-center text-fuchsia-600"><span>💥 3대장 시너지 (Max 20)</span><span class="font-black">${Math.round(spot.catSynergy)}점</span></div>
+                            <div class="flex justify-between items-center text-amber-700"><span>📸 체류 인프라 (Max 10)</span><span class="font-black">${Math.round(spot.catInfra)}점</span></div>
+                        `;
 
                         rankingHtml += `
                         <div class="bg-white px-3 py-3 rounded-xl border border-slate-200 shadow-sm mb-3 relative overflow-hidden">
                             ${currentMode === 'reloc' && idx === 0 ? '<div class="absolute top-0 right-0 bg-rose-500 text-white text-[10px] font-bold px-2 py-1 rounded-bl-lg">추천 이전지</div>' : ''}
                             <div class="flex justify-between items-center border-b border-slate-100 pb-1.5 mb-1.5 mt-1">
-                                <span class="text-[14px] text-slate-800 font-extrabold">${rankTitle} <span class="text-indigo-600 text-[12px] font-black ml-1">(총 ${Math.round(spot.score)}점)</span></span>
+                                <span class="text-[14px] text-slate-800 font-extrabold">${rankTitle} <span class="text-rose-600 text-[13px] font-black ml-1">(총 ${finalScore}점)</span></span>
                             </div>
                             <div class="text-[12px] text-slate-600 mb-2 font-bold tracking-tight">📍 구간: ${addrName} 주변</div>
                             
                             <div class="bg-slate-50 p-2 rounded-lg text-[11px] space-y-1.5 border border-slate-100 mb-2">
-                                <p class="font-extrabold text-slate-700 mb-1 border-b border-slate-200 pb-1">📊 상세 점수 획득 영수증</p>
+                                <p class="font-extrabold text-slate-700 mb-1 border-b border-slate-200 pb-1">📊 100점 만점 상세 영수증</p>
                                 ${receiptHtml}
                             </div>
                             
@@ -1037,13 +1023,13 @@
                     rBox.innerHTML = rankingHtml;
                 } else {
                     let failMsg = currentMode === 'new' 
-                        ? "⚠️ 주변에 기존 렌즈미가 너무 가깝거나 유효한 명당이 없습니다. (팀킬 방지 쉴드 작동 중)"
+                        ? "⚠️ 주변에 기존 렌즈미가 너무 가깝거나(100m 이내) 유효한 명당이 없습니다. (팀킬 방지 쉴드 작동 중)"
                         : "분석 조건을 만족하는 1~3위 입지가 없습니다.";
                     rBox.innerHTML = `<div class="text-xs text-rose-600 font-bold mt-1">${failMsg}</div>`;
                 }
 
                 document.getElementById('rankingResultBox').classList.remove('hidden');
-                statusEl.innerText = `✅ [V42.3] 밸런스 패치 완료! 억울한 감점 요소를 제거하고 정상 채점했습니다!`;
+                statusEl.innerText = `✅ [V43.0] 100점 만점제 & 40m 초밀착 룰 정밀 분석 완료!`;
 
             } catch(e) {
                 console.error("분석 에러:", e);
