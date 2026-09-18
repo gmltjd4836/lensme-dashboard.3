@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>렌즈미 상권 분석 대시보드 (V44.0 실제 보행동선 엔진)</title>
+    <title>렌즈미 상권 분석 대시보드 (V45.0 보행 Segment 입지 엔진)</title>
     <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
@@ -37,7 +37,7 @@
     <div class="w-full md:w-1/4 bg-white border-r border-gray-200 p-6 flex flex-col shadow-lg z-20 overflow-y-auto">
         <h1 class="text-xl font-extrabold text-slate-800 border-b-4 border-indigo-500 pb-3 mb-4 flex justify-between items-center">
             <span>🗺️ 전국 상권 관제탑</span>
-            <span class="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded-full font-bold">V44.0 🚶</span>
+            <span class="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded-full font-bold">V45.0 🔥</span>
         </h1>
 
         <div class="mb-4">
@@ -78,16 +78,16 @@
             
             <div class="bg-indigo-50/80 p-3 rounded-lg border border-indigo-100 space-y-1.5 mt-2">
                 <div class="flex justify-between items-center text-xs font-bold text-slate-700">
-                    <span>⚔️ 스캔 반경 내 렌즈샵:</span>
+                    <span>⚔️ 펜스 내 렌즈샵:</span>
                     <span id="comp_count" class="text-sm font-black text-pink-600">-개</span>
                 </div>
                 <div class="flex justify-between items-center text-xs font-bold text-slate-700">
-                    <span>📸 스캔 반경 내 앵커시설:</span>
+                    <span>📸 펜스 내 앵커시설:</span>
                     <span id="anchor_count" class="text-sm font-black text-emerald-600">-개</span>
                 </div>
 
                 <div id="rankingResultBox" class="mt-3 pt-3 border-t border-indigo-200 hidden">
-                    <p class="text-xs text-indigo-800 font-extrabold mb-2">💎 실제 보행동선 기반 100점 랭킹</p>
+                    <p class="text-xs text-indigo-800 font-extrabold mb-2">🔥 보행도로 Segment 입지 랭킹</p>
                     <div id="rankingResultText" class="space-y-0 mb-3 pb-2"></div>
                 </div>
             </div>
@@ -96,12 +96,12 @@
 
     <div class="w-full md:w-3/4 flex flex-col bg-slate-50 overflow-hidden relative">
         <div class="flex bg-white px-6 pt-3 border-b border-gray-200 overflow-x-auto whitespace-nowrap z-10">
-            <button onclick="switchTab('map')" id="btn-map" class="tab-btn active px-4 py-2 mr-4 text-base hover:text-indigo-500 transition">📍 100점 만점 보행 동선 랭킹</button>
+            <button onclick="switchTab('map')" id="btn-map" class="tab-btn active px-4 py-2 mr-4 text-base hover:text-indigo-500 transition">🔥 보행도로 Heatmap · 추천구간</button>
         </div>
 
         <div id="tab-map" class="flex-grow w-full h-full relative">
             <div id="statusMessage" class="absolute top-4 left-1/2 transform -translate-x-1/2 z-10 bg-white/95 backdrop-blur-sm px-6 py-2 rounded-full shadow-md text-sm font-bold text-slate-700 border border-slate-200 text-center transition-all">
-                🎯 펜스를 치면 실제 TMAP 보행경로 + 앵커시설로 길목/사거리를 분석합니다!
+                🎯 펜스를 치면 실제 보행경로를 도로 Segment로 쪼개 최우수 출점 구간을 분석합니다!
             </div>
 
             <div class="absolute top-16 left-4 z-10 bg-white/95 backdrop-blur-sm p-4 rounded-xl shadow-lg border border-slate-200 w-64 max-h-[80vh] overflow-y-auto hidden md:block">
@@ -124,6 +124,19 @@
                 </div>
             </div>
 
+
+            <div id="heatLegend" class="absolute bottom-5 right-5 z-10 bg-white/95 backdrop-blur-sm p-3 rounded-xl shadow-lg border border-slate-200 hidden md:block">
+                <p class="text-[11px] font-extrabold text-slate-700 mb-2">도로구간 입지 Heatmap</p>
+                <div class="space-y-1 text-[10px] font-bold text-slate-600">
+                    <div><span class="inline-block w-5 h-2 rounded mr-2" style="background:#2563eb"></span>보통</div>
+                    <div><span class="inline-block w-5 h-2 rounded mr-2" style="background:#16a34a"></span>양호</div>
+                    <div><span class="inline-block w-5 h-2 rounded mr-2" style="background:#eab308"></span>우수</div>
+                    <div><span class="inline-block w-5 h-2 rounded mr-2" style="background:#f97316"></span>매우 우수</div>
+                    <div><span class="inline-block w-5 h-2 rounded mr-2" style="background:#dc2626"></span>핵심 추천구간</div>
+                </div>
+                <p class="text-[9px] text-slate-400 mt-2 leading-tight">※ 실제 통신 유동인구가 아닌 보행경로·POI 기반 모델 지수</p>
+            </div>
+
             <div id="map" class="w-full h-full"></div>
         </div>
     </div>
@@ -133,33 +146,43 @@
 
     <script>
         // =========================================================
-        // 렌즈미 상권 분석 대시보드 V44.0
-        // 핵심 변경:
-        // 1) 가상의 직선 동선 제거 -> TMAP 실제 보행 LineString 기반 채점
-        // 2) 실제 경로 겹침 + 분기 방향으로 길목/삼거리/사거리 판정
-        // 3) TMAP 경로 캐시 재사용 -> 점수/표시 단계에서 추가 호출 최소화
-        // 4) Kakao Places 다중 페이지 수집(최대 15개 한 페이지 한계 보완)
-        // 5) 신규 출점 기존 렌즈미 50m 이내 완전 배제
-        // 6) 같은 길이 1/2/3위를 독식하지 않도록 동일 corridor 중복 제거
+        // 렌즈미 상권 분석 대시보드 V45.0
+        // FINAL ARCHITECTURE
+        // 1) 펜스 주변 유입구/목적지 수집
+        // 2) TMAP 실제 보행 OD 경로 생성
+        // 3) 보행경로를 8~14m Micro Segment로 분할
+        // 4) 같은 도로 방향/위치의 Segment를 하나의 Corridor로 병합
+        // 5) Flow × Demand × Capture × Access × Competition 으로 입지잠재지수 계산
+        // 6) 펜스 전체 도로 Heatmap + 서로 다른 추천구간 1~3위 표시
+        // 7) 신규 출점은 기존 렌즈미 50m 이내 Hard Filter
+        // ※ 통신 유동인구 미연동: 실제 유동량이 아닌 보행/입지 잠재 모델
         // =========================================================
 
         const TMAP_APP_KEY = "mJJ00gscCg39Y6nR0LhUw2yzrIfr7arY65OwUZYk";
 
         const CONFIG = {
             TEAM_KILL_METERS: 50,
-            SEARCH_RADIUS_MAX: 2000,
-            PLACE_SCORE_RADIUS: 40,
-            FLOW_HIT_RADIUS: 16,
-            JUNCTION_SCAN_RADIUS: 18,
-            ARM_LOOKAHEAD_METERS: 24,
-            CANDIDATE_SPACING_METERS: 10,
-            TOP_SPOT_MIN_DISTANCE: 45,
-            SAME_CORRIDOR_MAX_DISTANCE: 180,
-            MAX_TMAP_ROUTES_PER_SCAN: 8,
+            SEARCH_RADIUS_MAX: 2200,
+            FLOW_MATCH_RADIUS: 13,
+            SEGMENT_NODE_SPACING: 9,
+            SEGMENT_CLUSTER_RADIUS: 14,
+            SEGMENT_BEARING_TOLERANCE: 24,
+            TOP_SEGMENT_MIN_DISTANCE: 55,
+            SAME_CORRIDOR_MAX_DISTANCE: 170,
+            JUNCTION_SCAN_RADIUS: 22,
+            ARM_LOOKAHEAD_METERS: 28,
+            MAX_TMAP_ROUTES_PER_SCAN: 14,
+            MAX_GATES: 7,
+            MAX_DESTINATIONS: 10,
             TMAP_DELAY_MS: 110,
             KAKAO_PAGE_DELAY_MS: 45,
             ANALYSIS_MAX_PAGES: 3,
-            MAP_MAX_PAGES: 2
+            MAP_MAX_PAGES: 2,
+            DEMAND_RADIUS: 140,
+            COMPETITION_RADIUS: 160,
+            ACCESS_NEAR_GATE_MIN: 18,
+            ACCESS_NEAR_GATE_MAX: 220,
+            HEATMAP_MAX_SEGMENTS: 500
         };
 
         let currentMode = 'new';
@@ -228,15 +251,19 @@
             f_davich:     { kw: '다비치안경', hex: '%231d4ed8', isOther: true }
         };
 
-        // weight / radius 값을 실제 채점에서 그대로 사용한다.
+        // 렌즈 타깃 수요를 설명하는 주변 시설군.
+        // weight는 '좋은 위치 점수'가 아니라 Demand Engine의 상대 가중치다.
         const STEALTH_KEYWORDS = [
-            { kw: '인생네컷', weight: 5.0, radius: 40, type: 'play' },
-            { kw: '셀프사진관', weight: 5.0, radius: 40, type: 'play' },
-            { kw: '포토이즘', weight: 5.0, radius: 40, type: 'play' },
-            { kw: '가챠샵', weight: 5.0, radius: 40, type: 'play' },
-            { kw: '뽑기방', weight: 5.0, radius: 40, type: 'play' },
-            { kw: '메가커피', weight: 3.0, radius: 40, type: 'coffee' },
-            { kw: '컴포즈커피', weight: 3.0, radius: 40, type: 'coffee' }
+            { kw: '인생네컷', weight: 1.35, radius: 120, type: 'photo', label: '사진/놀이' },
+            { kw: '셀프사진관', weight: 1.35, radius: 120, type: 'photo', label: '사진/놀이' },
+            { kw: '포토이즘', weight: 1.40, radius: 120, type: 'photo', label: '사진/놀이' },
+            { kw: '가챠샵', weight: 1.10, radius: 100, type: 'play', label: '놀이' },
+            { kw: '뽑기방', weight: 1.00, radius: 100, type: 'play', label: '놀이' },
+            { kw: '메가커피', weight: 0.65, radius: 100, type: 'coffee', label: '카페' },
+            { kw: '컴포즈커피', weight: 0.65, radius: 100, type: 'coffee', label: '카페' },
+            { kw: '영화관', weight: 1.15, radius: 160, type: 'cinema', label: '문화' },
+            { kw: '백화점', weight: 1.25, radius: 180, type: 'mall', label: '대형상업' },
+            { kw: '쇼핑몰', weight: 1.05, radius: 160, type: 'mall', label: '대형상업' }
         ];
 
         function fetchLiveCounts() {
@@ -854,19 +881,24 @@
         }
 
         function gateWeight(type) {
-            if (type === 'subway_exit') return 1.55;
-            if (type === 'subway') return 1.40;
+            if (type === 'subway_exit') return 1.60;
+            if (type === 'subway') return 1.45;
             if (type === 'bus') return 1.00;
-            if (type === 'school') return 0.80;
+            if (type === 'university') return 1.20;
+            if (type === 'school') return 0.72;
+            if (type === 'parking') return 0.68;
             return 0.70;
         }
 
         function destinationWeight(kind) {
-            if (kind === 'olive') return 1.35;
-            if (kind === 'daiso') return 1.25;
+            if (kind === 'olive') return 1.45;
+            if (kind === 'daiso') return 1.20;
+            if (kind === 'photo') return 1.28;
             if (kind === 'play') return 1.05;
-            if (kind === 'coffee') return 0.75;
-            if (kind === 'center') return 0.55;
+            if (kind === 'cinema') return 1.20;
+            if (kind === 'mall') return 1.32;
+            if (kind === 'coffee') return 0.68;
+            if (kind === 'center') return 0.45;
             return 0.80;
         }
 
@@ -884,11 +916,11 @@
             const nearestStations = stations.slice(0, 3);
             for (const s of nearestStations) {
                 const stationLat = parseFloat(s.y), stationLng = parseFloat(s.x);
-                let exitResults = await kakaoKeywordAll(
+                const exitResults = await kakaoKeywordAll(
                     `${s.place_name} 출구`,
                     {
                         location: new kakao.maps.LatLng(stationLat, stationLng),
-                        radius: 300,
+                        radius: 350,
                         sort: kakao.maps.services.SortBy.DISTANCE
                     },
                     1
@@ -906,68 +938,80 @@
             return dedupeNearbyPoints(out, 10);
         }
 
-        function buildRoutePairs(gates, destinations, centerLat, centerLng) {
-            const gatePriority = { subway_exit: 4, subway: 3.5, bus: 2, school: 1 };
-            const sortedGates = [...gates].sort((a, b) => {
-                let pa = gatePriority[a.type] || 0, pb = gatePriority[b.type] || 0;
-                if (pb !== pa) return pb - pa;
+        function selectDiverseGates(gates, centerLat, centerLng) {
+            const priority = { subway_exit: 6, subway: 5, university: 4, bus: 3, parking: 2, school: 1 };
+            const sorted = [...gates].sort((a, b) => {
+                const pd = (priority[b.type] || 0) - (priority[a.type] || 0);
+                if (pd !== 0) return pd;
                 return getDistanceMeters(a.lat, a.lng, centerLat, centerLng) - getDistanceMeters(b.lat, b.lng, centerLat, centerLng);
             });
-
-            // 지하철 출구만 4개 뽑히는 편향을 막기 위해 유입구 종류를 섞는다.
-            const topGates = [];
-            const subwayLike = sortedGates.filter(g => g.type === 'subway_exit' || g.type === 'subway').slice(0, 2);
-            const busLike = sortedGates.filter(g => g.type === 'bus').slice(0, 1);
-            const schoolLike = sortedGates.filter(g => g.type === 'school').slice(0, 1);
-            [...subwayLike, ...busLike, ...schoolLike].forEach(g => {
-                if (!topGates.includes(g)) topGates.push(g);
-            });
-            for (const g of sortedGates) {
-                if (topGates.length >= 4) break;
-                if (!topGates.includes(g)) topGates.push(g);
+            const out = [];
+            const quotas = { subway_exit: 3, subway: 1, university: 1, bus: 2, parking: 1, school: 1 };
+            const used = {};
+            for (const g of sorted) {
+                const t = g.type;
+                if ((used[t] || 0) >= (quotas[t] || 1)) continue;
+                out.push(g); used[t] = (used[t] || 0) + 1;
+                if (out.length >= CONFIG.MAX_GATES) break;
             }
+            for (const g of sorted) {
+                if (out.length >= CONFIG.MAX_GATES) break;
+                if (!out.includes(g)) out.push(g);
+            }
+            return out;
+        }
 
-            const destPriority = { olive: 4, daiso: 3.5, play: 2.5, coffee: 1.5, center: 0.5 };
-            const topDest = [...destinations]
-                .sort((a, b) => {
-                    let pa = destPriority[a.kind] || 0, pb = destPriority[b.kind] || 0;
-                    if (pb !== pa) return pb - pa;
-                    return getDistanceMeters(a.lat, a.lng, centerLat, centerLng) - getDistanceMeters(b.lat, b.lng, centerLat, centerLng);
-                })
-                .slice(0, 6);
+        function selectDiverseDestinations(destinations, centerLat, centerLng) {
+            const priority = { olive: 7, daiso: 6, mall: 5, photo: 5, cinema: 4, play: 3, coffee: 2, center: 1 };
+            const sorted = [...destinations].sort((a, b) => {
+                const pd = (priority[b.kind] || 0) - (priority[a.kind] || 0);
+                if (pd !== 0) return pd;
+                return getDistanceMeters(a.lat, a.lng, centerLat, centerLng) - getDistanceMeters(b.lat, b.lng, centerLat, centerLng);
+            });
+            const out = [];
+            const perKind = {};
+            for (const d of sorted) {
+                const limit = d.kind === 'coffee' ? 2 : 3;
+                if ((perKind[d.kind] || 0) >= limit) continue;
+                if (out.some(o => getDistanceMeters(d.lat, d.lng, o.lat, o.lng) < 12 && d.kind === o.kind)) continue;
+                out.push(d); perKind[d.kind] = (perKind[d.kind] || 0) + 1;
+                if (out.length >= CONFIG.MAX_DESTINATIONS) break;
+            }
+            return out;
+        }
 
-            const pairs = [];
+        function buildRoutePairs(gates, destinations, centerLat, centerLng) {
+            const gs = selectDiverseGates(gates, centerLat, centerLng);
+            const ds = selectDiverseDestinations(destinations, centerLat, centerLng);
+            const candidates = [];
             const seen = new Set();
 
-            for (const gate of topGates) {
-                const nearest = [...topDest]
-                    .sort((a, b) => getDistanceMeters(gate.lat, gate.lng, a.lat, a.lng) - getDistanceMeters(gate.lat, gate.lng, b.lat, b.lng))
-                    .slice(0, 2);
-                for (const dest of nearest) {
+            for (const gate of gs) {
+                for (const dest of ds) {
                     const d = getDistanceMeters(gate.lat, gate.lng, dest.lat, dest.lng);
-                    if (d < 35 || d > 3000) continue;
+                    if (d < 45 || d > 3200) continue;
                     const key = `${gate.name}|${dest.name}`;
-                    if (!seen.has(key)) {
-                        seen.add(key);
-                        pairs.push({ gate, dest });
-                    }
-                    if (pairs.length >= CONFIG.MAX_TMAP_ROUTES_PER_SCAN) return pairs;
+                    if (seen.has(key)) continue;
+                    seen.add(key);
+                    const directnessBias = 1 / Math.max(1, d / 500);
+                    const pairWeight = gateWeight(gate.type) * destinationWeight(dest.kind);
+                    candidates.push({ gate, dest, distance: d, pairWeight, rankValue: pairWeight * 2 + directnessBias });
                 }
             }
 
-            // 한쪽 종류가 적어서 route 수가 부족하면 남은 조합으로 채운다.
-            if (pairs.length < CONFIG.MAX_TMAP_ROUTES_PER_SCAN) {
-                for (const gate of topGates) {
-                    for (const dest of topDest) {
-                        const d = getDistanceMeters(gate.lat, gate.lng, dest.lat, dest.lng);
-                        if (d < 35 || d > 3000) continue;
-                        const key = `${gate.name}|${dest.name}`;
-                        if (seen.has(key)) continue;
-                        seen.add(key);
-                        pairs.push({ gate, dest });
-                        if (pairs.length >= CONFIG.MAX_TMAP_ROUTES_PER_SCAN) return pairs;
-                    }
-                }
+            // 종류 다양성을 유지하면서 높은 가치 조합을 선택한다.
+            candidates.sort((a, b) => b.rankValue - a.rankValue);
+            const pairs = [];
+            const gateCount = new Map();
+            const destCount = new Map();
+            for (const c of candidates) {
+                const gc = gateCount.get(c.gate.name) || 0;
+                const dc = destCount.get(c.dest.name) || 0;
+                if (gc >= 3 || dc >= 3) continue;
+                pairs.push(c);
+                gateCount.set(c.gate.name, gc + 1);
+                destCount.set(c.dest.name, dc + 1);
+                if (pairs.length >= CONFIG.MAX_TMAP_ROUTES_PER_SCAN) break;
             }
             return pairs;
         }
@@ -978,21 +1022,22 @@
             let routeNo = 1;
 
             for (let i = 0; i < pairs.length; i++) {
-                const { gate, dest } = pairs[i];
-                statusEl.innerText = `🚶 TMAP 실제 보행경로 생성 중... (${i + 1}/${pairs.length})`;
+                const { gate, dest, pairWeight } = pairs[i];
+                statusEl.innerText = `🚶 실제 보행 OD 경로 생성 중... (${i + 1}/${pairs.length})`;
                 const features = await fetchTmapPedestrianRoute(gate.lng, gate.lat, dest.lng, dest.lat);
                 const coords = extractLineCoords(features);
                 if (coords.length >= 2) {
-                    const samples = samplePolylineCoords(coords, CONFIG.CANDIDATE_SPACING_METERS);
+                    const samples = samplePolylineCoords(coords, CONFIG.SEGMENT_NODE_SPACING);
                     const insideCount = samples.reduce((n, p) => n + (isPointInPolygon(p.lat, p.lng, targetPath) ? 1 : 0), 0);
-                    if (insideCount > 0) {
+                    if (insideCount >= 2) {
                         routes.push({
                             id: `R${routeNo++}`,
                             gate,
                             dest,
                             coords,
                             samples,
-                            weight: gateWeight(gate.type) * destinationWeight(dest.kind)
+                            weight: pairWeight,
+                            name: `${gate.name} → ${dest.name}`
                         });
                     }
                 }
@@ -1001,13 +1046,83 @@
             return routes;
         }
 
-        function routeHitInfo(pt, routes, radius = CONFIG.FLOW_HIT_RADIUS) {
+        function interpolateSegmentPoints(a, b, spacing = CONFIG.SEGMENT_NODE_SPACING) {
+            const dist = getDistanceMeters(a.lat, a.lng, b.lat, b.lng);
+            if (!isFinite(dist) || dist < 0.5) return [a, b];
+            const n = Math.max(1, Math.ceil(dist / spacing));
+            const out = [];
+            for (let i = 0; i <= n; i++) {
+                const t = i / n;
+                out.push({ lat: a.lat + (b.lat - a.lat) * t, lng: a.lng + (b.lng - a.lng) * t });
+            }
+            return out;
+        }
+
+        function buildMicroSegments(routes, targetPath) {
+            const micros = [];
+            routes.forEach(route => {
+                for (let i = 0; i < route.coords.length - 1; i++) {
+                    const a = route.coords[i], b = route.coords[i + 1];
+                    const nodes = interpolateSegmentPoints(a, b);
+                    for (let j = 0; j < nodes.length - 1; j++) {
+                        const p1 = nodes[j], p2 = nodes[j + 1];
+                        const mid = { lat: (p1.lat + p2.lat) / 2, lng: (p1.lng + p2.lng) / 2 };
+                        if (!isPointInPolygon(mid.lat, mid.lng, targetPath)) continue;
+                        const len = getDistanceMeters(p1.lat, p1.lng, p2.lat, p2.lng);
+                        if (len < 2) continue;
+                        micros.push({
+                            a: p1, b: p2, mid,
+                            bearing: bearingDegrees(p1.lat, p1.lng, p2.lat, p2.lng) % 180,
+                            routeId: route.id,
+                            routeWeight: route.weight,
+                            route
+                        });
+                    }
+                }
+            });
+            return micros;
+        }
+
+        function clusterMicroSegments(micros) {
+            const clusters = [];
+            const sorted = [...micros].sort((a, b) => b.routeWeight - a.routeWeight);
+            for (const m of sorted) {
+                let best = null, bestDist = Infinity;
+                for (const c of clusters) {
+                    const d = getDistanceMeters(m.mid.lat, m.mid.lng, c.mid.lat, c.mid.lng);
+                    if (d > CONFIG.SEGMENT_CLUSTER_RADIUS) continue;
+                    if (orientationDiff(m.bearing, c.bearing) > CONFIG.SEGMENT_BEARING_TOLERANCE) continue;
+                    if (d < bestDist) { best = c; bestDist = d; }
+                }
+                if (!best) {
+                    clusters.push({
+                        id: `S${clusters.length + 1}`,
+                        a: m.a, b: m.b, mid: { ...m.mid }, bearing: m.bearing,
+                        microCount: 1,
+                        routeMap: new Map([[m.routeId, { route: m.route, weight: m.routeWeight }]]),
+                        representativeWeight: m.routeWeight
+                    });
+                } else {
+                    best.microCount++;
+                    const n = best.microCount;
+                    best.mid.lat = (best.mid.lat * (n - 1) + m.mid.lat) / n;
+                    best.mid.lng = (best.mid.lng * (n - 1) + m.mid.lng) / n;
+                    if (!best.routeMap.has(m.routeId) || best.routeMap.get(m.routeId).weight < m.routeWeight) {
+                        best.routeMap.set(m.routeId, { route: m.route, weight: m.routeWeight });
+                    }
+                    if (m.routeWeight > best.representativeWeight) {
+                        best.a = m.a; best.b = m.b; best.bearing = m.bearing; best.representativeWeight = m.routeWeight;
+                    }
+                }
+            }
+            return clusters;
+        }
+
+        function nearbyRouteHitsForSegment(seg, routes) {
             const hits = [];
             routes.forEach(route => {
-                const info = polylineDistanceMeters(pt, route.coords);
-                if (info.distance <= radius) {
-                    hits.push({ route, distance: info.distance, segmentIndex: info.segmentIndex });
-                }
+                const info = polylineDistanceMeters(seg.mid, route.coords);
+                if (info.distance <= CONFIG.FLOW_MATCH_RADIUS) hits.push({ route, distance: info.distance, segmentIndex: info.segmentIndex });
             });
             return hits;
         }
@@ -1019,7 +1134,6 @@
             if (!last) return null;
             let walked = getDistanceMeters(pt.lat, pt.lng, last.lat, last.lng);
             let current = idx;
-
             while (walked < CONFIG.ARM_LOOKAHEAD_METERS) {
                 const next = current + direction;
                 if (next < 0 || next >= route.coords.length) break;
@@ -1032,282 +1146,322 @@
 
         function analyzeJunction(pt, routeHits) {
             const armAngles = [];
-            const orientationCandidates = [];
-
             routeHits.forEach(hit => {
-                const route = hit.route;
                 const i = hit.segmentIndex;
-                if (i < 0 || i >= route.coords.length - 1) return;
-
-                const a = route.coords[i], b = route.coords[i + 1];
-                orientationCandidates.push(bearingDegrees(a.lat, a.lng, b.lat, b.lng) % 180);
-
-                const back = findArmPoint(route, pt, i, -1);
-                const forward = findArmPoint(route, pt, i, +1);
-                if (back && getDistanceMeters(pt.lat, pt.lng, back.lat, back.lng) >= 8) {
-                    armAngles.push(bearingDegrees(pt.lat, pt.lng, back.lat, back.lng));
-                }
-                if (forward && getDistanceMeters(pt.lat, pt.lng, forward.lat, forward.lng) >= 8) {
-                    armAngles.push(bearingDegrees(pt.lat, pt.lng, forward.lat, forward.lng));
-                }
+                if (i < 0 || i >= hit.route.coords.length - 1) return;
+                const back = findArmPoint(hit.route, pt, i, -1);
+                const forward = findArmPoint(hit.route, pt, i, +1);
+                if (back && getDistanceMeters(pt.lat, pt.lng, back.lat, back.lng) >= 8) armAngles.push(bearingDegrees(pt.lat, pt.lng, back.lat, back.lng));
+                if (forward && getDistanceMeters(pt.lat, pt.lng, forward.lat, forward.lng) >= 8) armAngles.push(bearingDegrees(pt.lat, pt.lng, forward.lat, forward.lng));
             });
-
             const clusters = clusterAngles(armAngles, 28);
             const armCount = Math.min(4, clusters.length);
-            let type = 'line', cornerScore = 0;
-            if (armCount >= 4) {
-                type = 'cross';
-                cornerScore = 12;
-            } else if (armCount === 3) {
-                type = 'junction';
-                cornerScore = 9;
-            } else if (armCount === 2) {
-                type = 'line';
-                cornerScore = 2;
-            }
-
-            let dominantBearing = orientationCandidates.length ? orientationCandidates[0] : 0;
-            if (orientationCandidates.length > 1) {
-                // 첫 번째 hit의 도로 방향을 corridor 대표 방향으로 사용하되 0~180 정규화
-                dominantBearing = ((dominantBearing % 180) + 180) % 180;
-            }
-            return { type, cornerScore, armCount, dominantBearing };
+            let type = 'line';
+            if (armCount >= 4) type = 'cross';
+            else if (armCount === 3) type = 'junction';
+            return { armCount, type };
         }
 
-        function buildCandidatesFromRoutes(routes, targetPath) {
-            const candidates = [];
-            const addPoint = (p, source = 'route') => {
-                if (!isPointInPolygon(p.lat, p.lng, targetPath)) return;
-                if (candidates.some(c => getDistanceMeters(c.lat, c.lng, p.lat, p.lng) < 8)) return;
-                candidates.push({ lat: p.lat, lng: p.lng, score: 0, source });
-            };
-            routes.forEach(route => route.samples.forEach(p => addPoint(p, 'route')));
-            return candidates;
-        }
+        function demandRawAt(seg, validNodes) {
+            let raw = 0;
+            let typeSet = new Set();
+            let nearestOlive = Infinity;
+            let nearestDaiso = Infinity;
+            let targetCount = 0;
 
-        function buildFallbackGrid(minLat, maxLat, minLng, maxLng, targetPath) {
-            const out = [];
-            const latDiff = maxLat - minLat;
-            const lngDiff = maxLng - minLng;
-            const stepLat = Math.max(latDiff / 28, 0.000025);
-            const stepLng = Math.max(lngDiff / 28, 0.000025);
-            for (let lat = minLat; lat <= maxLat; lat += stepLat) {
-                for (let lng = minLng; lng <= maxLng; lng += stepLng) {
-                    if (isPointInPolygon(lat, lng, targetPath)) out.push({ lat, lng, score: 0, source: 'fallback' });
+            for (const node of validNodes) {
+                const lat = parseFloat(node.y), lng = parseFloat(node.x);
+                const d = getDistanceMeters(seg.mid.lat, seg.mid.lng, lat, lng);
+                if (d > CONFIG.DEMAND_RADIUS) continue;
+
+                if (node.brandKey && BRAND_CONFIG[node.brandKey]) {
+                    const cfg = BRAND_CONFIG[node.brandKey];
+                    if (cfg.isOlive) {
+                        const decay = Math.max(0, 1 - d / CONFIG.DEMAND_RADIUS);
+                        raw += 1.65 * decay;
+                        typeSet.add('olive'); nearestOlive = Math.min(nearestOlive, d); targetCount++;
+                    } else if (cfg.isDaiso) {
+                        const decay = Math.max(0, 1 - d / CONFIG.DEMAND_RADIUS);
+                        raw += 1.20 * decay;
+                        typeSet.add('daiso'); nearestDaiso = Math.min(nearestDaiso, d); targetCount++;
+                    }
+                } else if (node.isStealth && node.stealthData) {
+                    const radius = Math.min(CONFIG.DEMAND_RADIUS, node.stealthData.radius || CONFIG.DEMAND_RADIUS);
+                    if (d <= radius) {
+                        const decay = Math.max(0, 1 - d / radius);
+                        raw += node.stealthData.weight * decay;
+                        typeSet.add(node.stealthData.type); targetCount++;
+                    }
                 }
+            }
+
+            // 서로 다른 타깃 시설군이 함께 존재할 때만 약한 다양성 보너스.
+            raw += Math.min(1.5, Math.max(0, typeSet.size - 1) * 0.35);
+            return { raw, typeCount: typeSet.size, targetCount, nearestOlive, nearestDaiso };
+        }
+
+        function competitionAt(seg, validNodes) {
+            let lensmeNearest = Infinity;
+            let competitorCount80 = 0;
+            let competitorCount160 = 0;
+            let nearestCompetitor = Infinity;
+
+            for (const node of validNodes) {
+                if (!node.brandKey || !BRAND_CONFIG[node.brandKey]?.isComp) continue;
+                const d = getDistanceMeters(seg.mid.lat, seg.mid.lng, parseFloat(node.y), parseFloat(node.x));
+                if (node.brandKey === 'f_lensme') lensmeNearest = Math.min(lensmeNearest, d);
+                else {
+                    nearestCompetitor = Math.min(nearestCompetitor, d);
+                    if (d <= 80) competitorCount80++;
+                    if (d <= CONFIG.COMPETITION_RADIUS) competitorCount160++;
+                }
+            }
+
+            const teamKill = currentMode === 'new' && lensmeNearest <= CONFIG.TEAM_KILL_METERS;
+            // 경쟁사 1개는 시장 검증으로 과도한 감점을 하지 않고, 밀집될수록 점진 감점.
+            let multiplier = 1.0;
+            if (competitorCount80 >= 1) multiplier -= 0.04;
+            if (competitorCount80 >= 2) multiplier -= 0.06 * (competitorCount80 - 1);
+            if (competitorCount160 >= 4) multiplier -= 0.04 * Math.min(3, competitorCount160 - 3);
+            multiplier = Math.max(0.68, multiplier);
+            return { teamKill, lensmeNearest, competitorCount80, competitorCount160, nearestCompetitor, multiplier };
+        }
+
+        function accessRawAt(seg, gates) {
+            let nearest = Infinity;
+            let best = 0;
+            let types = new Set();
+            for (const g of gates) {
+                const d = getDistanceMeters(seg.mid.lat, seg.mid.lng, g.lat, g.lng);
+                nearest = Math.min(nearest, d);
+                if (d <= CONFIG.ACCESS_NEAR_GATE_MAX) {
+                    types.add(g.type);
+                    // 출구 바로 위보다 30~120m 정도를 가장 좋은 접근거리로 본다.
+                    let proximity;
+                    if (d < CONFIG.ACCESS_NEAR_GATE_MIN) proximity = 0.45;
+                    else if (d <= 120) proximity = 1.0 - Math.abs(d - 65) / 160;
+                    else proximity = Math.max(0.25, 1 - (d - 120) / 180);
+                    best = Math.max(best, gateWeight(g.type) * proximity);
+                }
+            }
+            return { raw: best + Math.min(0.5, Math.max(0, types.size - 1) * 0.12), nearest, typeCount: types.size };
+        }
+
+        function captureRawAt(seg, routeHits, junction) {
+            // 실제 간판 방향/전면폭 데이터가 없으므로 '포착 잠재력' 대리변수만 사용한다.
+            // 경로가 여러 방향에서 합류하거나, 동일 위치를 여러 OD가 통과하면 더 높은 잠재력.
+            const uniqueRoutes = new Set(routeHits.map(h => h.route.id)).size;
+            const directionFactor = junction.armCount >= 4 ? 1.0 : (junction.armCount === 3 ? 0.86 : 0.58);
+            const crossingFactor = Math.min(1.0, uniqueRoutes / 5);
+            return { raw: directionFactor * 0.62 + crossingFactor * 0.38, uniqueRoutes };
+        }
+
+        function percentileValue(sorted, value) {
+            if (!sorted.length) return 0;
+            let lo = 0, hi = sorted.length;
+            while (lo < hi) {
+                const mid = (lo + hi) >> 1;
+                if (sorted[mid] <= value) lo = mid + 1; else hi = mid;
+            }
+            return Math.max(0, Math.min(1, lo / sorted.length));
+        }
+
+        function robustNormalize(values, value) {
+            const s = values.filter(Number.isFinite).sort((a, b) => a - b);
+            if (!s.length) return 0;
+            const p10 = s[Math.floor((s.length - 1) * 0.10)];
+            const p90 = s[Math.floor((s.length - 1) * 0.90)];
+            if (Math.abs(p90 - p10) < 1e-9) return value > 0 ? 0.65 : 0.05;
+            return Math.max(0.03, Math.min(1, (value - p10) / (p90 - p10)));
+        }
+
+        function computeSegmentFeatures(segments, routes, validNodes, gates) {
+            segments.forEach(seg => {
+                const hits = nearbyRouteHitsForSegment(seg, routes);
+                const uniqueRouteMap = new Map();
+                hits.forEach(h => {
+                    const old = uniqueRouteMap.get(h.route.id);
+                    if (!old || h.distance < old.distance) uniqueRouteMap.set(h.route.id, h);
+                });
+                const uniqueHits = [...uniqueRouteMap.values()];
+                const flowRaw = uniqueHits.reduce((sum, h) => sum + h.route.weight * Math.max(0.40, 1 - h.distance / CONFIG.FLOW_MATCH_RADIUS), 0);
+                const junction = analyzeJunction(seg.mid, uniqueHits);
+                const demand = demandRawAt(seg, validNodes);
+                const access = accessRawAt(seg, gates);
+                const capture = captureRawAt(seg, uniqueHits, junction);
+                const competition = competitionAt(seg, validNodes);
+
+                Object.assign(seg, {
+                    routeHits: uniqueHits,
+                    routeHitIds: uniqueHits.map(h => h.route.id),
+                    flowRaw, junction, demand, access, capture, competition
+                });
+            });
+
+            const flowVals = segments.map(s => s.flowRaw);
+            const demandVals = segments.map(s => s.demand.raw);
+            const accessVals = segments.map(s => s.access.raw);
+            const captureVals = segments.map(s => s.capture.raw);
+
+            segments.forEach(seg => {
+                const flowN = robustNormalize(flowVals, seg.flowRaw);
+                const demandN = robustNormalize(demandVals, seg.demand.raw);
+                const accessN = robustNormalize(accessVals, seg.access.raw);
+                const captureN = robustNormalize(captureVals, seg.capture.raw);
+
+                // Weighted geometric mean. 한 요소가 매우 낮으면 다른 장점만으로 완전히 덮이지 않는다.
+                const floor = 0.08;
+                const base = 100 *
+                    Math.pow(Math.max(floor, flowN), 0.42) *
+                    Math.pow(Math.max(floor, demandN), 0.24) *
+                    Math.pow(Math.max(floor, captureN), 0.20) *
+                    Math.pow(Math.max(floor, accessN), 0.14);
+                let score = base * seg.competition.multiplier;
+                if (seg.competition.teamKill) score = 0;
+                seg.flowIndex = Math.round(flowN * 100);
+                seg.demandIndex = Math.round(demandN * 100);
+                seg.captureIndex = Math.round(captureN * 100);
+                seg.accessIndex = Math.round(accessN * 100);
+                seg.competitionIndex = Math.round(seg.competition.multiplier * 100);
+                seg.score = Math.max(0, Math.min(100, score));
+            });
+
+            const scoreSorted = segments.map(s => s.score).sort((a, b) => a - b);
+            segments.forEach(seg => {
+                const pct = percentileValue(scoreSorted, seg.score);
+                seg.percentile = Math.round(pct * 100);
+                seg.topPercent = Math.max(1, 100 - seg.percentile + 1);
+            });
+            return segments;
+        }
+
+        function heatColor(score) {
+            if (score >= 80) return '#dc2626';
+            if (score >= 65) return '#f97316';
+            if (score >= 50) return '#eab308';
+            if (score >= 35) return '#16a34a';
+            return '#2563eb';
+        }
+
+        function drawHeatmapSegments(segments) {
+            const drawable = [...segments].sort((a, b) => b.score - a.score).slice(0, CONFIG.HEATMAP_MAX_SEGMENTS);
+            drawable.forEach(seg => {
+                const line = new kakao.maps.Polyline({
+                    path: [new kakao.maps.LatLng(seg.a.lat, seg.a.lng), new kakao.maps.LatLng(seg.b.lat, seg.b.lng)],
+                    strokeWeight: seg.score >= 80 ? 9 : 7,
+                    strokeColor: heatColor(seg.score),
+                    strokeOpacity: 0.72,
+                    strokeStyle: 'solid'
+                });
+                line.setMap(map);
+                rankOverlays.push(line);
+            });
+        }
+
+        function sameCorridorSegment(a, b) {
+            const dist = getDistanceMeters(a.mid.lat, a.mid.lng, b.mid.lat, b.mid.lng);
+            if (dist < CONFIG.TOP_SEGMENT_MIN_DISTANCE) return true;
+            const sameBearing = orientationDiff(a.bearing || 0, b.bearing || 0) <= 20;
+            const aSet = new Set(a.routeHitIds || []), bSet = new Set(b.routeHitIds || []);
+            const shared = [...aSet].filter(x => bSet.has(x)).length;
+            const union = new Set([...aSet, ...bSet]).size || 1;
+            const overlap = shared / union;
+            return dist <= CONFIG.SAME_CORRIDOR_MAX_DISTANCE && sameBearing && overlap >= 0.45;
+        }
+
+        function pickTopSegments(segments, maxCount = 3) {
+            const sorted = [...segments].sort((a, b) => b.score - a.score);
+            const out = [];
+            for (const s of sorted) {
+                if (s.score <= 0 || s.competition.teamKill) continue;
+                if (out.some(o => sameCorridorSegment(s, o))) continue;
+                out.push(s);
+                if (out.length >= maxCount) break;
             }
             return out;
         }
 
-        function scoreCandidate(pt, validNodes, routes) {
-            let sOlive = 0, sDaiso = 0, sStealth = 0, sCoffee = 0;
-            let competitorProximity = 0;
-            let localOliveCount = 0, localDaisoCount = 0, localLensCount = 0;
-            let isTeamKill = false;
+        function segmentTypeText(seg) {
+            if (seg.junction.armCount >= 4) return '보행 합류 교차구간';
+            if (seg.junction.armCount === 3) return '보행 합류 분기구간';
+            if (seg.routeHitIds.length >= 4) return '메인 보행 집중구간';
+            return '핵심 보행구간';
+        }
 
-            for (const node of validNodes) {
-                const lat = parseFloat(node.y), lng = parseFloat(node.x);
-                const dist = getDistanceMeters(pt.lat, pt.lng, lat, lng);
+        function buildRecommendationWindow(seg, allSegments) {
+            const baseRoutes = new Set(seg.routeHitIds || []);
+            const points = [seg.a, seg.b];
+            allSegments.forEach(other => {
+                if (other === seg) return;
+                if (getDistanceMeters(seg.mid.lat, seg.mid.lng, other.mid.lat, other.mid.lng) > 34) return;
+                if (orientationDiff(seg.bearing || 0, other.bearing || 0) > 18) return;
+                const shared = (other.routeHitIds || []).some(id => baseRoutes.has(id));
+                if (!shared) return;
+                points.push(other.a, other.b);
+            });
 
-                if (node.brandKey === 'f_lensme' && currentMode === 'new' && dist <= CONFIG.TEAM_KILL_METERS) {
-                    isTeamKill = true;
-                }
-
-                if (node.isStealth) {
-                    const sd = node.stealthData;
-                    if (dist <= sd.radius) {
-                        const value = ((sd.radius - dist) / sd.radius) * sd.weight;
-                        if (sd.type === 'coffee') sCoffee += value;
-                        else sStealth += value;
-                    }
-                    continue;
-                }
-
-                if (!node.brandKey || !BRAND_CONFIG[node.brandKey]) continue;
-                const cfg = BRAND_CONFIG[node.brandKey];
-                if (dist > CONFIG.PLACE_SCORE_RADIUS) continue;
-                const proximity = (CONFIG.PLACE_SCORE_RADIUS - dist) / CONFIG.PLACE_SCORE_RADIUS;
-
-                if (cfg.isOlive) {
-                    sOlive = Math.max(sOlive, proximity * 18);
-                    localOliveCount++;
-                } else if (cfg.isDaiso) {
-                    sDaiso = Math.max(sDaiso, proximity * 10);
-                    localDaisoCount++;
-                } else if (cfg.isComp && !cfg.isLensme) {
-                    competitorProximity = Math.max(competitorProximity, proximity);
-                    localLensCount++;
+            let bestA = seg.a, bestB = seg.b, bestD = getDistanceMeters(seg.a.lat, seg.a.lng, seg.b.lat, seg.b.lng);
+            for (let i = 0; i < points.length; i++) {
+                for (let j = i + 1; j < points.length; j++) {
+                    const d = getDistanceMeters(points[i].lat, points[i].lng, points[j].lat, points[j].lng);
+                    if (d > bestD && d <= 58) { bestD = d; bestA = points[i]; bestB = points[j]; }
                 }
             }
-
-            // 경쟁 렌즈샵은 '수요 검증'은 플러스, 과밀은 별도 마이너스.
-            let sLensDemand = localLensCount > 0
-                ? Math.min(12, 5 + competitorProximity * 5 + Math.min(2, Math.max(0, localLensCount - 1)))
-                : 0;
-            let competitionPenalty = localLensCount >= 2 ? Math.min(8, (localLensCount - 1) * 2.5) : 0;
-
-            sOlive = Math.min(sOlive, 18);
-            sDaiso = Math.min(sDaiso, 10);
-            sStealth = Math.min(sStealth, 7);
-            sCoffee = Math.min(sCoffee, 3);
-
-            const hits = routeHitInfo(pt, routes);
-            const weightedFlow = hits.reduce((sum, h) => sum + h.route.weight * Math.max(0.35, 1 - h.distance / CONFIG.FLOW_HIT_RADIUS), 0);
-            const sFlowBase = Math.min(18, weightedFlow * 4.4);
-            const junction = analyzeJunction(pt, hits);
-            const sCorner = Math.min(12, junction.cornerScore);
-            const sFlow = Math.min(30, sFlowBase + sCorner);
-
-            let sSynergy = 0;
-            if (localOliveCount >= 1 && localDaisoCount >= 1 && localLensCount >= 1) sSynergy = 20;
-            else if (localOliveCount >= 1 && localDaisoCount >= 1) sSynergy = 10;
-            else if ((localOliveCount >= 1 || localDaisoCount >= 1) && localLensCount >= 1) sSynergy = 6;
-
-            let catAnchor = Math.min(40, sOlive + sDaiso + sLensDemand);
-            let catInfra = Math.min(10, sStealth + sCoffee);
-            let totalScore = catAnchor + sFlow + sSynergy + catInfra - competitionPenalty;
-
-            if (isTeamKill) totalScore = 0;
-            totalScore = Math.max(0, Math.min(100, totalScore));
-
-            pt.score = totalScore;
-            pt.catAnchor = catAnchor;
-            pt.catFlow = sFlow;
-            pt.catSynergy = sSynergy;
-            pt.catInfra = catInfra;
-            pt.competitionPenalty = competitionPenalty;
-            pt.detailOlive = sOlive;
-            pt.detailDaiso = sDaiso;
-            pt.detailLens = sLensDemand;
-            pt.detailFlowBase = sFlowBase;
-            pt.detailCorner = sCorner;
-            pt.localLensCount = localLensCount;
-            pt.localOliveCount = localOliveCount;
-            pt.localDaisoCount = localDaisoCount;
-            pt.isTeamKill = isTeamKill;
-            pt.routeHitIds = hits.map(h => h.route.id);
-            pt.routeHitCount = hits.length;
-            pt.primaryRouteId = hits.length ? hits.sort((a, b) => a.distance - b.distance)[0].route.id : null;
-            pt.junctionType = junction.type;
-            pt.armCount = junction.armCount;
-            pt.dominantBearing = junction.dominantBearing;
-            return pt;
+            return { a: bestA, b: bestB, length: bestD };
         }
 
-        function sameCorridor(a, b) {
-            const dist = getDistanceMeters(a.lat, a.lng, b.lat, b.lng);
-            if (dist < CONFIG.TOP_SPOT_MIN_DISTANCE) return true;
+        function drawTopSegment(seg, idx, allSegments) {
+            const colors = ['#7f1d1d', '#1d4ed8', '#047857'];
+            const color = colors[idx] || '#334155';
+            const window = buildRecommendationWindow(seg, allSegments);
+            seg.recommendationWindow = window;
+            const line = new kakao.maps.Polyline({
+                path: [new kakao.maps.LatLng(window.a.lat, window.a.lng), new kakao.maps.LatLng(window.b.lat, window.b.lng)],
+                strokeWeight: 14,
+                strokeColor: color,
+                strokeOpacity: 0.92,
+                strokeStyle: 'solid'
+            });
+            line.setMap(map); rankOverlays.push(line);
 
-            const aSet = new Set(a.routeHitIds || []);
-            const bSet = new Set(b.routeHitIds || []);
-            const shared = [...aSet].filter(id => bSet.has(id));
-            const union = new Set([...aSet, ...bSet]);
-            const jaccard = union.size ? shared.length / union.size : 0;
-            const sameBearing = orientationDiff(a.dominantBearing || 0, b.dominantBearing || 0) <= 20;
-
-            if (dist <= CONFIG.SAME_CORRIDOR_MAX_DISTANCE && a.primaryRouteId && a.primaryRouteId === b.primaryRouteId) return true;
-            if (dist <= CONFIG.SAME_CORRIDOR_MAX_DISTANCE && jaccard >= 0.5 && sameBearing) return true;
-            return false;
-        }
-
-        function pickTopUniqueSpots(candidates, maxCount = 3) {
-            const sorted = [...candidates].sort((a, b) => b.score - a.score);
-            const top = [];
-            for (const candidate of sorted) {
-                if (candidate.score < 1 || candidate.isTeamKill) continue;
-                if (top.some(existing => sameCorridor(candidate, existing))) continue;
-                top.push(candidate);
-                if (top.length >= maxCount) break;
-            }
-            return top;
-        }
-
-        function getSpotTitle(spot, idx) {
             const rank = idx + 1;
-            const prefix = rank === 1 ? '💎' : (rank === 2 ? '⭐' : '✅');
-            let typeText = '길목';
-            if (spot.junctionType === 'cross') typeText = '사거리';
-            else if (spot.junctionType === 'junction') typeText = '삼거리/분기점';
-            return `${prefix} ${rank}위 ${typeText}`;
-        }
-
-        function splitNearbyRouteSegments(route, spot, targetPath, radius = 65) {
-            const segments = [];
-            let current = [];
-            for (const p of route.samples) {
-                const ok = isPointInPolygon(p.lat, p.lng, targetPath) &&
-                    getDistanceMeters(spot.lat, spot.lng, p.lat, p.lng) <= radius;
-                if (ok) {
-                    current.push(new kakao.maps.LatLng(p.lat, p.lng));
-                } else if (current.length) {
-                    if (current.length >= 2) segments.push(current);
-                    current = [];
-                }
-            }
-            if (current.length >= 2) segments.push(current);
-            return segments;
-        }
-
-        function drawRankSpot(spot, idx, routes, targetPath) {
-            const colors = ['#ef4444', '#3b82f6', '#10b981'];
-            const color = colors[idx] || '#64748b';
-            const title = getSpotTitle(spot, idx);
-
-            let relevant = routes.filter(r => (spot.routeHitIds || []).includes(r.id)).slice(0, 4);
-            relevant.forEach(route => {
-                splitNearbyRouteSegments(route, spot, targetPath).forEach(path => {
-                    let pl = new kakao.maps.Polyline({
-                        path,
-                        strokeWeight: 9,
-                        strokeColor: color,
-                        strokeOpacity: 0.68,
-                        strokeStyle: 'solid'
-                    });
-                    pl.setMap(map);
-                    rankOverlays.push(pl);
-                });
+            const prefix = rank === 1 ? '🥇' : (rank === 2 ? '🥈' : '🥉');
+            const title = `${prefix} ${rank}위 추천구간`;
+            const badge = new kakao.maps.CustomOverlay({
+                position: new kakao.maps.LatLng(seg.mid.lat, seg.mid.lng),
+                content: `<div style="position:relative;z-index:999;text-align:center"><div style="background:${color};color:white;padding:5px 10px;border-radius:7px;font-weight:900;font-size:12px;border:2px solid white;box-shadow:0 3px 7px rgba(0,0,0,.35);white-space:nowrap">${title}</div></div>`,
+                xAnchor: 0.5, yAnchor: 1.15
             });
-
-            let badgeStr = `
-                <div style="position:relative; z-index:999; text-align:center;">
-                    <div style="background:${color}; color:white; padding:4px 10px; border-radius:6px; font-weight:900; font-size:12px; border:2px solid white; box-shadow:0 3px 6px rgba(0,0,0,0.3); white-space:nowrap;">
-                        ${title}
-                    </div>
-                </div>`;
-            let badgeOverlay = new kakao.maps.CustomOverlay({
-                position: new kakao.maps.LatLng(spot.lat, spot.lng),
-                content: badgeStr,
-                xAnchor: 0.5,
-                yAnchor: 0.5
-            });
-            badgeOverlay.setMap(map);
-            rankOverlays.push(badgeOverlay);
+            badge.setMap(map); rankOverlays.push(badge);
             return title;
         }
 
-        function generateExpertComment(totalScore, spot, hasTmapRoutes) {
-            if (!hasTmapRoutes) {
-                return 'TMAP 보행경로가 충분히 확보되지 않아 시설 접근성 중심으로 산정한 보조 결과입니다. 실제 현장 보행 동선 확인이 필요합니다.';
-            }
-
-            const flowText = spot.routeHitCount >= 3
-                ? `실제 보행경로 ${spot.routeHitCount}개가 겹치는 구간`
-                : (spot.routeHitCount >= 1 ? `실제 보행경로 ${spot.routeHitCount}개가 통과하는 구간` : '보행경로 직접 겹침이 약한 구간');
-            const junctionText = spot.armCount >= 4
-                ? '여러 방향의 분기가 확인되는 교차 지점입니다.'
-                : (spot.armCount === 3 ? '3방향 분기가 확인되는 지점입니다.' : '직선형 길목 성격이 강합니다.');
-
-            if (totalScore >= 80) {
-                return `${flowText}이며 앵커 접근성도 높습니다. ${junctionText} 현장에서는 횡단보도 위치와 실제 점포 가시성을 최종 확인하세요.`;
-            } else if (totalScore >= 65) {
-                return `${flowText}입니다. 앵커·체류시설과의 결합이 비교적 좋습니다. ${junctionText}`;
-            } else if (totalScore >= 45) {
-                return `${flowText}이지만 특정 앵커 또는 단일 동선 의존도가 있습니다. 시간대별 현장 유동 확인을 함께 권장합니다.`;
-            }
-            return '보행경로 중첩이나 앵커 결합이 상대적으로 약한 구간입니다. 점포 가시성·횡단 동선·실제 유동을 현장에서 추가 확인하는 편이 좋습니다.';
+        function commercialAreaIndex(segments, gates, validNodes, routes) {
+            if (!segments.length) return 0;
+            const top = [...segments].sort((a, b) => b.score - a.score).slice(0, Math.max(3, Math.ceil(segments.length * 0.12)));
+            const topAvg = top.reduce((s, x) => s + x.score, 0) / top.length;
+            const routeFactor = Math.min(1, routes.length / 10);
+            const gateTypes = new Set(gates.map(g => g.type)).size;
+            const gateFactor = Math.min(1, gateTypes / 4);
+            const targetTypes = new Set();
+            validNodes.forEach(n => {
+                if (n.brandKey && BRAND_CONFIG[n.brandKey]?.isOlive) targetTypes.add('olive');
+                else if (n.brandKey && BRAND_CONFIG[n.brandKey]?.isDaiso) targetTypes.add('daiso');
+                else if (n.isStealth && n.stealthData) targetTypes.add(n.stealthData.type);
+            });
+            const targetFactor = Math.min(1, targetTypes.size / 5);
+            return Math.round(Math.min(100, topAvg * 0.65 + routeFactor * 15 + gateFactor * 10 + targetFactor * 10));
         }
 
-        // ---------- Main analysis ----------
+        function generateSegmentComment(seg, hasRoutes) {
+            if (!hasRoutes) return '실제 보행경로가 확보되지 않아 추천구간 분석을 수행하지 못했습니다.';
+            const flow = seg.routeHitIds.length >= 5 ? '여러 핵심 OD 보행경로가 겹치는 구간' : (seg.routeHitIds.length >= 3 ? '복수 보행경로가 겹치는 구간' : '일부 보행경로가 통과하는 구간');
+            const type = segmentTypeText(seg);
+            const comp = seg.competition.competitorCount80 >= 2 ? `다만 80m 내 경쟁 렌즈샵 ${seg.competition.competitorCount80}곳으로 경쟁강도가 높습니다.` : '근거리 경쟁 과밀은 상대적으로 크지 않습니다.';
+            return `${flow}이며 ${type}으로 분류됩니다. ${comp} 실제 점포 선정 시 1층 여부·전면폭·간판 가시성·횡단보도 위치는 현장 확인이 필요합니다.`;
+        }
+
+        // ---------- Main Segment Analysis ----------
         async function runGridHotspotScan(targetPath) {
             if (isScanningAPI || !targetPath || targetPath.length < 3) return;
             isScanningAPI = true;
@@ -1319,106 +1473,69 @@
 
             try {
                 let cLat = 0, cLng = 0;
-                let minLat = 90, maxLat = -90, minLng = 180, maxLng = -180;
-                targetPath.forEach(p => {
-                    cLat += p.lat; cLng += p.lng;
-                    minLat = Math.min(minLat, p.lat); maxLat = Math.max(maxLat, p.lat);
-                    minLng = Math.min(minLng, p.lng); maxLng = Math.max(maxLng, p.lng);
-                });
-                cLat /= targetPath.length;
-                cLng /= targetPath.length;
+                targetPath.forEach(p => { cLat += p.lat; cLng += p.lng; });
+                cLat /= targetPath.length; cLng /= targetPath.length;
                 const centerPos = new kakao.maps.LatLng(cLat, cLng);
-
                 let maxRadius = 50;
-                targetPath.forEach(p => {
-                    maxRadius = Math.max(maxRadius, getDistanceMeters(p.lat, p.lng, cLat, cLng));
-                });
-                const searchRadius = Math.min(Math.ceil(maxRadius + 180), CONFIG.SEARCH_RADIUS_MAX);
+                targetPath.forEach(p => { maxRadius = Math.max(maxRadius, getDistanceMeters(p.lat, p.lng, cLat, cLng)); });
+                const searchRadius = Math.min(Math.ceil(maxRadius + 220), CONFIG.SEARCH_RADIUS_MAX);
 
                 // 1) 유입구 수집
-                statusEl.innerText = '🚇 지하철 출구·버스정류장·학교 유입구 수집 중...';
-                let subwayStations = await kakaoCategoryAll('SW8', {
+                statusEl.innerText = '🚇 지하철 출구·정류장·학교·주차장 유입구 수집 중...';
+                let subwayStations = uniquePlaces(await kakaoCategoryAll('SW8', {
                     location: centerPos,
-                    radius: Math.min(1500, Math.max(700, searchRadius)),
+                    radius: Math.min(1600, Math.max(800, searchRadius)),
                     sort: kakao.maps.services.SortBy.DISTANCE
-                }, 2);
-                subwayStations = uniquePlaces(subwayStations);
+                }, 2));
+                const subwayGates = await expandSubwayExits(subwayStations);
+                const busResults = await kakaoKeywordAll('버스정류장', { location: centerPos, radius: searchRadius, sort: kakao.maps.services.SortBy.DISTANCE }, 2);
+                const parkingResults = await kakaoKeywordAll('공영주차장', { location: centerPos, radius: searchRadius, sort: kakao.maps.services.SortBy.DISTANCE }, 1);
 
-                let subwayGates = await expandSubwayExits(subwayStations);
-                let busResults = await kakaoKeywordAll('버스정류장', {
-                    location: centerPos,
-                    radius: searchRadius,
-                    sort: kakao.maps.services.SortBy.DISTANCE
-                }, 2);
                 let rawGates = [
                     ...subwayGates,
-                    ...busResults.slice(0, 20).map(p => ({ lat: parseFloat(p.y), lng: parseFloat(p.x), type: 'bus', name: p.place_name }))
+                    ...busResults.slice(0, 24).map(p => ({ lat: +p.y, lng: +p.x, type: 'bus', name: p.place_name })),
+                    ...parkingResults.slice(0, 8).map(p => ({ lat: +p.y, lng: +p.x, type: 'parking', name: p.place_name }))
                 ];
 
-                for (const kw of ['중학교', '고등학교', '대학교']) {
-                    let schools = await kakaoKeywordAll(kw, {
-                        location: centerPos,
-                        radius: Math.min(searchRadius + 300, CONFIG.SEARCH_RADIUS_MAX),
-                        sort: kakao.maps.services.SortBy.DISTANCE
-                    }, 2);
+                for (const kw of ['대학교', '중학교', '고등학교']) {
+                    const schools = await kakaoKeywordAll(kw, { location: centerPos, radius: Math.min(searchRadius + 350, CONFIG.SEARCH_RADIUS_MAX), sort: kakao.maps.services.SortBy.DISTANCE }, 2);
                     schools.forEach(p => {
                         const n = p.place_name || '';
                         if (n.includes('남중') || n.includes('남자중') || n.includes('남고') || n.includes('남자고')) return;
-                        rawGates.push({ lat: parseFloat(p.y), lng: parseFloat(p.x), type: 'school', name: n });
+                        rawGates.push({ lat: +p.y, lng: +p.x, type: kw === '대학교' ? 'university' : 'school', name: n });
                     });
                 }
                 rawGates = dedupeNearbyPoints(rawGates, 12);
-
                 if (mySeq !== scanSequence) return;
 
-                // 2) 매장/앵커/체류시설 수집
-                statusEl.innerText = '🎯 앵커·렌즈샵·체류시설을 다중 페이지로 조사 중...';
-                let rawScannedNodes = [];
-                let seenIds = new Set();
-                let activeKeys = Object.keys(BRAND_CONFIG).filter(key => {
-                    let el = document.getElementById(key);
-                    return el && el.checked;
-                });
-
+                // 2) 렌즈샵/앵커/타깃시설 수집
+                statusEl.innerText = '🎯 렌즈샵·앵커·타깃 시설을 조사 중...';
+                const rawScannedNodes = [];
+                const seenIds = new Set();
+                const activeKeys = Object.keys(BRAND_CONFIG).filter(key => document.getElementById(key)?.checked);
                 for (const key of activeKeys) {
-                    let data = await kakaoKeywordAll(BRAND_CONFIG[key].kw, {
-                        location: centerPos,
-                        radius: searchRadius,
-                        sort: kakao.maps.services.SortBy.DISTANCE
-                    }, CONFIG.ANALYSIS_MAX_PAGES);
+                    const data = await kakaoKeywordAll(BRAND_CONFIG[key].kw, { location: centerPos, radius: searchRadius, sort: kakao.maps.services.SortBy.DISTANCE }, CONFIG.ANALYSIS_MAX_PAGES);
                     data.forEach(place => {
                         const id = place.id || `${place.place_name}|${place.x}|${place.y}`;
                         if (seenIds.has(id)) return;
-                        seenIds.add(id);
-                        place.brandKey = key;
-                        rawScannedNodes.push(place);
+                        seenIds.add(id); place.brandKey = key; rawScannedNodes.push(place);
                     });
-                    await delay(25);
+                    await delay(20);
                 }
-
-                for (const stealth of STEALTH_KEYWORDS) {
-                    let data = await kakaoKeywordAll(stealth.kw, {
-                        location: centerPos,
-                        radius: searchRadius,
-                        sort: kakao.maps.services.SortBy.DISTANCE
-                    }, 2);
+                for (const meta of STEALTH_KEYWORDS) {
+                    const data = await kakaoKeywordAll(meta.kw, { location: centerPos, radius: searchRadius, sort: kakao.maps.services.SortBy.DISTANCE }, meta.type === 'coffee' ? 1 : 2);
                     data.forEach(place => {
                         const id = place.id || `${place.place_name}|${place.x}|${place.y}`;
                         if (seenIds.has(id)) return;
-                        seenIds.add(id);
-                        place.isStealth = true;
-                        place.stealthData = stealth;
-                        rawScannedNodes.push(place);
+                        seenIds.add(id); place.isStealth = true; place.stealthData = meta; rawScannedNodes.push(place);
                     });
-                    await delay(25);
+                    await delay(20);
                 }
-
                 const validNodes = rawScannedNodes;
 
-                // 펜스 내부 카운트
                 let targetStats = { comp: 0, anchor: 0 };
                 validNodes.forEach(p => {
-                    if (!isPointInPolygon(parseFloat(p.y), parseFloat(p.x), targetPath)) return;
+                    if (!isPointInPolygon(+p.y, +p.x, targetPath)) return;
                     if (p.brandKey && BRAND_CONFIG[p.brandKey]) {
                         if (BRAND_CONFIG[p.brandKey].isComp) targetStats.comp++;
                         else if (BRAND_CONFIG[p.brandKey].isAnchor) targetStats.anchor++;
@@ -1427,128 +1544,128 @@
                 document.getElementById('comp_count').innerText = targetStats.comp + '개';
                 document.getElementById('anchor_count').innerText = targetStats.anchor + '개';
 
-                // 버스정류장은 주변 상업 노드가 2개 이상 있는 정류장 위주로 사용
+                // 상업성이 거의 없는 버스정류장 과다 반영 방지
                 const gates = rawGates.filter(g => {
                     if (g.type !== 'bus') return true;
                     let nearby = 0;
                     for (const node of validNodes) {
-                        const d = getDistanceMeters(g.lat, g.lng, parseFloat(node.y), parseFloat(node.x));
-                        if (d <= 120) nearby++;
+                        if (getDistanceMeters(g.lat, g.lng, +node.y, +node.x) <= 130) nearby++;
                         if (nearby >= 2) return true;
                     }
                     return false;
                 });
 
-                // 실제 경로의 목적지: 올리브영/다이소 + 사진/놀이 + 커피
+                // 3) 목적지 구성
                 let destinations = [];
                 validNodes.forEach(p => {
-                    const lat = parseFloat(p.y), lng = parseFloat(p.x);
+                    const lat = +p.y, lng = +p.x;
                     if (p.brandKey && BRAND_CONFIG[p.brandKey]) {
                         const cfg = BRAND_CONFIG[p.brandKey];
                         if (cfg.isOlive) destinations.push({ lat, lng, kind: 'olive', name: p.place_name });
                         else if (cfg.isDaiso) destinations.push({ lat, lng, kind: 'daiso', name: p.place_name });
-                    } else if (p.isStealth) {
+                    } else if (p.isStealth && p.stealthData) {
                         destinations.push({ lat, lng, kind: p.stealthData.type, name: p.place_name });
                     }
                 });
+                if (!destinations.length) destinations.push({ lat: cLat, lng: cLng, kind: 'center', name: '펜스 중심부' });
+                destinations = selectDiverseDestinations(destinations, cLat, cLng);
 
-                // 목적지가 전혀 없으면 중심점을 보조 목적지로 둔다. 점수상 앵커로 가산하지는 않는다.
-                if (!destinations.length) {
-                    destinations.push({ lat: cLat, lng: cLng, kind: 'center', name: '펜스 중심부' });
-                }
-
-                // 너무 가까운 동일 목적지 제거
-                const dedupDest = [];
-                destinations.forEach(d => {
-                    if (!dedupDest.some(o => getDistanceMeters(d.lat, d.lng, o.lat, o.lng) < 8 && d.kind === o.kind)) dedupDest.push(d);
-                });
-                destinations = dedupDest;
-
-                // 3) TMAP 실제 보행로 생성
-                statusEl.innerText = '🌐 TMAP 실제 보행로를 생성하고 있습니다...';
+                // 4) 실제 OD 보행 경로
+                statusEl.innerText = '🌐 실제 보행 OD 네트워크 생성 중...';
                 const actualRoutes = await buildActualFlowRoutes(gates, destinations, cLat, cLng, targetPath, statusEl);
-
                 if (mySeq !== scanSequence) return;
 
-                // 4) 후보점 생성: TMAP 실제 경로 좌표를 우선 사용. 경로가 하나도 없을 때만 grid fallback.
-                let candidates = buildCandidatesFromRoutes(actualRoutes, targetPath);
-                const hasTmapRoutes = actualRoutes.length > 0 && candidates.length > 0;
-                if (!candidates.length) {
-                    statusEl.innerText = '⚠️ TMAP 경로를 확보하지 못해 시설 기반 보조 분석으로 전환합니다.';
-                    candidates = buildFallbackGrid(minLat, maxLat, minLng, maxLng, targetPath);
-                } else {
-                    statusEl.innerText = `🧭 실제 보행경로 ${actualRoutes.length}개에서 핵심 길목 후보 ${candidates.length}개 채점 중...`;
-                }
-
-                // 5) 후보 채점
-                candidates.forEach(pt => scoreCandidate(pt, validNodes, actualRoutes));
-
-                // 지하철 출구 바로 위는 '점포 입지'가 아니라 출입구 자체일 가능성이 커 제외
-                const usableCandidates = candidates.filter(pt => {
-                    const tooNearSubway = gates.some(g =>
-                        (g.type === 'subway_exit' || g.type === 'subway') &&
-                        getDistanceMeters(pt.lat, pt.lng, g.lat, g.lng) < 18
-                    );
-                    return !tooNearSubway;
-                });
-
-                const topSpots = pickTopUniqueSpots(usableCandidates, 3);
                 const rBox = document.getElementById('rankingResultText');
-
-                if (topSpots.length) {
-                    let rankingHtml = '';
-                    for (let idx = 0; idx < topSpots.length; idx++) {
-                        const spot = topSpots[idx];
-                        const addrName = await getAddressAsync(spot.lat, spot.lng);
-                        const rankTitle = drawRankSpot(spot, idx, actualRoutes, targetPath);
-                        const finalScore = Math.round(spot.score);
-                        const expertComment = generateExpertComment(spot.score, spot, hasTmapRoutes);
-                        const flowDetail = hasTmapRoutes
-                            ? `실보행 경로 ${spot.routeHitCount}개 · 분기 ${spot.armCount}방향`
-                            : 'TMAP 경로 미확보 · 시설 기반 보조점수';
-
-                        let receiptHtml = `
-                            <div class="flex justify-between items-center text-teal-700"><span>🌿 핵심 앵커 파워 (Max 40)</span><span class="font-black">${Math.round(spot.catAnchor)}점</span></div>
-                            <div class="flex justify-between items-center text-indigo-700"><span>🚶 실제 보행동선 파워 (Max 30)</span><span class="font-black">${Math.round(spot.catFlow)}점</span></div>
-                            <div class="pl-4 text-[10px] text-indigo-500">└ ${flowDetail}</div>
-                            <div class="flex justify-between items-center text-fuchsia-600"><span>💥 앵커 시너지 (Max 20)</span><span class="font-black">${Math.round(spot.catSynergy)}점</span></div>
-                            <div class="flex justify-between items-center text-amber-700"><span>📸 체류 인프라 (Max 10)</span><span class="font-black">${Math.round(spot.catInfra)}점</span></div>
-                            ${spot.competitionPenalty > 0 ? `<div class="flex justify-between items-center text-rose-600"><span>⚔️ 경쟁 과밀 감점</span><span class="font-black">-${Math.round(spot.competitionPenalty)}점</span></div>` : ''}
-                        `;
-
-                        rankingHtml += `
-                            <div class="bg-white px-3 py-3 rounded-xl border border-slate-200 shadow-sm mb-3 relative overflow-hidden">
-                                ${currentMode === 'reloc' && idx === 0 ? '<div class="absolute top-0 right-0 bg-rose-500 text-white text-[10px] font-bold px-2 py-1 rounded-bl-lg">추천 이전 후보</div>' : ''}
-                                <div class="flex justify-between items-center border-b border-slate-100 pb-1.5 mb-1.5 mt-1">
-                                    <span class="text-[14px] text-slate-800 font-extrabold">${rankTitle} <span class="text-rose-600 text-[13px] font-black ml-1">(총 ${finalScore}점)</span></span>
-                                </div>
-                                <div class="text-[12px] text-slate-600 mb-2 font-bold tracking-tight">📍 구간: ${escapeHtml(addrName)} 주변</div>
-                                <div class="bg-slate-50 p-2 rounded-lg text-[11px] space-y-1.5 border border-slate-100 mb-2">
-                                    <p class="font-extrabold text-slate-700 mb-1 border-b border-slate-200 pb-1">📊 100점 만점 상세 근거</p>
-                                    ${receiptHtml}
-                                </div>
-                                <div class="bg-indigo-50/80 p-2.5 rounded-lg text-[11.5px] border border-indigo-100">
-                                    <p class="font-extrabold text-indigo-800 mb-1">💬 분석 코멘트</p>
-                                    <p class="text-indigo-700 leading-snug font-medium break-keep">${escapeHtml(expertComment)}</p>
-                                </div>
-                            </div>`;
-                    }
-                    rBox.innerHTML = rankingHtml;
-                } else {
-                    const failMsg = currentMode === 'new'
-                        ? `⚠️ 유효한 입지를 찾지 못했습니다. 신규 출점은 기존 렌즈미 ${CONFIG.TEAM_KILL_METERS}m 이내 후보를 자동 제외합니다.`
-                        : '분석 조건을 만족하는 서로 다른 길목 후보를 찾지 못했습니다.';
-                    rBox.innerHTML = `<div class="text-xs text-rose-600 font-bold mt-1">${failMsg}</div>`;
+                if (!actualRoutes.length) {
+                    rBox.innerHTML = `<div class="text-xs text-rose-600 font-bold">⚠️ TMAP 실제 보행경로를 확보하지 못해 Segment 분석을 중단했습니다. API 키·호출 제한·네트워크 상태를 확인하세요.</div>`;
+                    document.getElementById('rankingResultBox').classList.remove('hidden');
+                    statusEl.innerText = '⚠️ 실제 보행경로가 없어 도로 Segment 분석을 만들 수 없습니다.';
+                    return;
                 }
 
+                // 5) 경로를 Micro Segment -> Corridor Segment로 병합
+                statusEl.innerText = `🧩 실제 보행경로 ${actualRoutes.length}개를 도로 Segment로 분해 중...`;
+                const micros = buildMicroSegments(actualRoutes, targetPath);
+                let segments = clusterMicroSegments(micros);
+                if (!segments.length) throw new Error('펜스 내부 Segment 생성 실패');
+
+                // 6) Feature Engine + Multiplicative Potential
+                statusEl.innerText = `🧠 도로구간 ${segments.length}개 Flow·Demand·Capture·Access·Competition 분석 중...`;
+                segments = computeSegmentFeatures(segments, actualRoutes, validNodes, gates);
+
+                // 지하철 출구 정중앙 자체는 점포 후보에서 제외
+                segments = segments.filter(seg => !gates.some(g =>
+                    (g.type === 'subway_exit' || g.type === 'subway') &&
+                    getDistanceMeters(seg.mid.lat, seg.mid.lng, g.lat, g.lng) < 12
+                ));
+
+                drawHeatmapSegments(segments);
+                const topSegments = pickTopSegments(segments, 3);
+                const areaIndex = commercialAreaIndex(segments, gates, validNodes, actualRoutes);
+
+                let html = `
+                    <div class="mb-3 rounded-xl border border-indigo-200 bg-gradient-to-br from-indigo-50 to-white p-3">
+                        <div class="flex justify-between items-end">
+                            <div>
+                                <p class="text-[10px] font-bold text-indigo-500">펜스 전체</p>
+                                <p class="text-[13px] font-black text-indigo-800">상권 잠재지수</p>
+                            </div>
+                            <div class="text-2xl font-black text-indigo-700">${areaIndex}<span class="text-xs ml-1">/100</span></div>
+                        </div>
+                        <p class="text-[9.5px] text-slate-500 mt-1">실제 통신 유동인구가 아닌 OD 보행경로·유입구·타깃시설 기반 모델 지수</p>
+                    </div>`;
+
+                for (let idx = 0; idx < topSegments.length; idx++) {
+                    const seg = topSegments[idx];
+                    const title = drawTopSegment(seg, idx, segments);
+                    const addr = await getAddressAsync(seg.mid.lat, seg.mid.lng);
+                    const typeText = segmentTypeText(seg);
+                    const comment = generateSegmentComment(seg, true);
+                    const routeNames = seg.routeHits.slice(0, 3).map(h => escapeHtml(h.route.name)).join('<br>');
+                    const competitionText = seg.competition.competitorCount80 > 0
+                        ? `80m 내 경쟁 ${seg.competition.competitorCount80}곳 · 160m 내 ${seg.competition.competitorCount160}곳`
+                        : '80m 내 주요 경쟁 렌즈샵 없음';
+                    html += `
+                        <div class="bg-white px-3 py-3 rounded-xl border border-slate-200 shadow-sm mb-3 relative overflow-hidden">
+                            <div class="flex justify-between items-start gap-2 border-b border-slate-100 pb-2 mb-2">
+                                <div>
+                                    <p class="text-[13px] font-black text-slate-800">${title}</p>
+                                    <p class="text-[10px] font-bold text-slate-500 mt-0.5">${typeText}</p>
+                                </div>
+                                <div class="text-right">
+                                    <p class="text-[9px] font-bold text-slate-400">입지 잠재지수</p>
+                                    <p class="text-xl font-black text-rose-600">${Math.round(seg.score)}</p>
+                                    <p class="text-[9px] font-bold text-indigo-500">펜스 내 상위 ${seg.topPercent}%</p>
+                                </div>
+                            </div>
+                            <div class="text-[11px] font-bold text-slate-600 mb-2">📍 ${escapeHtml(addr)} 주변 약 ${Math.round(seg.recommendationWindow?.length || getDistanceMeters(seg.a.lat, seg.a.lng, seg.b.lat, seg.b.lng))}m 구간</div>
+                            <div class="grid grid-cols-2 gap-1.5 text-[10px] mb-2">
+                                <div class="bg-indigo-50 rounded p-2"><span class="text-slate-500">🚶 보행집중</span><b class="float-right text-indigo-700">${seg.flowIndex}</b></div>
+                                <div class="bg-pink-50 rounded p-2"><span class="text-slate-500">🎯 타깃수요</span><b class="float-right text-pink-700">${seg.demandIndex}</b></div>
+                                <div class="bg-amber-50 rounded p-2"><span class="text-slate-500">👀 포착잠재</span><b class="float-right text-amber-700">${seg.captureIndex}</b></div>
+                                <div class="bg-emerald-50 rounded p-2"><span class="text-slate-500">🚇 접근성</span><b class="float-right text-emerald-700">${seg.accessIndex}</b></div>
+                            </div>
+                            <div class="bg-slate-50 border border-slate-100 rounded-lg p-2 text-[10px] space-y-1 mb-2">
+                                <div class="flex justify-between"><span>실제 OD 경로 중첩</span><b>${seg.routeHitIds.length}개</b></div>
+                                <div class="flex justify-between"><span>보행 분기방향</span><b>${seg.junction.armCount}방향</b></div>
+                                <div class="flex justify-between"><span>경쟁 보정계수</span><b>${seg.competitionIndex}%</b></div>
+                                <div class="flex justify-between"><span>경쟁 환경</span><b>${competitionText}</b></div>
+                            </div>
+                            ${routeNames ? `<div class="bg-blue-50/70 rounded-lg p-2 text-[9.5px] text-blue-700 mb-2"><b>주요 통과경로</b><br>${routeNames}</div>` : ''}
+                            <div class="bg-indigo-50/70 rounded-lg p-2 text-[10.5px] text-indigo-700 leading-snug">${escapeHtml(comment)}</div>
+                        </div>`;
+                }
+
+                if (!topSegments.length) {
+                    html += `<div class="text-xs text-rose-600 font-bold">⚠️ Hard Filter 이후 추천 가능한 도로구간이 없습니다. 신규 출점은 기존 렌즈미 ${CONFIG.TEAM_KILL_METERS}m 이내를 자동 제외합니다.</div>`;
+                }
+
+                rBox.innerHTML = html;
                 document.getElementById('rankingResultBox').classList.remove('hidden');
-                if (hasTmapRoutes) {
-                    statusEl.innerText = `✅ 실제 TMAP 보행경로 ${actualRoutes.length}개 기반 분석 완료 · 동일 길 중복 제거 후 ${topSpots.length}개 표시`;
-                } else {
-                    statusEl.innerText = `⚠️ TMAP 실제 경로 미확보 · 시설 기반 보조 분석 결과 ${topSpots.length}개 표시`;
-                }
+                statusEl.innerText = `✅ V45 완료 · 실제 OD 경로 ${actualRoutes.length}개 · 도로 Segment ${segments.length}개 · 추천구간 ${topSegments.length}개`;
+
             } catch (e) {
-                console.error('분석 에러:', e);
+                console.error('V45 분석 에러:', e);
                 statusEl.innerText = '⚠️ 분석 중 에러가 발생했습니다. 개발자도구 Console을 확인하세요.';
             } finally {
                 isScanningAPI = false;
