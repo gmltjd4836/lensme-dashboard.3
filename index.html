@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>렌즈미 상권 분석 대시보드 V52.1 · 상권 형태 정제</title>
+<title>렌즈미 상권 분석 대시보드 V52.3 · 근거 기반 경계</title>
 <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css" rel="stylesheet">
 <script src="https://cdn.tailwindcss.com"></script>
 <style>
@@ -31,7 +31,7 @@ details[open]>summary::before{content:'📂 '}
 <div class="w-full md:w-1/4 bg-white border-r border-gray-200 p-6 flex flex-col shadow-lg z-20 overflow-y-auto">
 <h1 class="text-xl font-extrabold text-slate-800 border-b-4 border-indigo-500 pb-3 mb-4 flex justify-between items-center">
 <span>🗺️ 전국 상권 관제탑</span>
-<span class="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded-full font-bold">V50.1</span>
+<span class="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded-full font-bold">V52.3</span>
 </h1>
 
 <div class="mb-4">
@@ -79,6 +79,9 @@ details[open]>summary::before{content:'📂 '}
 <div class="text-[10px] leading-snug text-slate-500 mb-2">
 보행축과 연결된 주변 상가·골목·상업 블록을 함께 묶어 상권 영역을 표시합니다. 공식 경계는 원형을 보존하며, 자동 추정 경계는 현장 검토가 필요합니다.
 </div>
+<label class="flex items-center gap-2 bg-white rounded-lg px-2 py-1.5 border border-cyan-200 cursor-pointer text-[10px] font-bold text-cyan-900 mb-2">
+<input id="f_area_evidence" type="checkbox" onchange="toggleV523Evidence()" class="chk-blue">🧪 상권 경계 근거 보기
+</label>
 <p id="areaDataNotice" class="text-[10px] text-slate-500 mb-2"></p>
 <div id="autoAreaList" class="space-y-1.5 max-h-44 overflow-y-auto"></div>
 </div>
@@ -1643,205 +1646,250 @@ try{
 discoverTradeAreas=v52DiscoverTradeAreas;
 
 
+
 /* =========================
-   V52.2 ROAD-ALIGNED BOUNDARY REFINEMENT
-   - V52.1에서 찾은 Skeleton/상권 위치는 유지
-   - 원형 Buffer 대신 각 보행 구간별 좌/우 상가 깊이를 측정
-   - 도로 방향과 평행한 사각 Corridor로 외곽선 생성
-   - 외곽선은 계산용 보행 Skeleton에 정렬하되 화면에는 최종 면만 표시
+   V52.3 EVIDENCE-BASED MINIMAL REFINEMENT
+   - V52.1의 위치/크기 판단은 유지
+   - 중심부는 건드리지 않고 근거가 약한 말단만 제거
+   - 강한 형태 보정(opening/closing) 제거
+   - 겹침은 Skeleton 기반 배타 귀속 유지
+   - 검증모드: 유지 Skeleton / 제거 말단 / 귀속 POI 표시
    ========================= */
 Object.assign(V52_CFG,{
-  roadSnapBaseSide:20,
-  roadSnapMinSide:18,
-  roadSnapMaxSide:54,
-  roadSnapPoiPadding:10,
-  roadSnapEndExtend:7,
-  roadSnapPoiMax:82,
-  roadSnapQuantize:4,
-  roadSnapCloseMeters:4,
-  roadSnapSimplify:0.000018,
-  roadSnapSecondaryRatio:.38,
-  roadSnapSecondaryMinM2:2100
+  v523SafetyMaxRadius:365,
+  v523CoreRadius:105,
+  v523TailStart:135,
+  v523WeakPoiWeight:.82,
+  v523WeakPoiCount:1,
+  v523MinRouteCount:2,
+  v523MinKeepSegments:4,
+  v523MinComponentM2:1450,
+  v523SecondaryRatio:.38,
+  v523SimplifyTolerance:.000018,
+  v523EvidencePoiLimit:120
 });
 
-function v522LocalXY(lat,lng,origin){
-  const c=Math.cos(origin.lat*Math.PI/180);
-  return {x:(lng-origin.lng)*111320*c,y:(lat-origin.lat)*110540};
+let v523EvidenceOverlays=[];
+let v523LastSeeds=[];
+let v523LastAssigned={};
+
+function v523ClearEvidence(){
+  v523EvidenceOverlays.forEach(o=>{try{o.setMap(null)}catch(_){}});
+  v523EvidenceOverlays=[];
 }
-function v522LatLng(x,y,origin){
-  const c=Math.cos(origin.lat*Math.PI/180);
-  return {lat:origin.lat+y/110540,lng:origin.lng+x/(111320*c)};
+
+function v523EvidenceStrong(seg,seed){
+  const d=Pt(seg.mid.lat,seg.mid.lng,seed.lat,seed.lng);
+  return d<=V52_CFG.v523CoreRadius || (seg.routeCount||0)>=V52_CFG.v523MinRouteCount || (seg.poiWeight||0)>=1.15 || (seg.poiLocal||0)>=3;
 }
-function v522Quant(v,step=4){return Math.round(v/step)*step}
-function v522Percentile(arr,p){
-  if(!arr?.length)return 0;
-  const a=[...arr].sort((x,y)=>x-y),idx=(a.length-1)*p,lo=Math.floor(idx),hi=Math.ceil(idx);
-  return lo===hi?a[lo]:a[lo]*(hi-idx)+a[hi]*(idx-lo);
-}
-function v522ProjectPoiToSeg(seg,p0,origin){
-  const a=v522LocalXY(seg.a.lat,seg.a.lng,origin),b=v522LocalXY(seg.b.lat,seg.b.lng,origin),p=v522LocalXY(p0.lat,p0.lng,origin);
-  const dx=b.x-a.x,dy=b.y-a.y,L2=dx*dx+dy*dy;
-  if(L2<1e-6)return null;
-  let t=((p.x-a.x)*dx+(p.y-a.y)*dy)/L2;t=Math.max(0,Math.min(1,t));
-  const qx=a.x+t*dx,qy=a.y+t*dy,L=Math.sqrt(L2),ux=dx/L,uy=dy/L,nx=-uy,ny=ux;
-  const side=(p.x-qx)*nx+(p.y-qy)*ny;
-  const dist=Math.abs(side);
-  return {t,dist,side,proj:{x:qx,y:qy},u:{x:ux,y:uy},n:{x:nx,y:ny},a,b,L};
-}
-function v522PoiAssignmentsToSegments(seed,skeleton,assigned){
-  const origin={lat:seed.lat,lng:seed.lng};
-  const buckets=skeleton.map(()=>({left:[],right:[],pois:[]}));
-  for(const p0 of assigned||[]){
-    let best=null;
-    for(let i=0;i<skeleton.length;i++){
-      const pr=v522ProjectPoiToSeg(skeleton[i],p0,origin);if(!pr||pr.dist>V52_CFG.roadSnapPoiMax)continue;
-      if(!best||pr.dist<best.pr.dist)best={i,pr};
-    }
-    if(!best)continue;
-    const w=Math.max(.45,v52PoiWeight(p0));
-    const arr=best.pr.side>=0?buckets[best.i].left:buckets[best.i].right;
-    // 가중치가 높은 업종은 깊이 측정에 조금 더 반영하되 극단치는 후속 percentile에서 제거
-    arr.push(best.pr.dist*(.92+.08*Math.min(w,1.8)));
-    buckets[best.i].pois.push(p0);
+
+function v523ConnectedComponents(segs){
+  if(!segs?.length)return[];
+  const nb=segs.map(()=>[]);
+  for(let i=0;i<segs.length;i++)for(let j=i+1;j<segs.length;j++){
+    if(ht(segs[i],segs[j])<=V52_CFG.refinedConnectMeters){nb[i].push(j);nb[j].push(i)}
   }
-  return {origin,buckets};
-}
-function v522SegmentSideWidths(seg,bucket){
-  const support=Math.min(1,(seg.routeCount||0)/3)+Math.min(.8,(seg.poiWeight||0)/2.5);
-  const base=V52_CFG.roadSnapBaseSide+support*3.5;
-  const sideWidth=(arr)=>{
-    if(!arr?.length)return v522Quant(base,V52_CFG.roadSnapQuantize);
-    const q=v522Percentile(arr,arr.length>=5?.82:.9);
-    return v522Quant(it(Math.max(base,q+V52_CFG.roadSnapPoiPadding),V52_CFG.roadSnapMinSide,V52_CFG.roadSnapMaxSide),V52_CFG.roadSnapQuantize);
-  };
-  return {left:sideWidth(bucket?.left),right:sideWidth(bucket?.right)};
-}
-function v522CorridorRect(seg,leftW,rightW,origin,extend=7){
-  const a=v522LocalXY(seg.a.lat,seg.a.lng,origin),b=v522LocalXY(seg.b.lat,seg.b.lng,origin);
-  let dx=b.x-a.x,dy=b.y-a.y,L=Math.hypot(dx,dy);if(L<.5)return null;
-  const ux=dx/L,uy=dy/L,nx=-uy,ny=ux;
-  const ax=a.x-ux*extend,ay=a.y-uy*extend,bx=b.x+ux*extend,by=b.y+uy*extend;
-  const pts=[
-    {x:ax+nx*leftW,y:ay+ny*leftW},
-    {x:bx+nx*leftW,y:by+ny*leftW},
-    {x:bx-nx*rightW,y:by-ny*rightW},
-    {x:ax-nx*rightW,y:ay-ny*rightW}
-  ].map(p=>v522LatLng(p.x,p.y,origin));
-  return turf.polygon([pts.map(p=>[p.lng,p.lat]).concat([[pts[0].lng,pts[0].lat]])]);
-}
-function v522KeepMainPieces(g,seed){
-  if(!g)return null;
-  try{
-    const feats=[];
-    if(g.geometry?.type==='Polygon')feats.push(g);
-    else if(g.geometry?.type==='MultiPolygon')for(const c0 of g.geometry.coordinates)feats.push(turf.polygon(c0));
-    if(feats.length<=1)return g;
-    feats.sort((a,b)=>turf.area(b)-turf.area(a));
-    const seedPt=turf.point([seed.lng,seed.lat]);
-    const primary=feats.find(x=>{try{return turf.booleanPointInPolygon(seedPt,x)}catch(_){return false}})||feats[0];
-    const mainA=turf.area(primary),keep=[primary];
-    for(const x of feats){
-      if(x===primary)continue;
-      const a=turf.area(x);if(a<Math.max(V52_CFG.roadSnapSecondaryMinM2,mainA*V52_CFG.roadSnapSecondaryRatio))continue;
-      const cc=turf.centroid(x).geometry.coordinates;
-      if(Pt(seed.lat,seed.lng,cc[1],cc[0])<200)keep.push(x);
-    }
-    return v52UnionFeatures(keep)||primary;
-  }catch(_){return g}
-}
-function v522CleanRoadAligned(g,seed){
-  if(!g)return null;
-  let out=g;
-  // junction 사이 작은 틈만 메우고, 둥근 팽창은 최소화
-  try{
-    const grown=turf.buffer(out,V52_CFG.roadSnapCloseMeters/1000,{units:'kilometers',steps:2});
-    if(grown){const back=turf.buffer(grown,-V52_CFG.roadSnapCloseMeters/1000,{units:'kilometers',steps:2});if(back)out=back}
-  }catch(_){ }
-  try{
-    const clip=turf.buffer(turf.point([seed.lng,seed.lat]),V52_CFG.adaptiveClipRadius/1000,{units:'kilometers',steps:32});
-    out=turf.intersect(turf.featureCollection([out,clip]))||out;
-  }catch(_){ }
-  out=v522KeepMainPieces(out,seed)||out;
-  try{out=turf.simplify(out,{tolerance:V52_CFG.roadSnapSimplify,highQuality:true})||out}catch(_){ }
+  const seen=new Set(),out=[];
+  for(let i=0;i<segs.length;i++){
+    if(seen.has(i))continue;
+    const q=[i],c=[];seen.add(i);
+    while(q.length){const k=q.shift();c.push(segs[k]);for(const x of nb[k])if(!seen.has(x)){seen.add(x);q.push(x)}}
+    out.push(c);
+  }
   return out;
 }
 
-function v522CandidateArea(seed,assigned){
-  const skeleton=v521PruneSkeleton(seed,seed.skeleton||[]);
-  if(!skeleton.length)return null;
-  seed.skeleton=skeleton;
-  const {origin,buckets}=v522PoiAssignmentsToSegments(seed,skeleton,assigned||[]);
-  const pieces=[];
-  for(let i=0;i<skeleton.length;i++){
-    const w=v522SegmentSideWidths(skeleton[i],buckets[i]);
-    skeleton[i].roadSnapLeft=w.left;skeleton[i].roadSnapRight=w.right;
-    const rect=v522CorridorRect(skeleton[i],w.left,w.right,origin,V52_CFG.roadSnapEndExtend);
-    if(rect)pieces.push(rect);
+function v523PruneSkeleton(seed,skeleton){
+  if(!skeleton?.length){seed._v523Removed=[];return[]}
+  const removed=[];
+  // 1) 안전 반경 밖은 강한 근거가 있을 때만 유지. 중심부/강한 경로는 보존.
+  let pool=skeleton.filter(seg=>{
+    const d=Pt(seg.mid.lat,seg.mid.lng,seed.lat,seed.lng);
+    const strong=v523EvidenceStrong(seg,seed);
+    const keep=d<=V52_CFG.v523SafetyMaxRadius || strong;
+    if(!keep)removed.push(seg);
+    return keep;
+  });
+  // 2) seed 근처 또는 강한 근거가 포함된 주 연결 덩어리 선택.
+  let comps=v523ConnectedComponents(pool);
+  if(comps.length>1){
+    const score=c=>{
+      const near=Math.min(...c.map(s=>Pt(s.mid.lat,s.mid.lng,seed.lat,seed.lng)));
+      const strong=c.filter(s=>v523EvidenceStrong(s,seed)).length;
+      const evidence=c.reduce((z,s)=>z+v521SegSupport(s),0);
+      return evidence+2.2*strong-.008*near;
+    };
+    comps.sort((a,b)=>score(b)-score(a));
+    const main=comps[0];
+    for(const c of comps.slice(1))removed.push(...c);
+    pool=main;
   }
-  // Skeleton 교차점 주변만 작은 연결 패치. POI마다 원형 buffer를 만들지 않아 외곽이 울퉁불퉁해지는 것을 방지.
-  for(let i=0;i<skeleton.length;i++){
-    let deg=0;
-    for(let j=0;j<skeleton.length;j++)if(i!==j&&ht(skeleton[i],skeleton[j])<=V52_CFG.refinedConnectMeters+2)deg++;
-    if(deg>=2){
-      const m=skeleton[i].mid;
-      pieces.push(turf.buffer(turf.point([m.lng,m.lat]),.018,{units:'kilometers',steps:2}));
-    }
+  // 3) 말단 가지를 반복 제거. 거리만으로 자르지 않고 '말단+약한 보행+약한 상가'가 모두 맞아야 제거.
+  for(let pass=0;pass<5;pass++){
+    if(pool.length<=V52_CFG.v523MinKeepSegments)break;
+    const deg=pool.map(()=>0);
+    for(let i=0;i<pool.length;i++)for(let j=i+1;j<pool.length;j++)if(ht(pool[i],pool[j])<=V52_CFG.refinedConnectMeters){deg[i]++;deg[j]++}
+    const drop=[];
+    pool.forEach((seg,i)=>{
+      const d=Pt(seg.mid.lat,seg.mid.lng,seed.lat,seed.lng);
+      if(d<=V52_CFG.v523TailStart || deg[i]>1 || v523EvidenceStrong(seg,seed))return;
+      const weakRoute=(seg.routeCount||0)<=1;
+      const weakPoi=(seg.poiWeight||0)<V52_CFG.v523WeakPoiWeight && (seg.poiLocal||0)<=V52_CFG.v523WeakPoiCount;
+      if(weakRoute&&weakPoi)drop.push(seg);
+    });
+    if(!drop.length || pool.length-drop.length<V52_CFG.v523MinKeepSegments)break;
+    const ds=new Set(drop);removed.push(...drop);pool=pool.filter(s=>!ds.has(s));
   }
-  let area=v52UnionFeatures(pieces);
-  if(!area)return null;
-  return v522CleanRoadAligned(area,seed);
+  seed._v523Removed=removed;
+  return pool;
 }
 
-// 최종 상권 생성은 V52.1의 위치/배타 분할을 유지하되 후보 면만 도로정렬 방식으로 교체
-v52CandidateArea=v522CandidateArea;
+// 원래 V52 Skeleton에서 V52.1의 강한 형태정제를 거치지 않고, V52.3 근거 기반 pruning만 적용
+v52BuildSkeleton=function(seed,routes,pois){
+  return v523PruneSkeleton(seed,v52BuildSkeletonBase(seed,routes,pois));
+};
+
+function v523MinimalCleanGeometry(area,seed){
+  if(!area)return null;
+  let g=area;
+  // 모양을 억지로 깎지 않는다. 분리된 작은 위성 덩어리만 제거한다.
+  try{
+    const feats=[];
+    if(g.geometry?.type==='Polygon')feats.push(g);
+    else if(g.geometry?.type==='MultiPolygon')g.geometry.coordinates.forEach(c=>feats.push(turf.polygon(c)));
+    if(feats.length>1){
+      const seedPt=turf.point([seed.lng,seed.lat]);
+      feats.sort((a,b)=>turf.area(b)-turf.area(a));
+      const primary=feats.find(x=>{try{return turf.booleanPointInPolygon(seedPt,x)}catch(_){return false}})||feats[0];
+      const mainArea=turf.area(primary),keep=[primary];
+      for(const x of feats){
+        if(x===primary)continue;
+        const a=turf.area(x);
+        if(a<Math.max(V52_CFG.v523MinComponentM2,mainArea*V52_CFG.v523SecondaryRatio))continue;
+        const c=turf.centroid(x).geometry.coordinates;
+        if(Pt(seed.lat,seed.lng,c[1],c[0])<230)keep.push(x);
+      }
+      g=v52UnionFeatures(keep)||primary;
+    }
+  }catch(_){ }
+  // 약 2m 수준의 아주 약한 simplify만 적용. opening/closing은 사용하지 않는다.
+  try{g=turf.simplify(g,{tolerance:V52_CFG.v523SimplifyTolerance,highQuality:true})||g}catch(_){ }
+  return g;
+}
+
+// V52.1의 적응형 폭은 유지하되, 형태를 강하게 열고 닫지 않는다.
+v52CandidateArea=function(seed,assigned){
+  const skeleton=v523PruneSkeleton(seed,seed.skeleton||[]);
+  if(!skeleton.length)return null;
+  seed.skeleton=skeleton;
+  const pieces=[];
+  for(const seg of skeleton){
+    const width=v521AdaptiveWidth(seg,assigned);
+    const line=turf.lineString([[seg.a.lng,seg.a.lat],[seg.b.lng,seg.b.lat]]);
+    pieces.push(turf.buffer(line,width/1000,{units:'kilometers',steps:8}));
+  }
+  for(const p0 of assigned||[]){
+    const ds=v52DistToSkeleton(p0,skeleton);
+    if(ds.distance>V52_CFG.adaptivePoiDepth)continue;
+    const r=V52_CFG.adaptivePoiBuffer+(ds.distance<35?5:0)+Math.min(4,v52PoiWeight(p0)*1.5);
+    pieces.push(turf.buffer(turf.point([p0.lng,p0.lat]),r/1000,{units:'kilometers',steps:8}));
+  }
+  return v523MinimalCleanGeometry(v52UnionFeatures(pieces),seed);
+};
+
 v52FinalizeAreas=function(seeds,assigned){
-  const candidates=seeds.map(s=>v522CandidateArea(s,assigned[s.id]||[]));
+  const candidates=seeds.map(s=>v52CandidateArea(s,assigned[s.id]||[]));
   const masks=v52TerritoryMasksBase(seeds,candidates);
   const areas=[];
   seeds.forEach((s0,idx)=>{
-    let geom=candidates[idx];if(!geom)return;
+    let geom=candidates[idx];
+    if(!geom)return;
+    // 겹치는 부분만 Skeleton 기반 배타영역으로 자른다. 비겹침 부분은 그대로 둔다.
     if(masks?.[s0.id])try{geom=turf.intersect(turf.featureCollection([geom,masks[s0.id]]))||geom}catch(_){ }
-    geom=v522CleanRoadAligned(geom,s0);if(!geom)return;
-    const areaM2=Math.round(turf.area(geom));if(areaM2<V52_CFG.minAreaM2)return;
+    geom=v523MinimalCleanGeometry(geom,s0);
+    if(!geom)return;
+    const areaM2=Math.round(turf.area(geom));
+    if(areaM2<V52_CFG.minAreaM2)return;
     const ctr=K(geom),routeIds=new Set;
     (s0.skeleton||[]).forEach(seg=>seg.routeMap?.forEach((_,rid)=>routeIds.add(rid)));
     areas.push({
-      id:`v522_${s0.id}`,name:s0.name,type:'network_official_named',
-      source:`${s0.source} + TMAP 보행 Skeleton + 도로방향 외곽 Snap`,
+      id:`v523_${s0.id}`,name:s0.name,type:'network_official_named',
+      source:`${s0.source} + TMAP 보행 Skeleton + 근거 기반 최소 정제`,
       centerLat:ctr.lat,centerLng:ctr.lng,path:F(geom),geometry:geom.geometry,
-      segments:[],skeletonSegments:s0.skeleton,commercialPois:assigned[s0.id]||[],
+      segments:[],skeletonSegments:s0.skeleton,removedSkeletonSegments:s0._v523Removed||[],commercialPois:assigned[s0.id]||[],
       poiCount:(assigned[s0.id]||[]).length,
       networkLength:Math.round((s0.skeleton||[]).reduce((sum,x)=>sum+Pt(x.a.lat,x.a.lng,x.b.lat,x.b.lng),0)),
       routeCount:routeIds.size,
-      confidence:Math.min(.96,.62+.025*Math.min(routeIds.size,8)+.008*Math.min((assigned[s0.id]||[]).length,20)),
-      color:s0.color,areaM2,exclusive:true,shapeRefined:true,roadAligned:true
+      confidence:Math.min(.95,.6+.025*Math.min(routeIds.size,8)+.008*Math.min((assigned[s0.id]||[]).length,20)),
+      color:s0.color,areaM2,exclusive:true,evidenceRefined:true
     });
   });
   return areas;
 };
 
-// V52.2 화면 문구
+function v523DotOverlay(lat,lng,color,title){
+  const el=document.createElement('div');
+  el.title=title||'';
+  el.style.cssText=`width:7px;height:7px;border-radius:50%;background:${color};border:1px solid white;box-shadow:0 1px 3px rgba(0,0,0,.35);`;
+  return new kakao.maps.CustomOverlay({position:new kakao.maps.LatLng(lat,lng),content:el,xAnchor:.5,yAnchor:.5,zIndex:95});
+}
+
+function v523RenderEvidence(){
+  v523ClearEvidence();
+  if(!document.getElementById('f_area_evidence')?.checked)return;
+  for(const a0 of v){
+    const color=a0.color||'#2563eb';
+    for(const seg of a0.skeletonSegments||[]){
+      const strong=(seg.routeCount||0)>=2||(seg.poiWeight||0)>=1.15;
+      const pl=new kakao.maps.Polyline({
+        path:[new kakao.maps.LatLng(seg.a.lat,seg.a.lng),new kakao.maps.LatLng(seg.b.lat,seg.b.lng)],
+        strokeWeight:strong?5:3,strokeColor:color,strokeOpacity:strong?.9:.55,strokeStyle:'solid',zIndex:90
+      });
+      pl.setMap(f);v523EvidenceOverlays.push(pl);
+    }
+    for(const seg of a0.removedSkeletonSegments||[]){
+      const pl=new kakao.maps.Polyline({
+        path:[new kakao.maps.LatLng(seg.a.lat,seg.a.lng),new kakao.maps.LatLng(seg.b.lat,seg.b.lng)],
+        strokeWeight:3,strokeColor:'#64748b',strokeOpacity:.7,strokeStyle:'shortdash',zIndex:91
+      });
+      pl.setMap(f);v523EvidenceOverlays.push(pl);
+    }
+    const pois=(a0.commercialPois||[]).slice(0,V52_CFG.v523EvidencePoiLimit);
+    for(const p0 of pois){const ov=v523DotOverlay(p0.lat,p0.lng,color,p0.name);ov.setMap(f);v523EvidenceOverlays.push(ov)}
+  }
+}
+
+function toggleV523Evidence(){v523RenderEvidence()}
+
+const v523StBase=St;
+St=function(){v523StBase();v523RenderEvidence()};
+
+const v523ClearActiveBase=clearActivePolygon;
+clearActivePolygon=function(){v523ClearActiveBase();if(document.getElementById('f_area_evidence')?.checked)v523RenderEvidence()};
+
+const v523DiscoverBase=v52DiscoverTradeAreas;
+v52DiscoverTradeAreas=async function(){
+  await v523DiscoverBase();
+  // base 함수가 성공하면 v에 최종 영역이 들어 있음. 근거 표시 데이터는 area 객체에서 직접 사용.
+  const status=document.getElementById('statusMessage');
+  if(v?.length){
+    const evidence=v.map(a=>`${a.name}: 유지축 ${a.skeletonSegments?.length||0} / 제거말단 ${a.removedSkeletonSegments?.length||0} / 상가 ${a.poiCount||0}`).join(' · ');
+    document.getElementById('areaDataNotice').textContent=`V52.3 근거 기반 최소 정제 · ${evidence}`;
+    status.textContent='✅ V52.3 상권 경계 생성 완료 · 필요하면 [상권 경계 근거 보기]로 유지/제거 근거를 확인하세요.';
+    v523RenderEvidence();
+  }
+};
+
 try{
-  document.title='렌즈미 상권 분석 대시보드 V52.2 · 도로정렬 외곽선';
-  const badge=document.querySelector('h1 span:last-child');if(badge)badge.textContent='V52.2';
-  const areaLabel=document.querySelector('#btnDiscoverAreas')?.parentElement?.querySelector('label');if(areaLabel)areaLabel.textContent='🗺️ V52.2 부평 상권 도로정렬';
-  const btn52=document.getElementById('btnDiscoverAreas');if(btn52)btn52.textContent='부평역 V52.2 상권 전체영역 찾기';
+  document.title='렌즈미 상권 분석 대시보드 V52.3 · 근거 기반 경계';
+  const badge=document.querySelector('h1 span:last-child');if(badge)badge.textContent='V52.3';
+  const areaLabel=document.querySelector('#btnDiscoverAreas')?.parentElement?.querySelector('label');if(areaLabel)areaLabel.textContent='🗺️ V52.3 부평 상권 경계 검증';
+  const btn52=document.getElementById('btnDiscoverAreas');if(btn52)btn52.textContent='부평역 V52.3 근거 기반 상권 찾기';
   const note=document.querySelector('#autoAreaList')?.previousElementSibling?.previousElementSibling;
-  if(note&&note.tagName==='DIV')note.innerHTML='V52.1에서 찾은 상권 위치는 유지하고, <b>각 보행로 좌·우의 실제 상가 깊이</b>를 계산해 도로 방향과 평행한 외곽선으로 정제합니다. 기준선은 내부 계산에만 사용합니다.';
+  if(note&&note.tagName==='DIV')note.innerHTML='V52.1의 상권 위치를 유지하면서 <b>말단 + 보행근거 약함 + 상업근거 약함</b>이 동시에 성립할 때만 제거합니다. <b>상권 경계 근거 보기</b>에서 유지축·제거축·귀속 상가를 확인할 수 있습니다.';
 }catch(_){ }
 
-const v522DiscoverBase=v52DiscoverTradeAreas;
-v52DiscoverTradeAreas=async function(){
-  await v522DiscoverBase();
-  try{
-    if(v?.length){
-      document.getElementById('areaDataNotice').textContent=(document.getElementById('areaDataNotice').textContent||'')+' · V52.2 도로방향 외곽 Snap 적용';
-      const st=document.getElementById('statusMessage');if(st&&/완료/.test(st.textContent))st.textContent='✅ V52.2 도로정렬 상권 완료 · 외곽선은 보행로 방향과 상가 깊이에 맞춰 정제했습니다.';
-    }
-  }catch(_){ }
-};
 discoverTradeAreas=v52DiscoverTradeAreas;
-
 
 Ct();
 Ft();
