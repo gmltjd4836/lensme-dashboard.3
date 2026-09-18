@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>렌즈미 상권 분석 대시보드 V54 수동상권 TOP3</title>
+<title>렌즈미 상권 분석 대시보드 V54.1 길목정확스냅 TOP3</title>
 <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css" rel="stylesheet">
 <script src="https://cdn.tailwindcss.com"></script>
 <style>
@@ -31,7 +31,7 @@ details[open]>summary::before{content:'📂 '}
 <div class="w-full md:w-1/4 bg-white border-r border-gray-200 p-6 flex flex-col shadow-lg z-20 overflow-y-auto">
 <h1 class="text-xl font-extrabold text-slate-800 border-b-4 border-indigo-500 pb-3 mb-4 flex justify-between items-center">
 <span>🗺️ 전국 상권 관제탑</span>
-<span class="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded-full font-bold">V54 TOP3</span>
+<span class="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded-full font-bold">V54.1 길목스냅</span>
 </h1>
 
 <div class="mb-4">
@@ -137,7 +137,7 @@ details[open]>summary::before{content:'📂 '}
 </div>
 <div id="tab-map" class="flex-grow w-full h-full relative">
 <div id="statusMessage" class="absolute top-4 left-1/2 transform -translate-x-1/2 z-10 bg-white/95 backdrop-blur-sm px-6 py-2 rounded-full shadow-md text-sm font-bold text-slate-700 border border-slate-200 text-center transition-all">
-지역 검색 → 직접 저장한 상권 선택 → 상권 안 현장조사 TOP3를 자동 분석합니다.
+지역 검색 → 상권 경계를 직접 그리면 저장 전에도 즉시 TOP3를 분석합니다. TOP3 표시는 TMAP 실제 보행선 위에 고정됩니다.
 </div>
 
 <div class="absolute top-16 left-4 z-10 bg-white/95 backdrop-blur-sm p-4 rounded-xl shadow-lg border border-slate-200 w-64 max-h-[80vh] overflow-y-auto hidden md:block">
@@ -183,7 +183,7 @@ const t="mJJ00gscCg39Y6nR0LhUw2yzrIfr7arY65OwUZYk",e={TEAM_KILL_METERS:50,SEARCH
 SEGMENT_BEARING_TOLERANCE:24,TOP_SEGMENT_MIN_DISTANCE:55,SAME_CORRIDOR_MAX_DISTANCE:170,JUNCTION_SCAN_RADIUS:22,ARM_LOOKAHEAD_METERS:28,MAX_TMAP_ROUTES_PER_SCAN:14,
 REQUEST_TIMEOUT_MS:12e3,MIN_RECOMMEND_SCORE:50,MIN_RECOMMEND_ROUTES:3,MIN_RECOMMEND_TARGETS:2,MAX_GATES:7,MAX_DESTINATIONS:10,TMAP_DELAY_MS:110,KAKAO_PAGE_DELAY_MS:45,
 ANALYSIS_MAX_PAGES:3,MAP_MAX_PAGES:2,DEMAND_RADIUS:140,COMPETITION_RADIUS:160,ACCESS_NEAR_GATE_MIN:18,ACCESS_NEAR_GATE_MAX:220,HEATMAP_MAX_SEGMENTS:500,
-TOP3_MIN_SEPARATION_METERS:70,TOP3_WINDOW_METERS:28,TOP3_MIN_SCORE:52,TOP3_MIN_ROUTES:2,COMMERCIAL_RADIUS:80,COMMERCIAL_HOTSPOT_RADIUS:90,COMMERCIAL_HOTSPOT_SEPARATION:130,AUTO_AREA_RADIUS:1800,
+TOP3_MIN_SEPARATION_METERS:70,TOP3_WINDOW_METERS:28,TOP3_MIN_SCORE:52,TOP3_MIN_ROUTES:2,ROAD_SNAP_MAX_METERS:18,COMMERCIAL_RADIUS:80,COMMERCIAL_HOTSPOT_RADIUS:90,COMMERCIAL_HOTSPOT_SEPARATION:130,AUTO_AREA_RADIUS:1800,
 AUTO_AREA_MAX_NAMED:6,AUTO_AREA_MAX_CLUSTERS:3,AUTO_AREA_POI_PAGES:2,AUTO_AREA_CLUSTER_EPS:85,AUTO_AREA_CLUSTER_MIN_POINTS:7,AUTO_AREA_HULL_BUFFER:24,AUTO_AREA_MIN_POIS:6,
 AUTO_GRAPH_RADIUS:1500,AUTO_GRAPH_MAX_ROUTES:18,AUTO_GRAPH_ROUTE_DELAY_MS:90,AUTO_GRAPH_ACTIVE_MIN:.3,AUTO_GRAPH_CONNECT_ENDPOINT:20,AUTO_GRAPH_CONNECT_PARALLEL:15,
 AUTO_GRAPH_MAX_CORE_DISTANCE:720,AUTO_GRAPH_CORE_SEPARATION:210,AUTO_GRAPH_MAX_COMMUNITIES:6,AUTO_GRAPH_MIN_COMMUNITY_LENGTH:65,AUTO_GRAPH_BUFFER_METERS:24,
@@ -824,19 +824,44 @@ const o=6378137,r=n/o,s=a*Math.PI/180,i=t.lat*Math.PI/180,l=t.lng*Math.PI/180,
 c=Math.asin(Math.sin(i)*Math.cos(r)+Math.cos(i)*Math.sin(r)*Math.cos(s)),
 d=l+Math.atan2(Math.sin(s)*Math.sin(r)*Math.cos(i),Math.cos(r)-Math.sin(i)*Math.sin(c));
 return{lat:180*c/Math.PI,lng:180*d/Math.PI}}
+function ve(t,e){
+const n=e?.coords||[];if(n.length<2)return null;let a=null,o=1/0;
+for(let r=0;r<n.length-1;r++){
+const s=n[r],i=n[r+1],l=(s.lat+i.lat+t.lat)/3*Math.PI/180,c=111320*Math.cos(l),d=110540,
+u=(i.lng-s.lng)*c,m=(i.lat-s.lat)*d,g=(t.lng-s.lng)*c,f=(t.lat-s.lat)*d,h=u*u+m*m;
+const p=h>0?Math.max(0,Math.min(1,(g*u+f*m)/h)):0,q={lat:s.lat+(i.lat-s.lat)*p,lng:s.lng+(i.lng-s.lng)*p},y=Pt(t.lat,t.lng,q.lat,q.lng);
+if(y<o){o=y,a={point:q,segmentIndex:r,fraction:p,distance:y}}
+}return a}
+function we(t,n,a,o,r){
+const s=[],i=o.point;let l=n/2;
+if(a<0){s.push({...i});return s}
+if(r<0){
+let c={...i},d=a;
+while(l>0&&d>=0){const u=t[d],m=Pt(c.lat,c.lng,u.lat,u.lng);
+if(m>=l){const g=l/m;s.push({lat:c.lat+(u.lat-c.lat)*g,lng:c.lng+(u.lng-c.lng)*g}),l=0;break}
+s.push({...u}),l-=m,c={...u},d--}
+s.reverse();return s
+}else{
+let c={...i},d=a+1;
+while(l>0&&d<t.length){const u=t[d],m=Pt(c.lat,c.lng,u.lat,u.lng);
+if(m>=l){const g=l/m;s.push({lat:c.lat+(u.lat-c.lat)*g,lng:c.lng+(u.lng-c.lng)*g}),l=0;break}
+s.push({...u}),l-=m,c={...u},d++}return s
+}}
+
 function he(t,n=e.TOP3_WINDOW_METERS){
-const best=[...(t.routeHits||[])].sort(((t,e)=>(e.route?.weight||0)-(t.route?.weight||0)))[0],pts=best?.route?.samples||best?.route?.coords||[];
-if(pts.length>=2){
-let idx=0,dist=1/0;pts.forEach(((e,n)=>{const a=Pt(t.mid.lat,t.mid.lng,e.lat,e.lng);a<dist&&(dist=a,idx=n)}));
-const half=n/2,path=[];
-let back=[],remain=half,cur=idx;
-while(cur>0&&remain>0){const a=pts[cur],o=pts[cur-1],r=Pt(a.lat,a.lng,o.lat,o.lng);if(r>=remain){const s=remain/r;back.push({lat:a.lat+(o.lat-a.lat)*s,lng:a.lng+(o.lng-a.lng)*s}),remain=0}else back.push({...o}),remain-=r,cur--}
-back.reverse(),path.push(...back);const center=pts[idx];(!path.length||Pt(path.at(-1).lat,path.at(-1).lng,center.lat,center.lng)>.5)&&path.push({...center});
-remain=half,cur=idx;
-while(cur<pts.length-1&&remain>0){const a=pts[cur],o=pts[cur+1],r=Pt(a.lat,a.lng,o.lat,o.lng);if(r>=remain){const s=remain/r;path.push({lat:a.lat+(o.lat-a.lat)*s,lng:a.lng+(o.lng-a.lng)*s}),remain=0}else path.push({...o}),remain-=r,cur++}
-if(path.length>=2){let len=0;for(let i=0;i<path.length-1;i++)len+=Pt(path[i].lat,path[i].lng,path[i+1].lat,path[i+1].lng);return{a:path[0],b:path.at(-1),path,length:len}}
+const hits=[...(t.routeHits||[])];let best=null,bestRank=-1;
+for(const h of hits){const snap=ve(t.mid,h.route);if(!snap)continue;
+const proximity=Math.max(.15,1-Math.min(1,snap.distance/e.ROAD_SNAP_MAX_METERS)*.55),rank=(h.route?.weight||1)*proximity;
+if(rank>bestRank){bestRank=rank;best={hit:h,snap}}}
+if(best){
+const route=best.hit.route,pts=route.coords||[],snap=best.snap,back=we(pts,n,snap.segmentIndex,snap,-1),forward=we(pts,n,snap.segmentIndex,snap,1),path=[];
+path.push(...back);if(!path.length||Pt(path.at(-1).lat,path.at(-1).lng,snap.point.lat,snap.point.lng)>.25)path.push({...snap.point});
+for(const p of forward){if(!path.length||Pt(path.at(-1).lat,path.at(-1).lng,p.lat,p.lng)>.25)path.push(p)}
+if(path.length>=2){let len=0;for(let i=0;i<path.length-1;i++)len+=Pt(path[i].lat,path[i].lng,path[i+1].lat,path[i+1].lng);
+return{a:path[0],b:path.at(-1),path,length:len,center:{...snap.point},snapDistance:snap.distance,route}}
 }
-const a=n/2,o=t.bearing||Ut(t.a.lat,t.a.lng,t.b.lat,t.b.lng),r=pe(t.mid,a,(o+180)%360),s=pe(t.mid,a,o);return{a:r,b:s,path:[r,s],length:n}}
+const a=n/2,o=t.bearing||Ut(t.a.lat,t.a.lng,t.b.lat,t.b.lng),r=pe(t.mid,a,(o+180)%360),s=pe(t.mid,a,o);
+return{a:r,b:s,path:[r,s],length:n,center:{...t.mid},snapDistance:null,route:null}}
 
 function ge(t,n){
 let a=0,o=0,r=0,s=0;
@@ -856,10 +881,11 @@ function ye(t,n,a=3){
 const o=[];for(const r of[...t].sort(((t,e)=>e.score-t.score))){
 if(r.excluded||r.competition.teamKill||r.score<e.TOP3_MIN_SCORE||r.routeHitIds.length<e.TOP3_MIN_ROUTES)continue;
 if((r.demand.targetCount||0)+(r.commercial?.count60||0)<2)continue;
-const s=he(r,e.TOP3_WINDOW_METERS);if(!Nt(s.a.lat,s.a.lng,n)||!Nt(s.b.lat,s.b.lng,n))continue;
-if(o.some((t=>Pt(r.mid.lat,r.mid.lng,t.mid.lat,t.mid.lng)<e.TOP3_MIN_SEPARATION_METERS)))continue;
-r.recommendationWindow=s,o.push(r);if(o.length>=a)break}return o}
-function focusTopCandidate(t){const e=i?.topSegments?.[t];e&&(f.panTo(new kakao.maps.LatLng(e.mid.lat,e.mid.lng)),f.setLevel(Math.min(f.getLevel(),2)))}
+const s=he(r,e.TOP3_WINDOW_METERS),p=s.center||r.mid;if(!Nt(s.a.lat,s.a.lng,n)||!Nt(s.b.lat,s.b.lng,n)||!Nt(p.lat,p.lng,n))continue;
+if(Number.isFinite(s.snapDistance)&&s.snapDistance>e.ROAD_SNAP_MAX_METERS)continue;
+if(o.some((t=>{const q=t.displayPoint||t.mid;return Pt(p.lat,p.lng,q.lat,q.lng)<e.TOP3_MIN_SEPARATION_METERS})))continue;
+r.recommendationWindow=s,r.displayPoint={...p},r.roadSnapDistance=s.snapDistance,r.roadRouteName=s.route?.name||"",o.push(r);if(o.length>=a)break}return o}
+function focusTopCandidate(t){const e=i?.topSegments?.[t];if(!e)return;const n=e.displayPoint||e.recommendationWindow?.center||e.mid;f.panTo(new kakao.maps.LatLng(n.lat,n.lng)),f.setLevel(Math.min(f.getLevel(),2))}
 function re(t,n){
 const a=Pt(t.mid.lat,t.mid.lng,n.mid.lat,n.mid.lng);if(a<e.TOP_SEGMENT_MIN_DISTANCE)return!0;
 const o=Bt(t.bearing||0,n.bearing||0)<=20,r=new Set(t.routeHitIds||[]),s=new Set(n.routeHitIds||[]),
@@ -867,14 +893,14 @@ i=[...r].filter((t=>s.has(t))).length/(new Set([...r,...s]).size||1);
 return a<=e.SAME_CORRIDOR_MAX_DISTANCE&&o&&i>=.45}
 function se(t){return t.junction.armCount>=4?"보행 합류 교차구간":3===t.junction.armCount?"보행 합류 분기구간":t.routeHitIds.length>=4?"메인 보행 집중구간":"핵심 보행구간"}
 function ie(t,rankIdx,n){
-const a=["#7f1d1d","#1d4ed8","#047857"][rankIdx]||"#334155",o=t.recommendationWindow||he(t,28);
-t.recommendationWindow=o;
-const r=new kakao.maps.Polyline({path:o.path.map((t=>new kakao.maps.LatLng(t.lat,t.lng))),strokeWeight:16,strokeColor:a,strokeOpacity:.94,strokeStyle:"solid"});
+const a=["#7f1d1d","#1d4ed8","#047857"][rankIdx]||"#334155",o=t.recommendationWindow||he(t,28),p=t.displayPoint||o.center||t.mid;
+t.recommendationWindow=o,t.displayPoint={...p};
+const r=new kakao.maps.Polyline({path:o.path.map((t=>new kakao.maps.LatLng(t.lat,t.lng))),strokeWeight:9,strokeColor:a,strokeOpacity:.96,strokeStyle:"solid"});
 r.setMap(f),_.push(r);
 const s=rankIdx+1,i=`${1===s?"🥇":2===s?"🥈":"🥉"} ${s}위 현장조사 후보`,l=new kakao.maps.CustomOverlay({
-position:new kakao.maps.LatLng(t.mid.lat,t.mid.lng),
-content:`<div style="position:relative;z-index:999;text-align:center"><div style="background:${a};color:white;padding:6px 11px;border-radius:8px;font-weight:900;font-size:12px;border:2px solid white;box-shadow:0 3px 7px rgba(0,0,0,.35);white-space:nowrap">${i} · ${Math.round(t.score)}점</div></div>`,
-xAnchor:.5,yAnchor:1.15});return l.setMap(f),_.push(l),i}
+position:new kakao.maps.LatLng(p.lat,p.lng),
+content:`<div style="position:relative;z-index:999;text-align:center;pointer-events:none"><div style="background:${a};color:white;padding:5px 10px;border-radius:8px;font-weight:900;font-size:12px;border:2px solid white;box-shadow:0 3px 7px rgba(0,0,0,.35);white-space:nowrap;margin-bottom:3px">${i} · ${Math.round(t.score)}점</div><div style="width:14px;height:14px;border-radius:50%;background:#fff;border:4px solid ${a};box-shadow:0 1px 4px rgba(0,0,0,.4);margin:0 auto"></div></div>`,
+xAnchor:.5,yAnchor:1});return l.setMap(f),_.push(l),i}
 function le(t,e){
 return e?`${t.routeHitIds.length>=5?"여러 핵심 시설 간 보행경로가 겹치는 구간":t.routeHitIds.length>=3?"복수 보행경로가 겹치는 구간":"주요 보행경로가 통과하는 구간"}이며 ${se(t)}으로 분류됩니다. 주변 60m 상업시설 표본 ${t.commercial?.count60||0}곳을 함께 반영했습니다. ${t.competition.competitorCount80>=2?`80m 내 경쟁 렌즈샵 ${t.competition.competitorCount80}곳은 현장 경쟁강도를 확인해야 합니다.`:"근거리 경쟁 과밀은 상대적으로 크지 않습니다."} 1층 여부·전면폭·간판 가시성·횡단보도·임대료는 현장에서 최종 확인하세요.`:"길찾기 경로가 확보되지 않아 추천구간 분석을 수행하지 못했습니다."}
 
@@ -1080,7 +1106,7 @@ ${l.length?`<p class="text-[9.5px] text-amber-700 mt-1"><b>데이터 주의:</b>
 
 for(let t=0;t<H.length;t++){
 U(u);
-const e=H[t],n=ie(e,t),a=await Kt(e.mid.lat,e.mid.lng),o=se(e),r=le(e,!0),
+const e=H[t],n=ie(e,t),p=e.displayPoint||e.recommendationWindow?.center||e.mid,a=await Kt(p.lat,p.lng),o=se(e),r=le(e,!0),
 s=e.routeHits.slice(0,3).map((t=>V(t.route.name))).join("<br>"),
 i=e.competition.competitorCount80>0?`80m 내 경쟁 ${e.competition.competitorCount80}곳 · 160m 내 ${e.competition.competitorCount160}곳`:"80m 내 주요 경쟁 렌즈샵 없음";
 j+=`
@@ -1103,6 +1129,7 @@ j+=`
 <div class="flex justify-between"><span>관련시설 표본</span><b>${e.demand.targetCount}곳</b></div>
 <div class="flex justify-between"><span>60m 상업시설 표본</span><b>${e.commercial?.count60||0}곳</b></div>
 <div class="flex justify-between"><span>보행 분기방향</span><b>${e.junction.armCount}방향</b></div>
+<div class="flex justify-between"><span>표시 위치</span><b class="text-emerald-700">TMAP 보행선 위</b></div>
 <div class="flex justify-between"><span>경쟁 환경</span><b>${i}</b></div>
 </div>
 ${s?`<div class="bg-blue-50/70 rounded-lg p-2 text-[9.5px] text-blue-700 mb-2"><b>주요 통과경로</b><br>${s}</div>`:""}
@@ -1130,11 +1157,16 @@ e&&e.classList.remove("hidden"),n&&n.classList.add("active"),f.relayout()}
 vt.addListener("drawend",(function(t){
 if(t.overlayType!==kakao.maps.drawing.OverlayType.POLYGON)return;
 let e=vt.getData()[kakao.maps.drawing.OverlayType.POLYGON],n=e[e.length-1];
-S=n.points.map((t=>({lat:t.y,lng:t.x}))),
+S=n.points.map((t=>({lat:t.y,lng:t.x})));const a=H(S);
+if(!j(a)){document.getElementById("statusMessage").textContent="⚠️ 유효한 상권 경계가 아닙니다. 다시 그려주세요.";return}
+w=F(a),b=null,R=null;
 document.getElementById("btnStartDraw").classList.add("hidden"),
 document.getElementById("btnSaveDraw").classList.remove("hidden"),
 document.getElementById("btnCancelDraw").classList.remove("hidden"),
-document.getElementById("statusMessage").textContent="✏️ 꼭짓점을 드래그해 실제 상권 경계에 맞춘 뒤 ‘이 경계 저장’을 누르세요."}));
+document.getElementById("targetLocationInput").innerText="임시 상권 · 자동 TOP3 분석",
+document.getElementById("btnClearPolygon").classList.remove("hidden"),
+document.getElementById("statusMessage").textContent="✅ 펜스 완성 · 상권 내부 TOP3를 바로 분석합니다...";
+setTimeout((()=>{T||ce(w)}),60)}));
 
 kakao.maps.event.addListener(f,"idle",(async function(){I||w||T||await Ht()}));
 Ct();
