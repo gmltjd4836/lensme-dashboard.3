@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>렌즈미 상권 분석 대시보드 (V42.0 스마트 랭킹 & 분산 엔진)</title>
+    <title>렌즈미 상권 분석 대시보드 (V42.1 스마트 랭킹 & 버그픽스 엔진)</title>
     <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
@@ -37,7 +37,7 @@
     <div class="w-full md:w-1/4 bg-white border-r border-gray-200 p-6 flex flex-col shadow-lg z-20 overflow-y-auto">
         <h1 class="text-xl font-extrabold text-slate-800 border-b-4 border-indigo-500 pb-3 mb-4 flex justify-between items-center">
             <span>🗺️ 전국 상권 관제탑</span>
-            <span class="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded-full font-bold">V42.0 👑</span>
+            <span class="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded-full font-bold">V42.1 🛠️</span>
         </h1>
 
         <div class="mb-4">
@@ -209,7 +209,7 @@
             polygonOptions: { draggable: false, removable: false, editable: true, strokeColor: '#be185d', strokeWeight: 3, fillColor: '#f43f5e', fillOpacity: 0.2 }
         });
 
-        let savedPolygons = JSON.parse(localStorage.getItem('lensmePolygonsV42_0') || '[]');
+        let savedPolygons = JSON.parse(localStorage.getItem('lensmePolygonsV42_1') || '[]');
         let activePolygonPath = null; 
         let activePolygonId = null;
         let renderedPolygons = {}; 
@@ -283,7 +283,7 @@
                     }
                     let id = 'poly_' + Date.now();
                     savedPolygons.push({ id: id, name: name, path: tempDrawnPath, si: si, gu: gu, dong: dong, centerLat: centerLat, centerLng: centerLng });
-                    localStorage.setItem('lensmePolygonsV42_0', JSON.stringify(savedPolygons));
+                    localStorage.setItem('lensmePolygonsV42_1', JSON.stringify(savedPolygons));
                     
                     drawingManager.clear();
                     isDrawingMode = false;
@@ -365,7 +365,7 @@
         function deletePolygon(id) {
             if(!confirm("이 영토를 삭제하시겠습니까?")) return;
             savedPolygons = savedPolygons.filter(p => p.id !== id);
-            localStorage.setItem('lensmePolygonsV42_0', JSON.stringify(savedPolygons));
+            localStorage.setItem('lensmePolygonsV42_1', JSON.stringify(savedPolygons));
             if(activePolygonId === id) clearActivePolygon();
             renderPolygonTree();
         }
@@ -386,6 +386,7 @@
             runGridHotspotScan(activePolygonPath); 
         }
 
+        // 💡💡💡 [버그 픽스] 삭제된 군락지 HTML을 조작하려던 에러 코드 제거 완료 💡💡💡
         function clearActivePolygon() {
             activePolygonId = null; activePolygonPath = null; tempDrawnPath = null;
             document.getElementById('targetLocationInput').innerText = "선택 없음 (자유 탐색)";
@@ -394,7 +395,7 @@
             document.getElementById('anchor_count').innerText = "-개";
             document.getElementById('rankingResultBox').classList.add('hidden');
             document.getElementById('rankingResultText').innerHTML = '';
-            document.getElementById('specialResultText').innerHTML = '';
+            // (에러의 원인이었던 specialResultText 초기화 로직은 여기서 완전히 제거했습니다)
             Object.values(renderedPolygons).forEach(p => p.setOptions({ fillColor: '#f43f5e', fillOpacity: 0.1, strokeWeight: 2 }));
             clearRankMarkers(); 
             triggerScan();
@@ -892,7 +893,7 @@
                         }
                     }
 
-                    // 💡 [V42.0] 교차로(Corner) 가산점 판별: 주변에 3개 이상의 개별 동선 끝점이 모여있는가?
+                    // 💡 [V42.0] 교차로(Corner) 가산점
                     let closeFlowEnds = new Set();
                     for(let pIdx=0; pIdx<flowPaths.length; pIdx++) {
                         let f = flowPaths[pIdx];
@@ -904,13 +905,13 @@
                         }
                     }
                     if(closeFlowEnds.size >= 3) {
-                        sCorner = 15; // 교차로/허브 보너스
+                        sCorner = 15;
                     }
 
                     sStealth = Math.min(sStealth, 450); 
                     sCoffee = Math.min(sCoffee, 240);   
                     
-                    // 💡 [V42.0] 3대장 콤보 폭발 점수
+                    // 💡 [V42.0] 3대장 콤보 보너스
                     let isSynergy = false;
                     let synergyBonus = 0;
                     if (localOliveCount >= 1 && localDaisoCount >= 1 && localLensCount >= 1) {
@@ -944,7 +945,7 @@
                     let candidate = gridPoints[i];
                     if(candidate.score < 1) continue; 
 
-                    // 지하철역 출입구(반경 25m) 마커 표출 제외
+                    // 💡 지하철역(25m) 필터
                     let isNearSubway = false;
                     for(let g=0; g<rawGates.length; g++) {
                         if(rawGates[g].type === 'subway') {
@@ -955,7 +956,7 @@
                     }
                     if(isNearSubway) continue;
 
-                    // 💡 [V42.0] 1~3위 강제 분산 (120m 룰)
+                    // 💡 [V42.0] 1~3위 강제 분산 (120m)
                     let tooClose = false;
                     for(let k=0; k<topSpots.length; k++) {
                         if(getDistanceMeters(candidate.lat, candidate.lng, topSpots[k].lat, topSpots[k].lng) < 120) { 
@@ -985,7 +986,7 @@
                         if(spot.sDaiso > 0) receiptHtml += `<div class="flex justify-between items-center text-rose-600"><span>🟥 다이소 인접 보너스</span><span class="font-black">+${Math.round(spot.sDaiso)}점</span></div>`;
                         if(spot.sLens > 0) receiptHtml += `<div class="flex justify-between items-center text-purple-700"><span>👁️ 경쟁 렌즈샵 밀집도</span><span class="font-black">+${Math.round(spot.sLens)}점</span></div>`;
                         if(spot.sCoffee > 0) receiptHtml += `<div class="flex justify-between items-center text-amber-700"><span>☕ 저가커피(보행로) 보너스</span><span class="font-black">+${Math.round(spot.sCoffee)}점</span></div>`;
-                        // V42 신규 보너스 표출
+                        
                         if(spot.sCorner > 0) receiptHtml += `<div class="flex justify-between items-center text-indigo-700"><span>🔀 교차로/허브 가산점</span><span class="font-black">+${Math.round(spot.sCorner)}점</span></div>`;
                         if(spot.isSynergy) receiptHtml += `<div class="flex justify-between items-center text-fuchsia-600"><span>💥 3대장 콤보 (올+다+렌)</span><span class="font-black">+30점</span></div>`;
                         
@@ -1020,7 +1021,7 @@
                 }
 
                 document.getElementById('rankingResultBox').classList.remove('hidden');
-                statusEl.innerText = `✅ [V42.0] 교차로 보너스, 3대장 시너지, 1~3위 분산 배치(120m) 적용 완료!`;
+                statusEl.innerText = `✅ [V42.1] 버그 픽스 및 정상 분석 완료!`;
 
             } catch(e) {
                 console.error("분석 에러:", e);
