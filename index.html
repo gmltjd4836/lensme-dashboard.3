@@ -1643,6 +1643,206 @@ try{
 discoverTradeAreas=v52DiscoverTradeAreas;
 
 
+/* =========================
+   V52.2 ROAD-ALIGNED BOUNDARY REFINEMENT
+   - V52.1에서 찾은 Skeleton/상권 위치는 유지
+   - 원형 Buffer 대신 각 보행 구간별 좌/우 상가 깊이를 측정
+   - 도로 방향과 평행한 사각 Corridor로 외곽선 생성
+   - 외곽선은 계산용 보행 Skeleton에 정렬하되 화면에는 최종 면만 표시
+   ========================= */
+Object.assign(V52_CFG,{
+  roadSnapBaseSide:20,
+  roadSnapMinSide:18,
+  roadSnapMaxSide:54,
+  roadSnapPoiPadding:10,
+  roadSnapEndExtend:7,
+  roadSnapPoiMax:82,
+  roadSnapQuantize:4,
+  roadSnapCloseMeters:4,
+  roadSnapSimplify:0.000018,
+  roadSnapSecondaryRatio:.38,
+  roadSnapSecondaryMinM2:2100
+});
+
+function v522LocalXY(lat,lng,origin){
+  const c=Math.cos(origin.lat*Math.PI/180);
+  return {x:(lng-origin.lng)*111320*c,y:(lat-origin.lat)*110540};
+}
+function v522LatLng(x,y,origin){
+  const c=Math.cos(origin.lat*Math.PI/180);
+  return {lat:origin.lat+y/110540,lng:origin.lng+x/(111320*c)};
+}
+function v522Quant(v,step=4){return Math.round(v/step)*step}
+function v522Percentile(arr,p){
+  if(!arr?.length)return 0;
+  const a=[...arr].sort((x,y)=>x-y),idx=(a.length-1)*p,lo=Math.floor(idx),hi=Math.ceil(idx);
+  return lo===hi?a[lo]:a[lo]*(hi-idx)+a[hi]*(idx-lo);
+}
+function v522ProjectPoiToSeg(seg,p0,origin){
+  const a=v522LocalXY(seg.a.lat,seg.a.lng,origin),b=v522LocalXY(seg.b.lat,seg.b.lng,origin),p=v522LocalXY(p0.lat,p0.lng,origin);
+  const dx=b.x-a.x,dy=b.y-a.y,L2=dx*dx+dy*dy;
+  if(L2<1e-6)return null;
+  let t=((p.x-a.x)*dx+(p.y-a.y)*dy)/L2;t=Math.max(0,Math.min(1,t));
+  const qx=a.x+t*dx,qy=a.y+t*dy,L=Math.sqrt(L2),ux=dx/L,uy=dy/L,nx=-uy,ny=ux;
+  const side=(p.x-qx)*nx+(p.y-qy)*ny;
+  const dist=Math.abs(side);
+  return {t,dist,side,proj:{x:qx,y:qy},u:{x:ux,y:uy},n:{x:nx,y:ny},a,b,L};
+}
+function v522PoiAssignmentsToSegments(seed,skeleton,assigned){
+  const origin={lat:seed.lat,lng:seed.lng};
+  const buckets=skeleton.map(()=>({left:[],right:[],pois:[]}));
+  for(const p0 of assigned||[]){
+    let best=null;
+    for(let i=0;i<skeleton.length;i++){
+      const pr=v522ProjectPoiToSeg(skeleton[i],p0,origin);if(!pr||pr.dist>V52_CFG.roadSnapPoiMax)continue;
+      if(!best||pr.dist<best.pr.dist)best={i,pr};
+    }
+    if(!best)continue;
+    const w=Math.max(.45,v52PoiWeight(p0));
+    const arr=best.pr.side>=0?buckets[best.i].left:buckets[best.i].right;
+    // 가중치가 높은 업종은 깊이 측정에 조금 더 반영하되 극단치는 후속 percentile에서 제거
+    arr.push(best.pr.dist*(.92+.08*Math.min(w,1.8)));
+    buckets[best.i].pois.push(p0);
+  }
+  return {origin,buckets};
+}
+function v522SegmentSideWidths(seg,bucket){
+  const support=Math.min(1,(seg.routeCount||0)/3)+Math.min(.8,(seg.poiWeight||0)/2.5);
+  const base=V52_CFG.roadSnapBaseSide+support*3.5;
+  const sideWidth=(arr)=>{
+    if(!arr?.length)return v522Quant(base,V52_CFG.roadSnapQuantize);
+    const q=v522Percentile(arr,arr.length>=5?.82:.9);
+    return v522Quant(it(Math.max(base,q+V52_CFG.roadSnapPoiPadding),V52_CFG.roadSnapMinSide,V52_CFG.roadSnapMaxSide),V52_CFG.roadSnapQuantize);
+  };
+  return {left:sideWidth(bucket?.left),right:sideWidth(bucket?.right)};
+}
+function v522CorridorRect(seg,leftW,rightW,origin,extend=7){
+  const a=v522LocalXY(seg.a.lat,seg.a.lng,origin),b=v522LocalXY(seg.b.lat,seg.b.lng,origin);
+  let dx=b.x-a.x,dy=b.y-a.y,L=Math.hypot(dx,dy);if(L<.5)return null;
+  const ux=dx/L,uy=dy/L,nx=-uy,ny=ux;
+  const ax=a.x-ux*extend,ay=a.y-uy*extend,bx=b.x+ux*extend,by=b.y+uy*extend;
+  const pts=[
+    {x:ax+nx*leftW,y:ay+ny*leftW},
+    {x:bx+nx*leftW,y:by+ny*leftW},
+    {x:bx-nx*rightW,y:by-ny*rightW},
+    {x:ax-nx*rightW,y:ay-ny*rightW}
+  ].map(p=>v522LatLng(p.x,p.y,origin));
+  return turf.polygon([pts.map(p=>[p.lng,p.lat]).concat([[pts[0].lng,pts[0].lat]])]);
+}
+function v522KeepMainPieces(g,seed){
+  if(!g)return null;
+  try{
+    const feats=[];
+    if(g.geometry?.type==='Polygon')feats.push(g);
+    else if(g.geometry?.type==='MultiPolygon')for(const c0 of g.geometry.coordinates)feats.push(turf.polygon(c0));
+    if(feats.length<=1)return g;
+    feats.sort((a,b)=>turf.area(b)-turf.area(a));
+    const seedPt=turf.point([seed.lng,seed.lat]);
+    const primary=feats.find(x=>{try{return turf.booleanPointInPolygon(seedPt,x)}catch(_){return false}})||feats[0];
+    const mainA=turf.area(primary),keep=[primary];
+    for(const x of feats){
+      if(x===primary)continue;
+      const a=turf.area(x);if(a<Math.max(V52_CFG.roadSnapSecondaryMinM2,mainA*V52_CFG.roadSnapSecondaryRatio))continue;
+      const cc=turf.centroid(x).geometry.coordinates;
+      if(Pt(seed.lat,seed.lng,cc[1],cc[0])<200)keep.push(x);
+    }
+    return v52UnionFeatures(keep)||primary;
+  }catch(_){return g}
+}
+function v522CleanRoadAligned(g,seed){
+  if(!g)return null;
+  let out=g;
+  // junction 사이 작은 틈만 메우고, 둥근 팽창은 최소화
+  try{
+    const grown=turf.buffer(out,V52_CFG.roadSnapCloseMeters/1000,{units:'kilometers',steps:2});
+    if(grown){const back=turf.buffer(grown,-V52_CFG.roadSnapCloseMeters/1000,{units:'kilometers',steps:2});if(back)out=back}
+  }catch(_){ }
+  try{
+    const clip=turf.buffer(turf.point([seed.lng,seed.lat]),V52_CFG.adaptiveClipRadius/1000,{units:'kilometers',steps:32});
+    out=turf.intersect(turf.featureCollection([out,clip]))||out;
+  }catch(_){ }
+  out=v522KeepMainPieces(out,seed)||out;
+  try{out=turf.simplify(out,{tolerance:V52_CFG.roadSnapSimplify,highQuality:true})||out}catch(_){ }
+  return out;
+}
+
+function v522CandidateArea(seed,assigned){
+  const skeleton=v521PruneSkeleton(seed,seed.skeleton||[]);
+  if(!skeleton.length)return null;
+  seed.skeleton=skeleton;
+  const {origin,buckets}=v522PoiAssignmentsToSegments(seed,skeleton,assigned||[]);
+  const pieces=[];
+  for(let i=0;i<skeleton.length;i++){
+    const w=v522SegmentSideWidths(skeleton[i],buckets[i]);
+    skeleton[i].roadSnapLeft=w.left;skeleton[i].roadSnapRight=w.right;
+    const rect=v522CorridorRect(skeleton[i],w.left,w.right,origin,V52_CFG.roadSnapEndExtend);
+    if(rect)pieces.push(rect);
+  }
+  // Skeleton 교차점 주변만 작은 연결 패치. POI마다 원형 buffer를 만들지 않아 외곽이 울퉁불퉁해지는 것을 방지.
+  for(let i=0;i<skeleton.length;i++){
+    let deg=0;
+    for(let j=0;j<skeleton.length;j++)if(i!==j&&ht(skeleton[i],skeleton[j])<=V52_CFG.refinedConnectMeters+2)deg++;
+    if(deg>=2){
+      const m=skeleton[i].mid;
+      pieces.push(turf.buffer(turf.point([m.lng,m.lat]),.018,{units:'kilometers',steps:2}));
+    }
+  }
+  let area=v52UnionFeatures(pieces);
+  if(!area)return null;
+  return v522CleanRoadAligned(area,seed);
+}
+
+// 최종 상권 생성은 V52.1의 위치/배타 분할을 유지하되 후보 면만 도로정렬 방식으로 교체
+v52CandidateArea=v522CandidateArea;
+v52FinalizeAreas=function(seeds,assigned){
+  const candidates=seeds.map(s=>v522CandidateArea(s,assigned[s.id]||[]));
+  const masks=v52TerritoryMasksBase(seeds,candidates);
+  const areas=[];
+  seeds.forEach((s0,idx)=>{
+    let geom=candidates[idx];if(!geom)return;
+    if(masks?.[s0.id])try{geom=turf.intersect(turf.featureCollection([geom,masks[s0.id]]))||geom}catch(_){ }
+    geom=v522CleanRoadAligned(geom,s0);if(!geom)return;
+    const areaM2=Math.round(turf.area(geom));if(areaM2<V52_CFG.minAreaM2)return;
+    const ctr=K(geom),routeIds=new Set;
+    (s0.skeleton||[]).forEach(seg=>seg.routeMap?.forEach((_,rid)=>routeIds.add(rid)));
+    areas.push({
+      id:`v522_${s0.id}`,name:s0.name,type:'network_official_named',
+      source:`${s0.source} + TMAP 보행 Skeleton + 도로방향 외곽 Snap`,
+      centerLat:ctr.lat,centerLng:ctr.lng,path:F(geom),geometry:geom.geometry,
+      segments:[],skeletonSegments:s0.skeleton,commercialPois:assigned[s0.id]||[],
+      poiCount:(assigned[s0.id]||[]).length,
+      networkLength:Math.round((s0.skeleton||[]).reduce((sum,x)=>sum+Pt(x.a.lat,x.a.lng,x.b.lat,x.b.lng),0)),
+      routeCount:routeIds.size,
+      confidence:Math.min(.96,.62+.025*Math.min(routeIds.size,8)+.008*Math.min((assigned[s0.id]||[]).length,20)),
+      color:s0.color,areaM2,exclusive:true,shapeRefined:true,roadAligned:true
+    });
+  });
+  return areas;
+};
+
+// V52.2 화면 문구
+try{
+  document.title='렌즈미 상권 분석 대시보드 V52.2 · 도로정렬 외곽선';
+  const badge=document.querySelector('h1 span:last-child');if(badge)badge.textContent='V52.2';
+  const areaLabel=document.querySelector('#btnDiscoverAreas')?.parentElement?.querySelector('label');if(areaLabel)areaLabel.textContent='🗺️ V52.2 부평 상권 도로정렬';
+  const btn52=document.getElementById('btnDiscoverAreas');if(btn52)btn52.textContent='부평역 V52.2 상권 전체영역 찾기';
+  const note=document.querySelector('#autoAreaList')?.previousElementSibling?.previousElementSibling;
+  if(note&&note.tagName==='DIV')note.innerHTML='V52.1에서 찾은 상권 위치는 유지하고, <b>각 보행로 좌·우의 실제 상가 깊이</b>를 계산해 도로 방향과 평행한 외곽선으로 정제합니다. 기준선은 내부 계산에만 사용합니다.';
+}catch(_){ }
+
+const v522DiscoverBase=v52DiscoverTradeAreas;
+v52DiscoverTradeAreas=async function(){
+  await v522DiscoverBase();
+  try{
+    if(v?.length){
+      document.getElementById('areaDataNotice').textContent=(document.getElementById('areaDataNotice').textContent||'')+' · V52.2 도로방향 외곽 Snap 적용';
+      const st=document.getElementById('statusMessage');if(st&&/완료/.test(st.textContent))st.textContent='✅ V52.2 도로정렬 상권 완료 · 외곽선은 보행로 방향과 상가 깊이에 맞춰 정제했습니다.';
+    }
+  }catch(_){ }
+};
+discoverTradeAreas=v52DiscoverTradeAreas;
+
+
 Ct();
 Ft();
 </script>
