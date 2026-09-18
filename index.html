@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>렌즈미 상권 분석 대시보드 V52 · 부평 검증</title>
+<title>렌즈미 상권 분석 대시보드 V52.1 · 상권 형태 정제</title>
 <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css" rel="stylesheet">
 <script src="https://cdn.tailwindcss.com"></script>
 <style>
@@ -1383,7 +1383,7 @@ function v52FinalizeAreas(seeds,assigned){
 async function v52DiscoverTradeAreas(){
   if(T)return alert('현재 다른 분석이 진행 중입니다. 잠시 후 다시 눌러주세요.');
   $(!0);const token=++O;r=new AbortController;w=null;b=null;R=null;
-  document.getElementById('targetLocationInput').textContent='V52 부평 상권 검증 중';
+  document.getElementById('targetLocationInput').textContent='V52.1 부평 상권 형태 정제 중';
   document.getElementById('rankingResultBox').classList.add('hidden');
   const btn=document.getElementById('btnDiscoverAreas'),status=document.getElementById('statusMessage');
   if(btn){btn.disabled=true;btn.textContent='부평 보행기준 상권 계산 중...'}
@@ -1413,25 +1413,232 @@ async function v52DiscoverTradeAreas(){
     if(v.length<2)throw new Error(`최종 상권 면 생성이 부족합니다. 생성 ${v.length}개`);
     status.textContent='✂️ 6/6 두 상권의 중첩 영역을 Skeleton 거리 기준으로 분리 중...';
     St();
-    document.getElementById('areaDataNotice').textContent=`V52 부평 검증 · TMAP 실제 보행 Skeleton 기준 · 상업 POI ${pois.length}개 · 문화 ${assigned.v52_culture?.length||0}개 / 테마 ${assigned.v52_theme?.length||0}개 귀속`;
-    status.textContent='✅ V52 부평 검증 완료 · 상권 면을 클릭하면 내부 길목 분석을 시작합니다.';
+    document.getElementById('areaDataNotice').textContent=`V52.1 부평 검증 · Skeleton 정제 + 상업밀도 적응형 폭 · 상업 POI ${pois.length}개 · 문화 ${assigned.v52_culture?.length||0}개 / 테마 ${assigned.v52_theme?.length||0}개 귀속`;
+    status.textContent='✅ V52.1 상권 형태 정제 완료 · 상권 면을 클릭하면 내부 길목 분석을 시작합니다.';
   }catch(err){
-    console.error('V52 상권 생성 실패',err);v=[];St();
-    status.textContent='⚠️ V52 상권 생성 실패: '+(err?.message||String(err));
+    console.error('V52.1 상권 생성 실패',err);v=[];St();
+    status.textContent='⚠️ V52.1 상권 생성 실패: '+(err?.message||String(err));
   }finally{
-    if(btn){btn.disabled=false;btn.textContent='부평역 V52 보행기준 상권 찾기'}
+    if(btn){btn.disabled=false;btn.textContent='부평역 V52.1 상권 전체영역 찾기'}
     $(!1);c=null;
   }
 }
 
+
+/* =========================
+   V52.1 SHAPE REFINEMENT
+   - 가느다란 꼬리/약한 말단 Skeleton 제거
+   - 상업시설 밀도에 따라 상권 폭 자동 조절
+   - 좁은 목 제거 + 작은 홈 메우기 + 메인 상권 덩어리 유지
+   - Skeleton은 내부 계산용, 화면에는 최종 면만 표시
+   ========================= */
+Object.assign(V52_CFG,{
+  refinedSeedRadius:350,
+  refinedSkeletonMax:315,
+  refinedKeepNearSeed:105,
+  refinedWeakTailStart:135,
+  refinedConnectMeters:9,
+  refinedMinSkeletonSegments:5,
+  adaptiveBaseWidth:24,
+  adaptiveMaxWidth:58,
+  adaptivePoiDepth:78,
+  adaptivePoiBuffer:15,
+  adaptiveClipRadius:350,
+  openingMeters:9,
+  closingMeters:7,
+  minMainComponentM2:1800,
+  minSecondaryRatio:.32
+});
+
+function v521SegSupport(seg){
+  return 1.25*Math.min(4,seg.routeCount||0)+.85*Math.min(4,seg.poiWeight||0);
+}
+
+function v521SkeletonComponents(segs){
+  if(!segs.length)return[];
+  segs.forEach(s=>s.__v521nb=[]);
+  for(let i=0;i<segs.length;i++)for(let j=i+1;j<segs.length;j++){
+    if(ht(segs[i],segs[j])<=V52_CFG.refinedConnectMeters){
+      segs[i].__v521nb.push(j);segs[j].__v521nb.push(i);
+    }
+  }
+  const seen=new Set,comps=[];
+  for(let i=0;i<segs.length;i++){
+    if(seen.has(i))continue;
+    const q=[i],c=[];seen.add(i);
+    while(q.length){
+      const k=q.shift();c.push(segs[k]);
+      for(const nx of segs[k].__v521nb)if(!seen.has(nx)){seen.add(nx);q.push(nx)}
+    }
+    comps.push(c);
+  }
+  return comps;
+}
+
+function v521PruneSkeleton(seed,skeleton){
+  if(!skeleton?.length)return[];
+  let pool=skeleton.filter(seg=>{
+    const d=Pt(seg.mid.lat,seg.mid.lng,seed.lat,seed.lng),support=v521SegSupport(seg);
+    if(d<=V52_CFG.refinedKeepNearSeed)return true;
+    if(d>V52_CFG.refinedSkeletonMax)return false;
+    if((seg.routeCount||0)>=3)return true;
+    if((seg.routeCount||0)>=2&&(seg.poiWeight||0)>=.45)return true;
+    if((seg.poiWeight||0)>=1.45&&support>=2.1)return true;
+    return false;
+  });
+  if(pool.length<V52_CFG.refinedMinSkeletonSegments){
+    pool=[...skeleton]
+      .filter(seg=>Pt(seg.mid.lat,seg.mid.lng,seed.lat,seed.lng)<=V52_CFG.refinedSkeletonMax)
+      .sort((a,b)=>(v521SegSupport(b)-.004*Pt(b.mid.lat,b.mid.lng,seed.lat,seed.lng))-(v521SegSupport(a)-.004*Pt(a.mid.lat,a.mid.lng,seed.lat,seed.lng)))
+      .slice(0,Math.min(22,skeleton.length));
+  }
+  let comps=v521SkeletonComponents(pool);
+  if(!comps.length)return pool;
+  comps.sort((a,b)=>{
+    const score=c=>c.reduce((sum,s)=>sum+v521SegSupport(s),0)-.01*Math.min(...c.map(s=>Pt(s.mid.lat,s.mid.lng,seed.lat,seed.lng)));
+    return score(b)-score(a);
+  });
+  let main=comps[0];
+  // 약한 말단 가지 반복 제거: 중심에서 멀고 route/POI 지지가 낮은 degree-1 세그먼트
+  for(let pass=0;pass<4;pass++){
+    const idx=new Map(main.map((s,i)=>[s,i]));
+    const deg=main.map(()=>0);
+    for(let i=0;i<main.length;i++)for(let j=i+1;j<main.length;j++)if(ht(main[i],main[j])<=V52_CFG.refinedConnectMeters){deg[i]++;deg[j]++}
+    const drop=new Set;
+    main.forEach((seg,i)=>{
+      const d=Pt(seg.mid.lat,seg.mid.lng,seed.lat,seed.lng);
+      const weak=(seg.routeCount||0)<=1&&(seg.poiWeight||0)<1.05;
+      const medium=(seg.routeCount||0)<=2&&(seg.poiWeight||0)<.45;
+      if(deg[i]<=1&&d>V52_CFG.refinedWeakTailStart&&(weak||(d>235&&medium)))drop.add(seg);
+    });
+    if(!drop.size)break;
+    const next=main.filter(s=>!drop.has(s));
+    if(next.length<V52_CFG.refinedMinSkeletonSegments)break;
+    main=next;
+  }
+  return main;
+}
+
+const v52BuildSkeletonBase=v52BuildSkeleton;
+v52BuildSkeleton=function(seed,routes,pois){
+  return v521PruneSkeleton(seed,v52BuildSkeletonBase(seed,routes,pois));
+};
+
+function v521AdaptiveWidth(seg,assigned){
+  let weighted=0,count=0;
+  for(const p0 of assigned||[]){
+    const d=Et(seg,p0);
+    if(d>V52_CFG.adaptivePoiDepth)continue;
+    const fall=Math.max(.08,1-d/V52_CFG.adaptivePoiDepth);
+    weighted+=v52PoiWeight(p0)*fall;count++;
+  }
+  const support=Math.min(1.25,(seg.routeCount||0)/3)+Math.min(1.15,(seg.poiWeight||0)/2.2);
+  return it(V52_CFG.adaptiveBaseWidth+weighted*4.1+support*5.5,V52_CFG.adaptiveBaseWidth,V52_CFG.adaptiveMaxWidth);
+}
+
+function v521CleanGeometry(area,seed){
+  if(!area)return null;
+  let g=area;
+  // Morphological opening: 18m보다 얇은 꼬리/목을 상당 부분 제거
+  try{
+    const shrunk=turf.buffer(g,-V52_CFG.openingMeters/1000,{units:'kilometers',steps:8});
+    if(shrunk)g=turf.buffer(shrunk,V52_CFG.openingMeters/1000,{units:'kilometers',steps:8})||g;
+  }catch(_){ }
+  // Closing: 작은 톱니/패임을 정리
+  try{
+    const grown=turf.buffer(g,V52_CFG.closingMeters/1000,{units:'kilometers',steps:8});
+    if(grown){const closed=turf.buffer(grown,-V52_CFG.closingMeters/1000,{units:'kilometers',steps:8});if(closed)g=closed}
+  }catch(_){ }
+  // 반경 밖 잔여 꼬리 제거
+  try{
+    const clip=turf.buffer(turf.point([seed.lng,seed.lat]),V52_CFG.adaptiveClipRadius/1000,{units:'kilometers',steps:48});
+    g=turf.intersect(turf.featureCollection([g,clip]))||g;
+  }catch(_){ }
+  // MultiPolygon이면 seed가 포함된 주 덩어리를 우선, 큰 보조 덩어리만 유지
+  try{
+    const feats=[];
+    if(g.geometry?.type==='Polygon')feats.push(g);
+    else if(g.geometry?.type==='MultiPolygon')g.geometry.coordinates.forEach(c=>feats.push(turf.polygon(c)));
+    if(feats.length>1){
+      feats.sort((a,b)=>turf.area(b)-turf.area(a));
+      const seedPt=turf.point([seed.lng,seed.lat]);
+      let primary=feats.find(x=>{try{return turf.booleanPointInPolygon(seedPt,x)}catch(_){return false}})||feats[0];
+      const mainArea=turf.area(primary),keep=[primary];
+      for(const x of feats){
+        if(x===primary)continue;
+        const a=turf.area(x);
+        if(a<Math.max(V52_CFG.minMainComponentM2,mainArea*V52_CFG.minSecondaryRatio))continue;
+        const c=turf.centroid(x).geometry.coordinates;
+        const d=Pt(seed.lat,seed.lng,c[1],c[0]);
+        if(d<210)keep.push(x);
+      }
+      g=v52UnionFeatures(keep)||primary;
+    }
+  }catch(_){ }
+  try{g=turf.simplify(g,{tolerance:.000045,highQuality:true})||g}catch(_){ }
+  return g;
+}
+
+v52CandidateArea=function(seed,assigned){
+  const skeleton=v521PruneSkeleton(seed,seed.skeleton||[]);
+  if(!skeleton.length)return null;
+  seed.skeleton=skeleton;
+  const pieces=[];
+  // 모든 Skeleton을 같은 폭으로 칠하지 않고, 주변 상업 깊이에 따라 폭을 다르게 생성
+  for(const seg of skeleton){
+    const width=v521AdaptiveWidth(seg,assigned);
+    const line=turf.lineString([[seg.a.lng,seg.a.lat],[seg.b.lng,seg.b.lat]]);
+    pieces.push(turf.buffer(line,width/1000,{units:'kilometers',steps:8}));
+  }
+  // Skeleton에 실제로 붙어 있는 상업시설만 면적 확장에 사용. 긴 직선 connector는 만들지 않음.
+  for(const p0 of assigned||[]){
+    const ds=v52DistToSkeleton(p0,skeleton);
+    if(ds.distance>V52_CFG.adaptivePoiDepth)continue;
+    const r=V52_CFG.adaptivePoiBuffer+(ds.distance<35?5:0)+Math.min(4,v52PoiWeight(p0)*1.5);
+    pieces.push(turf.buffer(turf.point([p0.lng,p0.lat]),r/1000,{units:'kilometers',steps:8}));
+  }
+  let area=v52UnionFeatures(pieces);
+  return v521CleanGeometry(area,seed);
+};
+
+const v52TerritoryMasksBase=v52TerritoryMasks;
+v52FinalizeAreas=function(seeds,assigned){
+  const candidates=seeds.map(s=>v52CandidateArea(s,assigned[s.id]||[]));
+  const masks=v52TerritoryMasksBase(seeds,candidates);
+  const areas=[];
+  seeds.forEach((s0,idx)=>{
+    let geom=candidates[idx];
+    if(!geom)return;
+    if(masks?.[s0.id])try{geom=turf.intersect(turf.featureCollection([geom,masks[s0.id]]))||geom}catch(_){ }
+    geom=v521CleanGeometry(geom,s0);
+    if(!geom)return;
+    const areaM2=Math.round(turf.area(geom));
+    if(areaM2<V52_CFG.minAreaM2)return;
+    const ctr=K(geom),routeIds=new Set;
+    (s0.skeleton||[]).forEach(seg=>seg.routeMap?.forEach((_,rid)=>routeIds.add(rid)));
+    areas.push({
+      id:`v521_${s0.id}`,name:s0.name,type:'network_official_named',
+      source:`${s0.source} + TMAP 보행 Skeleton 정제 + 상업밀도 적응형 폭`,
+      centerLat:ctr.lat,centerLng:ctr.lng,path:F(geom),geometry:geom.geometry,
+      segments:[],skeletonSegments:s0.skeleton,commercialPois:assigned[s0.id]||[],
+      poiCount:(assigned[s0.id]||[]).length,
+      networkLength:Math.round((s0.skeleton||[]).reduce((sum,x)=>sum+Pt(x.a.lat,x.a.lng,x.b.lat,x.b.lng),0)),
+      routeCount:routeIds.size,
+      confidence:Math.min(.95,.6+.025*Math.min(routeIds.size,8)+.008*Math.min((assigned[s0.id]||[]).length,20)),
+      color:s0.color,areaM2,exclusive:true,shapeRefined:true
+    });
+  });
+  return areas;
+};
+
 // V52 화면 문구 및 탐색 함수 교체
 try{
-  document.title='렌즈미 상권 분석 대시보드 V52 · 부평 검증';
-  const badge=document.querySelector('h1 span:last-child');if(badge)badge.textContent='V52 TEST';
-  const areaLabel=document.querySelector('#btnDiscoverAreas')?.parentElement?.querySelector('label');if(areaLabel)areaLabel.textContent='🗺️ V52 부평 보행기준 상권 검증';
-  const btn52=document.getElementById('btnDiscoverAreas');if(btn52)btn52.textContent='부평역 V52 보행기준 상권 찾기';
+  document.title='렌즈미 상권 분석 대시보드 V52.1 · 상권 형태 정제';
+  const badge=document.querySelector('h1 span:last-child');if(badge)badge.textContent='V52.1';
+  const areaLabel=document.querySelector('#btnDiscoverAreas')?.parentElement?.querySelector('label');if(areaLabel)areaLabel.textContent='🗺️ V52.1 부평 상권 형태 정제';
+  const btn52=document.getElementById('btnDiscoverAreas');if(btn52)btn52.textContent='부평역 V52.1 상권 전체영역 찾기';
   const note=document.querySelector('#autoAreaList')?.previousElementSibling?.previousElementSibling;
-  if(note&&note.tagName==='DIV')note.innerHTML='부평문화의거리·부평테마의거리를 <b>실제 TMAP 보행경로 Skeleton</b>으로 분리하는 검증본입니다. 기준선은 내부 계산용이며 화면에는 최종 상권 면만 표시합니다.';
+  if(note&&note.tagName==='DIV')note.innerHTML='실제 보행 Skeleton은 <b>내부 계산에만 사용</b>하고, 약한 꼬리·좁은 목을 제거한 뒤 상업시설이 퍼진 깊이에 맞춰 <b>상권 전체 면</b>을 정제해 표시합니다.';
 }catch(_){ }
 discoverTradeAreas=v52DiscoverTradeAreas;
 
