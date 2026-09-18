@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>렌즈미 상권 분석 대시보드 V53 수동상권</title>
+<title>렌즈미 상권 분석 대시보드 V54 수동상권 TOP3</title>
 <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css" rel="stylesheet">
 <script src="https://cdn.tailwindcss.com"></script>
 <style>
@@ -31,7 +31,7 @@ details[open]>summary::before{content:'📂 '}
 <div class="w-full md:w-1/4 bg-white border-r border-gray-200 p-6 flex flex-col shadow-lg z-20 overflow-y-auto">
 <h1 class="text-xl font-extrabold text-slate-800 border-b-4 border-indigo-500 pb-3 mb-4 flex justify-between items-center">
 <span>🗺️ 전국 상권 관제탑</span>
-<span class="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded-full font-bold">V53 MANUAL</span>
+<span class="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded-full font-bold">V54 TOP3</span>
 </h1>
 
 <div class="mb-4">
@@ -50,10 +50,11 @@ details[open]>summary::before{content:'📂 '}
 </div>
 
 <div class="mb-4 bg-slate-50 border p-3 rounded-xl text-xs">
-<b>조사 후보 선정 기준</b>
-<p class="mt-1 text-slate-600">상대지수 50 이상 · 설정 경로 3개 이상 · 관련 시설 2곳 이상. 검증 전 임시 기준이며 출점 승인 기준이 아닙니다.</p>
-<p class="mt-1 text-slate-600">색칠되지 않은 길은 미분석입니다. 점수는 다른 상권과 직접 비교하지 마세요.</p>
-<button onclick="reanalyzeActive()" class="mt-2 bg-indigo-600 text-white px-3 py-2 rounded">선택 상권 다시 분석</button>
+<b>현장조사 TOP3 기준</b>
+<p class="mt-1 text-slate-600">핵심동선 30 · 관련시설 20 · 상업활성 15 · 접근성 15 · 길목성 10 · 경쟁환경 10점.</p>
+<p class="mt-1 text-slate-600">신규 출점은 기존 렌즈미 50m 이내를 후보에서 제외하고, TOP 후보끼리는 원칙적으로 70m 이상 떨어뜨립니다.</p>
+<label class="mt-2 flex items-center gap-2 text-[11px] font-bold text-slate-600 cursor-pointer"><input id="showAnalysisLines" type="checkbox" onchange="toggleAnalysisLines()"> 세부 분석선 보기</label>
+<button onclick="reanalyzeActive()" class="mt-2 bg-indigo-600 text-white px-3 py-2 rounded">선택 상권 TOP3 다시 분석</button>
 <button id="cancelAnalysisBtn" onclick="cancelAnalysis()" class="hidden mt-2 border px-3 py-2 rounded">진행 중 분석 취소</button>
 </div>
 
@@ -136,7 +137,7 @@ details[open]>summary::before{content:'📂 '}
 </div>
 <div id="tab-map" class="flex-grow w-full h-full relative">
 <div id="statusMessage" class="absolute top-4 left-1/2 transform -translate-x-1/2 z-10 bg-white/95 backdrop-blur-sm px-6 py-2 rounded-full shadow-md text-sm font-bold text-slate-700 border border-slate-200 text-center transition-all">
-지역 검색 → 상권 찾기 → 지도에서 상권 선택. 색칠되지 않은 길은 미분석입니다.
+지역 검색 → 직접 저장한 상권 선택 → 상권 안 현장조사 TOP3를 자동 분석합니다.
 </div>
 
 <div class="absolute top-16 left-4 z-10 bg-white/95 backdrop-blur-sm p-4 rounded-xl shadow-lg border border-slate-200 w-64 max-h-[80vh] overflow-y-auto hidden md:block">
@@ -160,7 +161,7 @@ details[open]>summary::before{content:'📂 '}
 </div>
 
 <div id="heatLegend" class="absolute bottom-5 right-5 z-10 bg-white/95 backdrop-blur-sm p-3 rounded-xl shadow-lg border border-slate-200 hidden md:block">
-<p class="text-[11px] font-extrabold text-slate-700 mb-2">상권 내부 상대지수 · 조사 참고</p>
+<p class="text-[11px] font-extrabold text-slate-700 mb-2">세부 분석선 · 조사 참고</p>
 <div class="space-y-1 text-[10px] font-bold text-slate-600">
 <div><span class="inline-block w-5 h-2 rounded mr-2" style="background:#2563eb"></span>낮음</div>
 <div><span class="inline-block w-5 h-2 rounded mr-2" style="background:#16a34a"></span>보통</div>
@@ -168,7 +169,7 @@ details[open]>summary::before{content:'📂 '}
 <div><span class="inline-block w-5 h-2 rounded mr-2" style="background:#f97316"></span>높음</div>
 <div><span class="inline-block w-5 h-2 rounded mr-2" style="background:#dc2626"></span>매우 높음</div>
 </div>
-<p class="text-[9px] text-slate-400 mt-2 leading-tight">회색 점선: 50m 제외 · 미색칠: 미분석<br>※ 실제 통신 유동인구가 아닌 길찾기·시설 기반 상대지수</p>
+<p class="text-[9px] text-slate-400 mt-2 leading-tight">체크 시 전체 후보구간 표시 · 회색 점선: 렌즈미 50m 제외<br>※ 실제 통신 유동인구가 아닌 길찾기·시설 기반 상대평가</p>
 </div>
 <div id="map" class="w-full h-full"></div>
 </div>
@@ -181,7 +182,8 @@ details[open]>summary::before{content:'📂 '}
 const t="mJJ00gscCg39Y6nR0LhUw2yzrIfr7arY65OwUZYk",e={TEAM_KILL_METERS:50,SEARCH_RADIUS_MAX:2200,FLOW_MATCH_RADIUS:13,SEGMENT_NODE_SPACING:9,SEGMENT_CLUSTER_RADIUS:14,
 SEGMENT_BEARING_TOLERANCE:24,TOP_SEGMENT_MIN_DISTANCE:55,SAME_CORRIDOR_MAX_DISTANCE:170,JUNCTION_SCAN_RADIUS:22,ARM_LOOKAHEAD_METERS:28,MAX_TMAP_ROUTES_PER_SCAN:14,
 REQUEST_TIMEOUT_MS:12e3,MIN_RECOMMEND_SCORE:50,MIN_RECOMMEND_ROUTES:3,MIN_RECOMMEND_TARGETS:2,MAX_GATES:7,MAX_DESTINATIONS:10,TMAP_DELAY_MS:110,KAKAO_PAGE_DELAY_MS:45,
-ANALYSIS_MAX_PAGES:3,MAP_MAX_PAGES:2,DEMAND_RADIUS:140,COMPETITION_RADIUS:160,ACCESS_NEAR_GATE_MIN:18,ACCESS_NEAR_GATE_MAX:220,HEATMAP_MAX_SEGMENTS:500,AUTO_AREA_RADIUS:1800,
+ANALYSIS_MAX_PAGES:3,MAP_MAX_PAGES:2,DEMAND_RADIUS:140,COMPETITION_RADIUS:160,ACCESS_NEAR_GATE_MIN:18,ACCESS_NEAR_GATE_MAX:220,HEATMAP_MAX_SEGMENTS:500,
+TOP3_MIN_SEPARATION_METERS:70,TOP3_WINDOW_METERS:28,TOP3_MIN_SCORE:52,TOP3_MIN_ROUTES:2,COMMERCIAL_RADIUS:80,COMMERCIAL_HOTSPOT_RADIUS:90,COMMERCIAL_HOTSPOT_SEPARATION:130,AUTO_AREA_RADIUS:1800,
 AUTO_AREA_MAX_NAMED:6,AUTO_AREA_MAX_CLUSTERS:3,AUTO_AREA_POI_PAGES:2,AUTO_AREA_CLUSTER_EPS:85,AUTO_AREA_CLUSTER_MIN_POINTS:7,AUTO_AREA_HULL_BUFFER:24,AUTO_AREA_MIN_POIS:6,
 AUTO_GRAPH_RADIUS:1500,AUTO_GRAPH_MAX_ROUTES:18,AUTO_GRAPH_ROUTE_DELAY_MS:90,AUTO_GRAPH_ACTIVE_MIN:.3,AUTO_GRAPH_CONNECT_ENDPOINT:20,AUTO_GRAPH_CONNECT_PARALLEL:15,
 AUTO_GRAPH_MAX_CORE_DISTANCE:720,AUTO_GRAPH_CORE_SEPARATION:210,AUTO_GRAPH_MAX_COMMUNITIES:6,AUTO_GRAPH_MIN_COMMUNITY_LENGTH:65,AUTO_GRAPH_BUFFER_METERS:24,
@@ -191,7 +193,7 @@ if(!window.kakao?.maps?.services||!window.kakao?.maps?.drawing)throw document.ge
 new Error("Kakao SDK unavailable");
 let n="new",a="",o=null,r=null,s=[],i=null,l="",c=null,d=0,u=document.getElementById("map"),m=new kakao.maps.LatLng(37.498095,127.02761),g=m,f=new kakao.maps.Map(u,{center:m,
 level:3}),h=new kakao.maps.services.Places,p=new kakao.maps.services.Geocoder,y=[],_=[],A=new Map,E=new Map,M=new kakao.maps.CustomOverlay({xAnchor:.5,yAnchor:1.5,zIndex:150
-}),w=null,b=null,k={},x={},I=!1,S=null,T=!1,O=0,v=[],L={},C={},R=null,P=[],N=[];
+}),w=null,b=null,k={},x={},I=!1,S=null,T=!1,O=0,v=[],L={},C={},R=null,P=[],N=[],analysisLines=[];
 
 function D(t){return String(t.id||`${t.place_name}|${t.x}|${t.y}`)}
 function U(t){if(t!==O||r?.signal.aborted)throw new DOMException("분석 취소","AbortError")}
@@ -686,7 +688,10 @@ document.getElementById("comp_count").innerText="-개",document.getElementById("
 document.getElementById("rankingResultText").innerHTML="",
 Object.values(k).forEach((t=>t.setOptions({fillColor:"#f43f5e",fillOpacity:.1,strokeWeight:2}))),
 v.forEach((t=>{const n=L[t.id];if(n){const a=kt(t);n.setOptions({strokeWeight:3,fillColor:a.fill,fillOpacity:e.AUTO_AREA_FILL_OPACITY})}})),Rt(),t||I||Ft()}
-function Rt(){_.forEach((t=>t.setMap(null))),_=[]}
+function Rt(){_.forEach((t=>t.setMap(null))),_=[],analysisLines=[]}
+function toggleAnalysisLines(){
+const t=!!document.getElementById("showAnalysisLines")?.checked;
+analysisLines.forEach((e=>e.setMap(t?f:null))),document.getElementById("heatLegend")?.classList.toggle("hidden",!t)}
 
 function Pt(t,e,n,a){
 const o=(n-t)*Math.PI/180,r=(a-e)*Math.PI/180,s=Math.sin(o/2)**2+Math.cos(t*Math.PI/180)*Math.cos(n*Math.PI/180)*Math.sin(r/2)**2;
@@ -722,7 +727,7 @@ let t=document.getElementById("searchInput").value.trim();if(!t)return;const e=+
 h.keywordSearch(t,(function(t,n){
 if(e===d&&!T&&n===kakao.maps.services.Status.OK&&t.length){
 clearActivePolygon(!0),It();let e=t[0];g=new kakao.maps.LatLng(e.y,e.x),f.setCenter(g),f.setLevel(3),Ft(),
-document.getElementById("statusMessage").innerText="📍 이동 완료. [이 지역 상권 전체영역 찾기]을 누르면 주변 상권을 자동으로 표시합니다."}}))}
+document.getElementById("statusMessage").innerText="📍 이동 완료. [상권 경계 직접 그리기]로 경계를 저장한 뒤 선택하면 TOP3를 분석합니다."}}))}
 async function Ft(){I||w||T||(O++,A.clear(),y.forEach((t=>t.setMap(null))),y=[],await Ht())}
 function jt(t,e,n){
 const a=t.id||`${t.place_name}|${t.x}|${t.y}`;if(A.has(a))return!1;let o=!1;
@@ -760,7 +765,7 @@ return t.forEach((t=>{
 if(!Array.isArray(t)||t.length<2)return;
 const n={lng:parseFloat(t[0]),lat:parseFloat(t[1])},a=e[e.length-1];(!a||Pt(a.lat,a.lng,n.lat,n.lng)>.5)&&e.push(n)}))})),e}
 function Yt(t){return"subway_exit"===t?1.6:"subway"===t?1.45:"bus"===t?1:"university"===t?1.2:"school"===t?.72:"parking"===t?.68:.7}
-function zt(t){return"olive"===t?1.45:"daiso"===t?1.2:"photo"===t?1.28:"play"===t?1.05:"cinema"===t?1.2:"mall"===t?1.32:"coffee"===t?.68:"center"===t?.45:.8}
+function zt(t){return"olive"===t?1.45:"daiso"===t?1.2:"photo"===t?1.28:"play"===t?1.05:"cinema"===t?1.2:"mall"===t?1.32:"commerce"===t?1.05:"coffee"===t?.68:"center"===t?.45:.8}
 function Vt(t,e=12){const n=[];return t.forEach((t=>{n.some((n=>Pt(t.lat,t.lng,n.lat,n.lng)<=e&&t.type===n.type))||n.push(t)})),n}
 async function qt(t){
 const e=[],n=t.slice(0,3);
@@ -777,7 +782,7 @@ s=[],i={subway_exit:3,subway:1,university:1,bus:2,parking:1,school:1},l={};
 for(const t of r){const n=t.type;if(!((l[n]||0)>=(i[n]||1))&&(s.push(t),l[n]=(l[n]||0)+1,s.length>=e.MAX_GATES))break}
 for(const t of r){if(s.length>=e.MAX_GATES)break;s.includes(t)||s.push(t)}return s}
 function Qt(t,n,a){
-const o={olive:7,daiso:6,mall:5,photo:5,cinema:4,play:3,coffee:2,center:1},
+const o={olive:7,daiso:6,mall:5,photo:5,commerce:4.5,cinema:4,play:3,coffee:2,center:1},
 r=[...t].sort(((t,e)=>{const r=(o[e.kind]||0)-(o[t.kind]||0);return 0!==r?r:Pt(t.lat,t.lng,n,a)-Pt(e.lat,e.lng,n,a)})),s=[],i={};
 for(const t of r){const n="coffee"===t.kind?2:3;
 if(!((i[t.kind]||0)>=n)&&!s.some((e=>Pt(t.lat,t.lng,e.lat,e.lng)<12&&t.kind===e.kind))&&(s.push(t),i[t.kind]=(i[t.kind]||0)+1,s.length>=e.MAX_DESTINATIONS))break}return s}
@@ -814,25 +819,64 @@ for(;n<a;){const o=n+a>>1;t[o]<=e?n=o+1:a=o}return Math.max(0,Math.min(1,n/t.len
 function oe(t,e){const n=t.filter(Number.isFinite).sort(((t,e)=>t-e));if(!n.length)return 0;
 const a=n[Math.floor(.1*(n.length-1))],o=n[Math.floor(.9*(n.length-1))];
 return Math.abs(o-a)<1e-9?e>0?.65:.05:Math.max(.03,Math.min(1,(e-a)/(o-a)))}
+function pe(t,n,a){
+const o=6378137,r=n/o,s=a*Math.PI/180,i=t.lat*Math.PI/180,l=t.lng*Math.PI/180,
+c=Math.asin(Math.sin(i)*Math.cos(r)+Math.cos(i)*Math.sin(r)*Math.cos(s)),
+d=l+Math.atan2(Math.sin(s)*Math.sin(r)*Math.cos(i),Math.cos(r)-Math.sin(i)*Math.sin(c));
+return{lat:180*c/Math.PI,lng:180*d/Math.PI}}
+function he(t,n=e.TOP3_WINDOW_METERS){
+const best=[...(t.routeHits||[])].sort(((t,e)=>(e.route?.weight||0)-(t.route?.weight||0)))[0],pts=best?.route?.samples||best?.route?.coords||[];
+if(pts.length>=2){
+let idx=0,dist=1/0;pts.forEach(((e,n)=>{const a=Pt(t.mid.lat,t.mid.lng,e.lat,e.lng);a<dist&&(dist=a,idx=n)}));
+const half=n/2,path=[];
+let back=[],remain=half,cur=idx;
+while(cur>0&&remain>0){const a=pts[cur],o=pts[cur-1],r=Pt(a.lat,a.lng,o.lat,o.lng);if(r>=remain){const s=remain/r;back.push({lat:a.lat+(o.lat-a.lat)*s,lng:a.lng+(o.lng-a.lng)*s}),remain=0}else back.push({...o}),remain-=r,cur--}
+back.reverse(),path.push(...back);const center=pts[idx];(!path.length||Pt(path.at(-1).lat,path.at(-1).lng,center.lat,center.lng)>.5)&&path.push({...center});
+remain=half,cur=idx;
+while(cur<pts.length-1&&remain>0){const a=pts[cur],o=pts[cur+1],r=Pt(a.lat,a.lng,o.lat,o.lng);if(r>=remain){const s=remain/r;path.push({lat:a.lat+(o.lat-a.lat)*s,lng:a.lng+(o.lng-a.lng)*s}),remain=0}else path.push({...o}),remain-=r,cur++}
+if(path.length>=2){let len=0;for(let i=0;i<path.length-1;i++)len+=Pt(path[i].lat,path[i].lng,path[i+1].lat,path[i+1].lng);return{a:path[0],b:path.at(-1),path,length:len}}
+}
+const a=n/2,o=t.bearing||Ut(t.a.lat,t.a.lng,t.b.lat,t.b.lng),r=pe(t.mid,a,(o+180)%360),s=pe(t.mid,a,o);return{a:r,b:s,path:[r,s],length:n}}
+
+function ge(t,n){
+let a=0,o=0,r=0,s=0;
+for(const i of n){const n=Pt(t.mid.lat,t.mid.lng,+i.y,+i.x);n<=30&&(a++,s+=1),n<=60&&(o++,s+=.55),n<=e.COMMERCIAL_RADIUS&&(r++,s+=.25)}
+return{raw:s,count30:a,count60:o,count80:r}}
+function me(t,n,o=3){
+const r=n.filter((n=>Nt(+n.y,+n.x,t))).map((t=>({lat:+t.y,lng:+t.x,raw:t}))),s=[];
+for(const t of r){let n=0;for(const a of r)Pt(t.lat,t.lng,a.lat,a.lng)<=e.COMMERCIAL_HOTSPOT_RADIUS&&n++;s.push({...t,density:n})}
+s.sort(((t,e)=>e.density-t.density));const i=[];
+for(const t of s){if(i.some((n=>Pt(t.lat,t.lng,n.lat,n.lng)<e.COMMERCIAL_HOTSPOT_SEPARATION)))continue;
+i.push({lat:t.lat,lng:t.lng,kind:"commerce",name:`상업밀집지 ${i.length+1}`,density:t.density});if(i.length>=o)break}
+return i}
+function fe(t){
+let n=100,a=t.nearestCompetitor;
+return Number.isFinite(a)&&(a<20?n-=45:a<40?n-=28:a<70?n-=14:a<100&&(n-=6)),t.competitorCount80>=2&&(n-=6*Math.min(3,t.competitorCount80-1)),Math.max(35,Math.min(100,n))}
+function ye(t,n,a=3){
+const o=[];for(const r of[...t].sort(((t,e)=>e.score-t.score))){
+if(r.excluded||r.competition.teamKill||r.score<e.TOP3_MIN_SCORE||r.routeHitIds.length<e.TOP3_MIN_ROUTES)continue;
+if((r.demand.targetCount||0)+(r.commercial?.count60||0)<2)continue;
+const s=he(r,e.TOP3_WINDOW_METERS);if(!Nt(s.a.lat,s.a.lng,n)||!Nt(s.b.lat,s.b.lng,n))continue;
+if(o.some((t=>Pt(r.mid.lat,r.mid.lng,t.mid.lat,t.mid.lng)<e.TOP3_MIN_SEPARATION_METERS)))continue;
+r.recommendationWindow=s,o.push(r);if(o.length>=a)break}return o}
+function focusTopCandidate(t){const e=i?.topSegments?.[t];e&&(f.panTo(new kakao.maps.LatLng(e.mid.lat,e.mid.lng)),f.setLevel(Math.min(f.getLevel(),2)))}
 function re(t,n){
 const a=Pt(t.mid.lat,t.mid.lng,n.mid.lat,n.mid.lng);if(a<e.TOP_SEGMENT_MIN_DISTANCE)return!0;
 const o=Bt(t.bearing||0,n.bearing||0)<=20,r=new Set(t.routeHitIds||[]),s=new Set(n.routeHitIds||[]),
 i=[...r].filter((t=>s.has(t))).length/(new Set([...r,...s]).size||1);
 return a<=e.SAME_CORRIDOR_MAX_DISTANCE&&o&&i>=.45}
 function se(t){return t.junction.armCount>=4?"보행 합류 교차구간":3===t.junction.armCount?"보행 합류 분기구간":t.routeHitIds.length>=4?"메인 보행 집중구간":"핵심 보행구간"}
-function ie(t,e,n){
-const a=["#7f1d1d","#1d4ed8","#047857"][e]||"#334155",
-o=function(t,e){return{a:t.a,b:t.b,length:Pt(t.a.lat,t.a.lng,t.b.lat,t.b.lng)}}(t);
+function ie(t,rankIdx,n){
+const a=["#7f1d1d","#1d4ed8","#047857"][rankIdx]||"#334155",o=t.recommendationWindow||he(t,28);
 t.recommendationWindow=o;
-const r=new kakao.maps.Polyline({path:[new kakao.maps.LatLng(o.a.lat,o.a.lng),new kakao.maps.LatLng(o.b.lat,o.b.lng)],
-strokeWeight:14,strokeColor:a,strokeOpacity:.92,strokeStyle:"solid"});
+const r=new kakao.maps.Polyline({path:o.path.map((t=>new kakao.maps.LatLng(t.lat,t.lng))),strokeWeight:16,strokeColor:a,strokeOpacity:.94,strokeStyle:"solid"});
 r.setMap(f),_.push(r);
-const s=e+1,i=`${1===s?"🥇":2===s?"🥈":"🥉"} ${s}위 조사후보`,l=new kakao.maps.CustomOverlay({
+const s=rankIdx+1,i=`${1===s?"🥇":2===s?"🥈":"🥉"} ${s}위 현장조사 후보`,l=new kakao.maps.CustomOverlay({
 position:new kakao.maps.LatLng(t.mid.lat,t.mid.lng),
-content:`<div style="position:relative;z-index:999;text-align:center"><div style="background:${a};color:white;padding:5px 10px;border-radius:7px;font-weight:900;font-size:12px;border:2px solid white;box-shadow:0 3px 7px rgba(0,0,0,.35);white-space:nowrap">${i}</div></div>`,
+content:`<div style="position:relative;z-index:999;text-align:center"><div style="background:${a};color:white;padding:6px 11px;border-radius:8px;font-weight:900;font-size:12px;border:2px solid white;box-shadow:0 3px 7px rgba(0,0,0,.35);white-space:nowrap">${i} · ${Math.round(t.score)}점</div></div>`,
 xAnchor:.5,yAnchor:1.15});return l.setMap(f),_.push(l),i}
 function le(t,e){
-return e?`${t.routeHitIds.length>=5?"여러 핵심 OD 보행경로가 겹치는 구간":t.routeHitIds.length>=3?"복수 보행경로가 겹치는 구간":"일부 보행경로가 통과하는 구간"}이며 ${se(t)}으로 분류됩니다. ${t.competition.competitorCount80>=2?`다만 80m 내 경쟁 렌즈샵 ${t.competition.competitorCount80}곳으로 경쟁강도가 높습니다.`:"근거리 경쟁 과밀은 상대적으로 크지 않습니다."} 실제 점포 선정 시 1층 여부·전면폭·간판 가시성·횡단보도 위치는 현장 확인이 필요합니다.`:"길찾기 경로가 확보되지 않아 추천구간 분석을 수행하지 못했습니다."}
+return e?`${t.routeHitIds.length>=5?"여러 핵심 시설 간 보행경로가 겹치는 구간":t.routeHitIds.length>=3?"복수 보행경로가 겹치는 구간":"주요 보행경로가 통과하는 구간"}이며 ${se(t)}으로 분류됩니다. 주변 60m 상업시설 표본 ${t.commercial?.count60||0}곳을 함께 반영했습니다. ${t.competition.competitorCount80>=2?`80m 내 경쟁 렌즈샵 ${t.competition.competitorCount80}곳은 현장 경쟁강도를 확인해야 합니다.`:"근거리 경쟁 과밀은 상대적으로 크지 않습니다."} 1층 여부·전면폭·간판 가시성·횡단보도·임대료는 현장에서 최종 확인하세요.`:"길찾기 경로가 확보되지 않아 추천구간 분석을 수행하지 못했습니다."}
 
 async function ce(t){
 if(T||!t||t.length<3)return;
@@ -856,7 +900,14 @@ for(const t of["대학교","중학교","고등학교"])
 (await Z(t,{location:g,radius:Math.min(p+350,e.SEARCH_RADIUS_MAX),sort:kakao.maps.services.SortBy.DISTANCE},2)).forEach((e=>{
 const n=e.place_name||"";
 n.includes("남중")||n.includes("남자중")||n.includes("남고")||n.includes("남자고")||k.push({lat:+e.y,lng:+e.x,type:"대학교"===t?"university":"school",name:n})}));
-k=Vt(k,12),U(u),m.innerText="🎯 렌즈샵·앵커·타깃 시설을 조사 중...";
+k=Vt(k,12),U(u),m.innerText="🏬 상권 내부 상업활성 표본을 수집 중...";
+const fenceBounds=new kakao.maps.LatLngBounds;t.forEach((t=>fenceBounds.extend(new kakao.maps.LatLng(t.lat,t.lng))));
+const commerceRaw=[],commerceSeen=new Set;
+for(const code of["CE7","FD6","CS2","MT1"]){
+const rows=await tt(code,{bounds:fenceBounds},2);U(u);
+B(rows)&&l.push(`상업활성 ${code}: 일부 표본만 수집`);rows.forEach((q=>{const id=q.id||`${q.place_name}|${q.x}|${q.y}`;
+if(!commerceSeen.has(id)&&Nt(+q.y,+q.x,t)){commerceSeen.add(id),commerceRaw.push(q)}}));await z(15)}
+m.innerText="🎯 렌즈샵·앵커·타깃 시설을 조사 중...";
 const x=[],I=new Set,S=Object.keys(J);
 for(const t of S){
 const n=await Z(J[t].kw,{location:g,radius:p,sort:kakao.maps.services.SortBy.DISTANCE},e.ANALYSIS_MAX_PAGES);
@@ -886,7 +937,7 @@ let C=[];
 T.forEach((t=>{const e=+t.y,n=+t.x;
 if(t.brandKey&&J[t.brandKey]){const a=J[t.brandKey];a.isOlive?C.push({lat:e,lng:n,kind:"olive",name:t.place_name}):a.isDaiso&&C.push({lat:e,lng:n,kind:"daiso",name:t.place_name})}
 else t.isStealth&&t.stealthData&&C.push({lat:e,lng:n,kind:t.stealthData.type,name:t.place_name})})),
-C.length||C.push({lat:r,lng:c,kind:"center",name:"펜스 중심부"}),C=Qt(C,r,c),m.innerText="🌐 설정한 보행 네트워크 생성 중...";
+C.push(...me(t,commerceRaw,3)),C.length||C.push({lat:r,lng:c,kind:"center",name:"펜스 중심부"}),C=Qt(C,r,c),m.innerText="🌐 핵심 시설·상업밀집지를 연결하는 보행 네트워크 생성 중...";
 
 const R=await async function(t,n,a,o,r,s){
 const i=function(t,n,a,o){
@@ -917,7 +968,7 @@ m.innerText=`🧩 길찾기 경로 ${R.length}개를 도로 Segment로 분해 �
 let N=ee(te(R,t));if(!N.length)throw new Error("펜스 내부 Segment 생성 실패");
 m.innerText=`🧠 도로구간 ${N.length}개 Flow·Demand·Capture·Access·Competition 분석 중...`;
 
-N=function(t,r,s,i){
+N=function(t,r,s,i,commercePlaces){
 t.forEach((t=>{
 const l=function(t,n){
 const a=[];
@@ -983,17 +1034,20 @@ if("reloc"===s.mode&&D(n)===s.relocationStoreId)continue;i=Math.min(i,a)}
 else d=Math.min(d,a),a<=80&&l++,a<=e.COMPETITION_RADIUS&&c++}
 const u=i<=e.TEAM_KILL_METERS;let m=1;
 return l>=1&&(m-=.04),l>=2&&(m-=.06*(l-1)),c>=4&&(m-=.04*Math.min(3,c-3)),
-{teamKill:u,lensmeNearest:i,competitorCount80:l,competitorCount160:c,nearestCompetitor:d,multiplier:Math.max(.68,m)}}(t,s);
-Object.assign(t,{routeHits:d,routeHitIds:d.map((t=>t.route.id)),flowRaw:u,junction:m,demand:g,access:f,capture:h,competition:p})}));
+{teamKill:u,lensmeNearest:i,competitorCount80:l,competitorCount160:c,nearestCompetitor:d,multiplier:Math.max(.68,m)}}(t,s),
+q=ge(t,commercePlaces);
+Object.assign(t,{routeHits:d,routeHitIds:d.map((t=>t.route.id)),flowRaw:u,junction:m,demand:g,access:f,capture:h,competition:p,commercial:q})}));
 
-const l=t.map((t=>t.flowRaw)),c=t.map((t=>t.demand.raw)),d=t.map((t=>t.access.raw)),u=t.map((t=>t.capture.raw));
+const l=t.map((t=>t.flowRaw)),c=t.map((t=>t.demand.raw)),d=t.map((t=>t.access.raw)),u=t.map((t=>t.capture.raw)),q=t.map((t=>t.commercial.raw));
 t.forEach((t=>{
-const e=oe(l,t.flowRaw),n=oe(c,t.demand.raw),a=oe(d,t.access.raw),o=oe(u,t.capture.raw),r=.08;
-let s=100*Math.pow(Math.max(r,e),.42)*Math.pow(Math.max(r,n),.24)*Math.pow(Math.max(r,o),.2)*Math.pow(Math.max(r,a),.14)*t.competition.multiplier;
-t.competition.teamKill&&(s=0),t.flowIndex=Math.round(100*e),t.demandIndex=Math.round(100*n),t.captureIndex=Math.round(100*o),t.accessIndex=Math.round(100*a),
-t.competitionIndex=Math.round(100*t.competition.multiplier),t.score=Math.max(0,Math.min(100,s))}));
+const flow=oe(l,t.flowRaw),demand=oe(c,t.demand.raw),access=oe(d,t.access.raw),capture=oe(u,t.capture.raw),commercial=oe(q,t.commercial.raw);
+const comp=fe(t.competition),junction=Math.max(0,Math.min(1,.62*capture+.38*(t.junction.armCount>=4?1:3===t.junction.armCount?.82:.48)));
+t.flowIndex=Math.round(100*flow),t.demandIndex=Math.round(100*demand),t.commercialIndex=Math.round(100*commercial),t.captureIndex=Math.round(100*junction),t.accessIndex=Math.round(100*access),
+t.competitionIndex=Math.round(comp);
+let score=.30*t.flowIndex+.20*t.demandIndex+.15*t.commercialIndex+.15*t.accessIndex+.10*t.captureIndex+.10*t.competitionIndex;
+t.competition.teamKill&&(score=0),t.score=Math.max(0,Math.min(100,score))}));
 const m=t.map((t=>t.score)).sort(((t,e)=>t-e));
-return t.forEach((t=>{const e=ae(m,t.score);t.percentile=Math.round(100*e),t.topPercent=Math.max(1,100-t.percentile+1)})),t}(N,R,T,L);
+return t.forEach((t=>{const e=ae(m,t.score);t.percentile=Math.round(100*e),t.topPercent=Math.max(1,100-t.percentile+1)})),t}(N,R,T,L,commerceRaw);
 
 N=N.filter((t=>!L.some((e=>("subway_exit"===e.type||"subway"===e.type)&&Pt(t.mid.lat,t.mid.lng,e.lat,e.lng)<12)))),
 N.forEach((t=>{
@@ -1008,29 +1062,20 @@ const e=new kakao.maps.Polyline({
 path:[new kakao.maps.LatLng(t.a.lat,t.a.lng),new kakao.maps.LatLng(t.b.lat,t.b.lng)],strokeWeight:t.score>=80?9:7,
 strokeColor:t.excluded?"#64748b":(n=t.score,n>=80?"#dc2626":n>=65?"#f97316":n>=50?"#eab308":n>=35?"#16a34a":"#2563eb"),
 strokeOpacity:.72,strokeStyle:t.excluded?"shortdash":"solid"});
-var n;e.setMap(f),_.push(e)}))}(N);
+var n;analysisLines.push(e),document.getElementById("showAnalysisLines")?.checked&&e.setMap(f),_.push(e)}))}(N);
 
-const H=l.length?[]:function(t,n=3){
-const a=[];
-for(const o of[...t].sort(((t,e)=>e.score-t.score)))
-if(!(o.excluded||o.competition.teamKill||o.score<e.MIN_RECOMMEND_SCORE||o.routeHitIds.length<e.MIN_RECOMMEND_ROUTES||o.demand.targetCount<e.MIN_RECOMMEND_TARGETS)&&!a.some((t=>re(o,t)))&&(a.push(o),a.length>=n))break;
-return a}(N,3);
+const H=ye(N,t,3);
 i={context:s,qualityIssues:l,segments:N,topSegments:H,routeCount:R.length};
-const F=function(t,e,n,a){
-if(!t.length)return 0;
-const o=[...t].sort(((t,e)=>e.score-t.score)).slice(0,Math.max(3,Math.ceil(.12*t.length))),
-r=o.reduce(((t,e)=>t+e.score),0)/o.length,s=Math.min(1,a.length/10),i=new Set(e.map((t=>t.type))).size,l=Math.min(1,i/4),c=new Set;
-n.forEach((t=>{
-t.brandKey&&J[t.brandKey]?.isOlive?c.add("olive"):t.brandKey&&J[t.brandKey]?.isDaiso?c.add("daiso"):t.isStealth&&t.stealthData&&c.add(t.stealthData.type)}));
-const d=Math.min(1,c.size/5);return Math.round(Math.min(100,.65*r+15*s+10*l+10*d))}(N,L,T,R);
+const F=H.length?Math.round(H.reduce(((t,e)=>t+e.score),0)/H.length):0;
 
 let j=`
 <div class="mb-3 rounded-xl border border-indigo-200 bg-gradient-to-br from-indigo-50 to-white p-3">
 <div class="flex justify-between items-end">
-<div><p class="text-[10px] font-bold text-indigo-500">펜스 전체</p><p class="text-[13px] font-black text-indigo-800">상권 내부 조사 참고지수</p></div>
-<div class="text-2xl font-black text-indigo-700">${F}<span class="text-xs ml-1">/100</span></div>
+<div><p class="text-[10px] font-bold text-indigo-500">선택 상권 내부</p><p class="text-[13px] font-black text-indigo-800">현장조사 후보 ${H.length}곳</p></div>
+<div class="text-right"><p class="text-[9px] text-slate-400 font-bold">TOP 후보 평균</p><div class="text-2xl font-black text-indigo-700">${F}<span class="text-xs ml-1">/100</span></div></div>
 </div>
-<p class="text-[9.5px] text-slate-500 mt-1">길찾기·시설 기반 상대지수입니다. 미색칠 구간은 미분석이며 다른 상권 점수와 직접 비교할 수 없습니다.</p>
+<p class="text-[9.5px] text-slate-500 mt-1">실제 통신 유동인구가 아니라 주요 시설 간 TMAP 도보경로와 주변 시설을 이용한 상권 내부 상대평가입니다. TOP 후보는 최대 3곳이며 서로 70m 이상 분리합니다.</p>
+${l.length?`<p class="text-[9.5px] text-amber-700 mt-1"><b>데이터 주의:</b> ${V([...new Set(l)].join(" · "))}</p>`:""}
 </div>`;
 
 for(let t=0;t<H.length;t++){
@@ -1046,24 +1091,32 @@ j+=`
 </div>
 <div class="text-[11px] font-bold text-slate-600 mb-2">📍 ${V(a)} 주변 약 ${Math.round(e.recommendationWindow?.length||Pt(e.a.lat,e.a.lng,e.b.lat,e.b.lng))}m 구간</div>
 <div class="grid grid-cols-2 gap-1.5 text-[10px] mb-2">
-<div class="bg-indigo-50 rounded p-2"><span class="text-slate-500">🚶 경로 연결성</span><b class="float-right text-indigo-700">${e.flowIndex}</b></div>
-<div class="bg-pink-50 rounded p-2"><span class="text-slate-500">🎯 관련 시설</span><b class="float-right text-pink-700">${e.demandIndex}</b></div>
-<div class="bg-amber-50 rounded p-2"><span class="text-slate-500">👀 경로 합류</span><b class="float-right text-amber-700">${e.captureIndex}</b></div>
-<div class="bg-emerald-50 rounded p-2"><span class="text-slate-500">🚇 접근성</span><b class="float-right text-emerald-700">${e.accessIndex}</b></div>
+<div class="bg-indigo-50 rounded p-2"><span class="text-slate-500">🚶 핵심동선</span><b class="float-right text-indigo-700">${Math.round(e.flowIndex*.30)}/30</b></div>
+<div class="bg-pink-50 rounded p-2"><span class="text-slate-500">🎯 관련시설</span><b class="float-right text-pink-700">${Math.round(e.demandIndex*.20)}/20</b></div>
+<div class="bg-cyan-50 rounded p-2"><span class="text-slate-500">🏬 상업활성</span><b class="float-right text-cyan-700">${Math.round(e.commercialIndex*.15)}/15</b></div>
+<div class="bg-emerald-50 rounded p-2"><span class="text-slate-500">🚇 접근성</span><b class="float-right text-emerald-700">${Math.round(e.accessIndex*.15)}/15</b></div>
+<div class="bg-amber-50 rounded p-2"><span class="text-slate-500">🔀 길목성</span><b class="float-right text-amber-700">${Math.round(e.captureIndex*.10)}/10</b></div>
+<div class="bg-slate-100 rounded p-2"><span class="text-slate-500">⚔️ 경쟁환경</span><b class="float-right text-slate-700">${Math.round(e.competitionIndex*.10)}/10</b></div>
 </div>
 <div class="bg-slate-50 border border-slate-100 rounded-lg p-2 text-[10px] space-y-1 mb-2">
-<div class="flex justify-between"><span>설정 경로 중첩</span><b>${e.routeHitIds.length}개</b></div>
+<div class="flex justify-between"><span>주요 보행경로 중첩</span><b>${e.routeHitIds.length}개</b></div>
+<div class="flex justify-between"><span>관련시설 표본</span><b>${e.demand.targetCount}곳</b></div>
+<div class="flex justify-between"><span>60m 상업시설 표본</span><b>${e.commercial?.count60||0}곳</b></div>
 <div class="flex justify-between"><span>보행 분기방향</span><b>${e.junction.armCount}방향</b></div>
-<div class="flex justify-between"><span>경쟁 보정계수</span><b>${e.competitionIndex}%</b></div>
 <div class="flex justify-between"><span>경쟁 환경</span><b>${i}</b></div>
 </div>
 ${s?`<div class="bg-blue-50/70 rounded-lg p-2 text-[9.5px] text-blue-700 mb-2"><b>주요 통과경로</b><br>${s}</div>`:""}
-<div class="bg-indigo-50/70 rounded-lg p-2 text-[10.5px] text-indigo-700 leading-snug">${V(r)}</div>
+<div class="bg-indigo-50/70 rounded-lg p-2 text-[10.5px] text-indigo-700 leading-snug mb-2">${V(r)}</div>
+<div class="flex items-center justify-between gap-2 mb-2"><button onclick="focusTopCandidate(${t})" class="text-[10px] font-black bg-slate-800 text-white rounded px-2.5 py-1.5">📍 지도에서 보기</button><span class="text-[9px] text-slate-400">후보구간 약 ${Math.round(e.recommendationWindow?.length||28)}m</span></div>
+<div class="rounded-lg border border-slate-200 bg-white p-2 text-[9.5px] text-slate-600">
+<b class="text-slate-700">현장 최종확인</b><div class="grid grid-cols-2 gap-x-2 gap-y-1 mt-1">
+<label><input type="checkbox"> 1층/출입성</label><label><input type="checkbox"> 전면폭/간판</label><label><input type="checkbox"> 보행자 시야</label><label><input type="checkbox"> 횡단보도 방향</label><label><input type="checkbox"> 임대료/권리금</label><label><input type="checkbox"> 공실/계약 가능</label>
+</div></div>
 </div>`}
 
-H.length||(j+=`<div class="text-xs text-rose-600 font-bold">조사후보 선정 보류. ${l.length?V(l.join(" · ")):"50m 제외 조건 또는 임시 조사 기준을 충족하는 구간이 없습니다."} 낮은 순위를 출점 추천으로 대체하지 않습니다.</div>`),
+H.length||(j+=`<div class="text-xs text-rose-600 font-bold">TOP 후보를 만들 수 없습니다. 렌즈미 50m 제외, 최소 보행경로 ${e.TOP3_MIN_ROUTES}개, 점수 ${e.TOP3_MIN_SCORE}점 기준을 통과한 서로 다른 구간이 없습니다. 낮은 점수 후보를 억지로 TOP3에 채우지 않습니다.</div>`),
 U(u),P.innerHTML=j,document.getElementById("rankingResultBox").classList.remove("hidden"),
-m.innerText=`조사 분석 완료 · 설정 경로 ${R.length}개 · 분석 구간 ${N.length}개 · 조사후보 ${H.length}개`;
+m.innerText=`TOP3 분석 완료 · 보행경로 ${R.length}개 · 후보구간 ${N.length}개 · 현장조사 후보 ${H.length}곳`;
 }catch(t){
 if("AbortError"===t.name)return void(m.textContent="입지 분석을 취소했습니다.");
 console.error("V45 분석 에러:",t),m.innerText="⚠️ 분석 중 에러가 발생했습니다. 개발자도구 Console을 확인하세요."}
