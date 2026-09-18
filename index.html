@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>렌즈미 상권 분석 대시보드 (V43.2 랭킹 증발 버그 완벽 픽스)</title>
+    <title>렌즈미 상권 분석 대시보드 (V44.0 실제 보행동선 엔진)</title>
     <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
@@ -37,7 +37,7 @@
     <div class="w-full md:w-1/4 bg-white border-r border-gray-200 p-6 flex flex-col shadow-lg z-20 overflow-y-auto">
         <h1 class="text-xl font-extrabold text-slate-800 border-b-4 border-indigo-500 pb-3 mb-4 flex justify-between items-center">
             <span>🗺️ 전국 상권 관제탑</span>
-            <span class="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded-full font-bold">V43.2 🛠️</span>
+            <span class="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded-full font-bold">V44.0 🚶</span>
         </h1>
 
         <div class="mb-4">
@@ -87,7 +87,7 @@
                 </div>
 
                 <div id="rankingResultBox" class="mt-3 pt-3 border-t border-indigo-200 hidden">
-                    <p class="text-xs text-indigo-800 font-extrabold mb-2">💎 100점 만점 랭킹 결과</p>
+                    <p class="text-xs text-indigo-800 font-extrabold mb-2">💎 실제 보행동선 기반 100점 랭킹</p>
                     <div id="rankingResultText" class="space-y-0 mb-3 pb-2"></div>
                 </div>
             </div>
@@ -101,7 +101,7 @@
 
         <div id="tab-map" class="flex-grow w-full h-full relative">
             <div id="statusMessage" class="absolute top-4 left-1/2 transform -translate-x-1/2 z-10 bg-white/95 backdrop-blur-sm px-6 py-2 rounded-full shadow-md text-sm font-bold text-slate-700 border border-slate-200 text-center transition-all">
-                🎯 펜스를 치면 [40m 초밀착 룰 & 100점 만점제]로 정밀 채점합니다!
+                🎯 펜스를 치면 실제 TMAP 보행경로 + 앵커시설로 길목/사거리를 분석합니다!
             </div>
 
             <div class="absolute top-16 left-4 z-10 bg-white/95 backdrop-blur-sm p-4 rounded-xl shadow-lg border border-slate-200 w-64 max-h-[80vh] overflow-y-auto hidden md:block">
@@ -132,40 +132,78 @@
     <script type="text/javascript" src="//dapi.kakao.com/v2/maps/sdk.js?appkey=c045609510f8b75252389123f086be48&libraries=services,drawing"></script>
 
     <script>
-        const TMAP_APP_KEY = "mJJ00gscCg39Y6nR0LhUw2yzrIfr7arY65OwUZYk"; 
+        // =========================================================
+        // 렌즈미 상권 분석 대시보드 V44.0
+        // 핵심 변경:
+        // 1) 가상의 직선 동선 제거 -> TMAP 실제 보행 LineString 기반 채점
+        // 2) 실제 경로 겹침 + 분기 방향으로 길목/삼거리/사거리 판정
+        // 3) TMAP 경로 캐시 재사용 -> 점수/표시 단계에서 추가 호출 최소화
+        // 4) Kakao Places 다중 페이지 수집(최대 15개 한 페이지 한계 보완)
+        // 5) 신규 출점 기존 렌즈미 50m 이내 완전 배제
+        // 6) 같은 길이 1/2/3위를 독식하지 않도록 동일 corridor 중복 제거
+        // =========================================================
 
-        let currentMode = 'new'; 
-        function setMode(mode) {
-            currentMode = mode;
-            if(mode === 'new') {
-                document.getElementById('btnModeNew').className = "flex-1 bg-white text-indigo-700 shadow-sm px-3 py-1.5 rounded-md text-[13px] font-extrabold transition";
-                document.getElementById('btnModeReloc').className = "flex-1 text-slate-500 hover:text-slate-800 px-3 py-1.5 rounded-md text-[13px] font-bold transition";
-            } else {
-                document.getElementById('btnModeReloc').className = "flex-1 bg-white text-indigo-700 shadow-sm px-3 py-1.5 rounded-md text-[13px] font-extrabold transition";
-                document.getElementById('btnModeNew').className = "flex-1 text-slate-500 hover:text-slate-800 px-3 py-1.5 rounded-md text-[13px] font-bold transition";
-            }
-            if(activePolygonPath) runGridHotspotScan(activePolygonPath);
-        }
+        const TMAP_APP_KEY = "mJJ00gscCg39Y6nR0LhUw2yzrIfr7arY65OwUZYk";
 
-        let mapContainer = document.getElementById('map'); 
-        let currentCenter = new kakao.maps.LatLng(37.498095, 127.027610); 
-        let searchCenter = currentCenter; 
-        let map = new kakao.maps.Map(mapContainer, { center: currentCenter, level: 3 }); 
-        
-        let ps = new kakao.maps.services.Places(); 
-        let geocoder = new kakao.maps.services.Geocoder();
-        
-        const STATIC_COUNTS = {
-            'lensme': 242, 
-            'olens': 372, 
-            'olive': 1369, 
-            'daiso': 1600, 
-            'davich': 321
+        const CONFIG = {
+            TEAM_KILL_METERS: 50,
+            SEARCH_RADIUS_MAX: 2000,
+            PLACE_SCORE_RADIUS: 40,
+            FLOW_HIT_RADIUS: 16,
+            JUNCTION_SCAN_RADIUS: 18,
+            ARM_LOOKAHEAD_METERS: 24,
+            CANDIDATE_SPACING_METERS: 10,
+            TOP_SPOT_MIN_DISTANCE: 45,
+            SAME_CORRIDOR_MAX_DISTANCE: 180,
+            MAX_TMAP_ROUTES_PER_SCAN: 8,
+            TMAP_DELAY_MS: 110,
+            KAKAO_PAGE_DELAY_MS: 45,
+            ANALYSIS_MAX_PAGES: 3,
+            MAP_MAX_PAGES: 2
         };
-        for(let key in STATIC_COUNTS) {
-            let el = document.getElementById('cnt_' + key);
-            if(el) el.innerText = `(${STATIC_COUNTS[key].toLocaleString()}개)`;
+
+        let currentMode = 'new';
+        let mapContainer = document.getElementById('map');
+        let currentCenter = new kakao.maps.LatLng(37.498095, 127.027610);
+        let searchCenter = currentCenter;
+        let map = new kakao.maps.Map(mapContainer, { center: currentCenter, level: 3 });
+        let ps = new kakao.maps.services.Places();
+        let geocoder = new kakao.maps.services.Geocoder();
+
+        let mapMarkers = [];
+        let rankOverlays = [];
+        let placeCache = new Map();
+        let routeCache = new Map();
+        let tooltipOverlay = new kakao.maps.CustomOverlay({ xAnchor: 0.5, yAnchor: 1.5, zIndex: 150 });
+
+        let activePolygonPath = null;
+        let activePolygonId = null;
+        let renderedPolygons = {};
+        let renderedNametags = {};
+        let isDrawingMode = false;
+        let tempDrawnPath = null;
+        let isScanningAPI = false;
+        let scanSequence = 0;
+
+        const delay = ms => new Promise(res => setTimeout(res, ms));
+
+        function escapeHtml(value) {
+            return String(value ?? '').replace(/[&<>'"]/g, ch => ({
+                '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'
+            }[ch]));
         }
+
+        const STATIC_COUNTS = {
+            lensme: 242,
+            olens: 372,
+            olive: 1369,
+            daiso: 1600,
+            davich: 321
+        };
+        Object.keys(STATIC_COUNTS).forEach(key => {
+            let el = document.getElementById('cnt_' + key);
+            if (el) el.innerText = `(${STATIC_COUNTS[key].toLocaleString()}개)`;
+        });
 
         const DYNAMIC_BRANDS = [
             { id: 'hapa', kw: '하파크리스틴' },
@@ -176,9 +214,35 @@
             { id: 'olive_hapa', kw: '올리브영 하파크리스틴' }
         ];
 
+        const BRAND_CONFIG = {
+            f_lensme:     { kw: '렌즈미', hex: '%239333ea', isComp: true, isLensme: true },
+            f_olens:      { kw: '오렌즈', hex: '%23f97316', isComp: true },
+            f_hapa:       { kw: '하파크리스틴', hex: '%23f472b6', isComp: true },
+            f_winc:       { kw: '윙크 렌즈', hex: '%233b82f6', isComp: true },
+            f_withlens:   { kw: '위드렌즈', hex: '%23059669', isComp: true },
+            f_lensvery:   { kw: '렌즈베리', hex: '%23eab308', isComp: true },
+            f_lenstown:   { kw: '렌즈타운', hex: '%23dc2626', isComp: true },
+            f_olive_hapa: { kw: '올리브영 하파크리스틴', hex: '%230f766e', isOlive: true, isAnchor: true },
+            f_olive:      { kw: '올리브영', hex: '%2316a34a', isOlive: true, isAnchor: true },
+            f_daiso:      { kw: '다이소', hex: '%23e11d48', isDaiso: true, isAnchor: true },
+            f_davich:     { kw: '다비치안경', hex: '%231d4ed8', isOther: true }
+        };
+
+        // weight / radius 값을 실제 채점에서 그대로 사용한다.
+        const STEALTH_KEYWORDS = [
+            { kw: '인생네컷', weight: 5.0, radius: 40, type: 'play' },
+            { kw: '셀프사진관', weight: 5.0, radius: 40, type: 'play' },
+            { kw: '포토이즘', weight: 5.0, radius: 40, type: 'play' },
+            { kw: '가챠샵', weight: 5.0, radius: 40, type: 'play' },
+            { kw: '뽑기방', weight: 5.0, radius: 40, type: 'play' },
+            { kw: '메가커피', weight: 3.0, radius: 40, type: 'coffee' },
+            { kw: '컴포즈커피', weight: 3.0, radius: 40, type: 'coffee' }
+        ];
+
         function fetchLiveCounts() {
             DYNAMIC_BRANDS.forEach(brand => {
-                ps.keywordSearch(brand.kw, function(data, status, pagination) {
+                const svc = new kakao.maps.services.Places();
+                svc.keywordSearch(brand.kw, function(data, status, pagination) {
                     let el = document.getElementById('cnt_' + brand.id);
                     if (status === kakao.maps.services.Status.OK && el && pagination) {
                         el.innerText = `(${pagination.totalCount.toLocaleString()}개)`;
@@ -194,128 +258,176 @@
         }
         fetchLiveCounts();
 
-        let mapMarkers = [];
-        let rankOverlays = []; 
-        let placeCache = new Map(); 
-        
-        let tooltipOverlay = new kakao.maps.CustomOverlay({ xAnchor: 0.5, yAnchor: 1.5, zIndex: 150 });
+        // ---------- Kakao Places paging helpers ----------
+        function kakaoKeywordAll(keyword, options = {}, maxPages = CONFIG.ANALYSIS_MAX_PAGES) {
+            return new Promise(resolve => {
+                const svc = new kakao.maps.services.Places();
+                let all = [];
+                let pageCount = 0;
+                let finished = false;
 
-        const BRAND_CONFIG = {
-            f_lensme: { kw: '렌즈미', hex: '%239333ea', isComp: true },
-            f_olens: { kw: '오렌즈', hex: '%23f97316', isComp: true },
-            f_hapa: { kw: '하파크리스틴', hex: '%23f472b6', isComp: true },
-            f_winc: { kw: '윙크 렌즈', hex: '%233b82f6', isComp: true },
-            f_withlens: { kw: '위드렌즈', hex: '%23059669', isComp: true },
-            f_lensvery: { kw: '렌즈베리', hex: '%23eab308', isComp: true },
-            f_lenstown: { kw: '렌즈타운', hex: '%23dc2626', isComp: true }, 
-            f_olive_hapa: { kw: '올리브영 하파크리스틴', hex: '%230f766e', isOlive: true, isAnchor: true }, 
-            f_olive: { kw: '올리브영', hex: '%2316a34a', isOlive: true, isAnchor: true },
-            f_daiso: { kw: '다이소', hex: '%23e11d48', isDaiso: true, isAnchor: true },
-            f_davich: { kw: '다비치안경', hex: '%231d4ed8', isOther: true }
-        };
+                const callback = (data, status, pagination) => {
+                    if (finished) return;
+                    if (status === kakao.maps.services.Status.OK) {
+                        all.push(...data);
+                        pageCount++;
+                        if (pagination && pagination.hasNextPage && pageCount < maxPages) {
+                            setTimeout(() => pagination.nextPage(), CONFIG.KAKAO_PAGE_DELAY_MS);
+                        } else {
+                            finished = true;
+                            resolve(all);
+                        }
+                    } else {
+                        finished = true;
+                        resolve(all);
+                    }
+                };
 
-        const STEALTH_KEYWORDS = [
-            { kw: '인생네컷', weight: 5.0, radius: 40, type: 'play' },
-            { kw: '셀프사진관', weight: 5.0, radius: 40, type: 'play' }, 
-            { kw: '포토이즘', weight: 5.0, radius: 40, type: 'play' },
-            { kw: '가챠샵', weight: 5.0, radius: 40, type: 'play' },
-            { kw: '뽑기방', weight: 5.0, radius: 40, type: 'play' },
-            { kw: '메가커피', weight: 3.0, radius: 40, type: 'coffee' },
-            { kw: '컴포즈커피', weight: 3.0, radius: 40, type: 'coffee' }
-        ];
+                svc.keywordSearch(keyword, callback, { ...options, size: 15 });
+            });
+        }
 
+        function kakaoCategoryAll(code, options = {}, maxPages = CONFIG.ANALYSIS_MAX_PAGES) {
+            return new Promise(resolve => {
+                const svc = new kakao.maps.services.Places();
+                let all = [];
+                let pageCount = 0;
+                let finished = false;
+
+                const callback = (data, status, pagination) => {
+                    if (finished) return;
+                    if (status === kakao.maps.services.Status.OK) {
+                        all.push(...data);
+                        pageCount++;
+                        if (pagination && pagination.hasNextPage && pageCount < maxPages) {
+                            setTimeout(() => pagination.nextPage(), CONFIG.KAKAO_PAGE_DELAY_MS);
+                        } else {
+                            finished = true;
+                            resolve(all);
+                        }
+                    } else {
+                        finished = true;
+                        resolve(all);
+                    }
+                };
+
+                svc.categorySearch(code, callback, { ...options, size: 15 });
+            });
+        }
+
+        function uniquePlaces(places) {
+            const seen = new Set();
+            return places.filter(p => {
+                const key = p.id || `${p.place_name}|${p.x}|${p.y}`;
+                if (seen.has(key)) return false;
+                seen.add(key);
+                return true;
+            });
+        }
+
+        // ---------- Draw / saved polygon ----------
         let drawingManager = new kakao.maps.drawing.DrawingManager({
-            map: map, drawingMode: [kakao.maps.drawing.OverlayType.POLYGON],
+            map: map,
+            drawingMode: [kakao.maps.drawing.OverlayType.POLYGON],
             guideTooltip: ['그리기 시작: 클릭', '완료: 더블클릭'],
-            polygonOptions: { draggable: false, removable: false, editable: true, strokeColor: '#be185d', strokeWeight: 3, fillColor: '#f43f5e', fillOpacity: 0.2 }
-        });
-
-        let savedPolygons = JSON.parse(localStorage.getItem('lensmePolygonsV43_2') || '[]');
-        let activePolygonPath = null; 
-        let activePolygonId = null;
-        let renderedPolygons = {}; 
-        let renderedNametags = {};
-        let isDrawingMode = false;
-        let tempDrawnPath = null; 
-        let isScanningAPI = false;
-
-        const delay = ms => new Promise(res => setTimeout(res, ms));
-
-        drawingManager.addListener('drawend', function(data) {
-            if (data.overlayType === kakao.maps.drawing.OverlayType.POLYGON) {
-                let drawData = drawingManager.getData();
-                let polygons = drawData[kakao.maps.drawing.OverlayType.POLYGON];
-                let lastDrawn = polygons[polygons.length - 1]; 
-                
-                let flatPath = [];
-                for(let i = 0; i < lastDrawn.points.length; i++) {
-                    flatPath.push({ lat: lastDrawn.points[i].y, lng: lastDrawn.points[i].x });
-                }
-                tempDrawnPath = flatPath;
-                
-                document.getElementById('btnStartDraw').classList.add('hidden');
-                document.getElementById('btnSaveDraw').classList.remove('hidden');
-                document.getElementById('btnCancelDraw').classList.remove('hidden');
-                
-                runGridHotspotScan(tempDrawnPath); 
+            polygonOptions: {
+                draggable: false,
+                removable: false,
+                editable: true,
+                strokeColor: '#be185d',
+                strokeWeight: 3,
+                fillColor: '#f43f5e',
+                fillOpacity: 0.2
             }
         });
 
-        function startDrawing() {
-            if(isScanningAPI) return alert("현재 분석 중입니다. 잠시만 기다려주세요.");
-            isDrawingMode = true;
-            tempDrawnPath = null;
-            clearActivePolygon(); 
+        // 기존 V43.2에 저장한 펜스를 그대로 유지하기 위해 키를 바꾸지 않는다.
+        let savedPolygons = JSON.parse(localStorage.getItem('lensmePolygonsV43_2') || '[]');
+
+        drawingManager.addListener('drawend', function(data) {
+            if (data.overlayType !== kakao.maps.drawing.OverlayType.POLYGON) return;
+            let drawData = drawingManager.getData();
+            let polygons = drawData[kakao.maps.drawing.OverlayType.POLYGON];
+            let lastDrawn = polygons[polygons.length - 1];
+            tempDrawnPath = lastDrawn.points.map(p => ({ lat: p.y, lng: p.x }));
+
             document.getElementById('btnStartDraw').classList.add('hidden');
             document.getElementById('btnSaveDraw').classList.remove('hidden');
             document.getElementById('btnCancelDraw').classList.remove('hidden');
-            document.getElementById('statusMessage').innerText = "🖍️ 클릭하여 펜스를 치고, 완료 시 반드시 [더블클릭] 해주세요!";
+            runGridHotspotScan(tempDrawnPath);
+        });
+
+        function setMode(mode) {
+            currentMode = mode;
+            if (mode === 'new') {
+                document.getElementById('btnModeNew').className = 'flex-1 bg-white text-indigo-700 shadow-sm px-3 py-1.5 rounded-md text-[13px] font-extrabold transition';
+                document.getElementById('btnModeReloc').className = 'flex-1 text-slate-500 hover:text-slate-800 px-3 py-1.5 rounded-md text-[13px] font-bold transition';
+            } else {
+                document.getElementById('btnModeReloc').className = 'flex-1 bg-white text-indigo-700 shadow-sm px-3 py-1.5 rounded-md text-[13px] font-extrabold transition';
+                document.getElementById('btnModeNew').className = 'flex-1 text-slate-500 hover:text-slate-800 px-3 py-1.5 rounded-md text-[13px] font-bold transition';
+            }
+            if (activePolygonPath && !isScanningAPI) runGridHotspotScan(activePolygonPath);
+        }
+
+        function startDrawing() {
+            if (isScanningAPI) return alert('현재 분석 중입니다. 분석이 끝난 뒤 다시 눌러주세요.');
+            isDrawingMode = true;
+            tempDrawnPath = null;
+            clearActivePolygon(true);
+            document.getElementById('btnStartDraw').classList.add('hidden');
+            document.getElementById('btnSaveDraw').classList.remove('hidden');
+            document.getElementById('btnCancelDraw').classList.remove('hidden');
+            document.getElementById('statusMessage').innerText = '🖍️ 클릭하여 펜스를 치고, 완료할 때 더블클릭하세요.';
             drawingManager.select(kakao.maps.drawing.OverlayType.POLYGON);
         }
 
         function cancelDrawing() {
             isDrawingMode = false;
             tempDrawnPath = null;
-            drawingManager.clear(); 
-            clearRankMarkers(); 
-            
+            drawingManager.clear();
+            clearRankMarkers();
             document.getElementById('btnStartDraw').classList.remove('hidden');
             document.getElementById('btnSaveDraw').classList.add('hidden');
             document.getElementById('btnCancelDraw').classList.add('hidden');
-            document.getElementById('statusMessage').innerText = "지도를 자유롭게 탐색하세요.";
+            document.getElementById('statusMessage').innerText = '지도를 자유롭게 탐색하세요.';
+            triggerScan();
         }
 
         function saveDrawing() {
             if (!tempDrawnPath || tempDrawnPath.length === 0) return;
-            let name = prompt("이 상권 영토의 이름을 입력하세요:", "새 상권");
-            if (name) {
-                let sumLat = 0, sumLng = 0;
-                for(let i = 0; i < tempDrawnPath.length; i++) {
-                    sumLat += tempDrawnPath[i].lat; sumLng += tempDrawnPath[i].lng;
-                }
-                let centerLat = sumLat / tempDrawnPath.length;
-                let centerLng = sumLng / tempDrawnPath.length;
+            let name = prompt('이 상권 영토의 이름을 입력하세요:', '새 상권');
+            if (!name) return cancelDrawing();
 
-                geocoder.coord2RegionCode(centerLng, centerLat, function(result, status) {
-                    let si = "기타", gu = "기타", dong = "기타";
-                    if (status === kakao.maps.services.Status.OK) {
-                        let addr = result.find(r => r.region_type === 'B') || result[0];
-                        si = addr.region_1depth_name; gu = addr.region_2depth_name || "전체"; dong = addr.region_3depth_name;
-                    }
-                    let id = 'poly_' + Date.now();
-                    savedPolygons.push({ id: id, name: name, path: tempDrawnPath, si: si, gu: gu, dong: dong, centerLat: centerLat, centerLng: centerLng });
-                    localStorage.setItem('lensmePolygonsV43_2', JSON.stringify(savedPolygons));
-                    
-                    drawingManager.clear();
-                    isDrawingMode = false;
-                    document.getElementById('btnStartDraw').classList.remove('hidden');
-                    document.getElementById('btnSaveDraw').classList.add('hidden');
-                    document.getElementById('btnCancelDraw').classList.add('hidden');
-                    
-                    renderPolygonTree();
-                    selectSavedPolygon(id); 
-                });
-            } else { cancelDrawing(); }
+            let centerLat = tempDrawnPath.reduce((s, p) => s + p.lat, 0) / tempDrawnPath.length;
+            let centerLng = tempDrawnPath.reduce((s, p) => s + p.lng, 0) / tempDrawnPath.length;
+
+            geocoder.coord2RegionCode(centerLng, centerLat, function(result, status) {
+                let si = '기타', gu = '기타', dong = '기타';
+                if (status === kakao.maps.services.Status.OK && result.length) {
+                    let addr = result.find(r => r.region_type === 'B') || result[0];
+                    si = addr.region_1depth_name || '기타';
+                    gu = addr.region_2depth_name || '전체';
+                    dong = addr.region_3depth_name || '기타';
+                }
+                let id = 'poly_' + Date.now();
+                savedPolygons.push({ id, name, path: tempDrawnPath, si, gu, dong, centerLat, centerLng });
+                localStorage.setItem('lensmePolygonsV43_2', JSON.stringify(savedPolygons));
+
+                drawingManager.clear();
+                isDrawingMode = false;
+                document.getElementById('btnStartDraw').classList.remove('hidden');
+                document.getElementById('btnSaveDraw').classList.add('hidden');
+                document.getElementById('btnCancelDraw').classList.add('hidden');
+                renderPolygonTree();
+
+                if (!isScanningAPI) selectSavedPolygon(id);
+                else {
+                    activePolygonId = id;
+                    activePolygonPath = savedPolygons.find(p => p.id === id).path;
+                    document.getElementById('targetLocationInput').innerText = `[${dong}] ${name}`;
+                    document.getElementById('btnClearPolygon').classList.remove('hidden');
+                }
+            });
         }
 
         function renderPolygonTree() {
@@ -323,54 +435,65 @@
             treeEl.innerHTML = '';
             Object.values(renderedPolygons).forEach(p => p.setMap(null));
             Object.values(renderedNametags).forEach(p => p.setMap(null));
-            renderedPolygons = {}; renderedNametags = {};
+            renderedPolygons = {};
+            renderedNametags = {};
 
             let treeData = {};
             savedPolygons.forEach(poly => {
-                if(!treeData[poly.si]) treeData[poly.si] = {};
-                if(!treeData[poly.si][poly.gu]) treeData[poly.si][poly.gu] = {};
-                if(!treeData[poly.si][poly.gu][poly.dong]) treeData[poly.si][poly.gu][poly.dong] = [];
+                if (!treeData[poly.si]) treeData[poly.si] = {};
+                if (!treeData[poly.si][poly.gu]) treeData[poly.si][poly.gu] = {};
+                if (!treeData[poly.si][poly.gu][poly.dong]) treeData[poly.si][poly.gu][poly.dong] = [];
                 treeData[poly.si][poly.gu][poly.dong].push(poly);
             });
 
             for (let si in treeData) {
-                let detSi = document.createElement('details'); detSi.open = true;
-                detSi.innerHTML = `<summary>${si}</summary><div class="tree-indent"></div>`;
+                let detSi = document.createElement('details');
+                detSi.open = true;
+                detSi.innerHTML = `<summary>${escapeHtml(si)}</summary><div class="tree-indent"></div>`;
                 let divSi = detSi.querySelector('.tree-indent');
+
                 for (let gu in treeData[si]) {
-                    let detGu = document.createElement('details'); detGu.open = true;
-                    detGu.innerHTML = `<summary>${gu}</summary><div class="tree-indent"></div>`;
+                    let detGu = document.createElement('details');
+                    detGu.open = true;
+                    detGu.innerHTML = `<summary>${escapeHtml(gu)}</summary><div class="tree-indent"></div>`;
                     let divGu = detGu.querySelector('.tree-indent');
+
                     for (let dong in treeData[si][gu]) {
                         let polys = treeData[si][gu][dong];
-                        let detDong = document.createElement('details'); detDong.open = true;
-                        detDong.innerHTML = `<summary>${dong} <span class="text-rose-500 text-xs">(${polys.length})</span></summary><div class="tree-indent"></div>`;
+                        let detDong = document.createElement('details');
+                        detDong.open = true;
+                        detDong.innerHTML = `<summary>${escapeHtml(dong)} <span class="text-rose-500 text-xs">(${polys.length})</span></summary><div class="tree-indent"></div>`;
                         let divDong = detDong.querySelector('.tree-indent');
-                        
+
                         polys.forEach(poly => {
                             let item = document.createElement('div');
-                            item.className = "flex justify-between items-center py-1 border-b border-gray-100 last:border-0";
+                            item.className = 'flex justify-between items-center py-1 border-b border-gray-100 last:border-0';
                             item.innerHTML = `
-                                <span class="font-bold text-rose-600 cursor-pointer hover:underline flex-grow" onclick="selectSavedPolygon('${poly.id}')">📍 ${poly.name}</span>
+                                <span class="font-bold text-rose-600 cursor-pointer hover:underline flex-grow" onclick="selectSavedPolygon('${poly.id}')">📍 ${escapeHtml(poly.name)}</span>
                                 <div class="flex gap-1 ml-2">
                                     <button onclick="deletePolygon('${poly.id}')" class="text-[10px] bg-slate-200 px-1.5 py-0.5 rounded text-slate-600 hover:bg-slate-300">삭제</button>
-                                </div>
-                            `;
+                                </div>`;
                             divDong.appendChild(item);
 
                             let pathForMap = poly.path.map(p => new kakao.maps.LatLng(p.lat, p.lng));
                             let polygon = new kakao.maps.Polygon({
-                                path: pathForMap, strokeWeight: 2, strokeColor: '#be185d', strokeOpacity: 0.8, fillOpacity: 0.1, fillColor: '#f43f5e'
+                                path: pathForMap,
+                                strokeWeight: 2,
+                                strokeColor: '#be185d',
+                                strokeOpacity: 0.8,
+                                fillOpacity: 0.1,
+                                fillColor: '#f43f5e'
                             });
                             polygon.setMap(map);
-                            kakao.maps.event.addListener(polygon, 'click', function() { selectSavedPolygon(poly.id); });
+                            kakao.maps.event.addListener(polygon, 'click', () => selectSavedPolygon(poly.id));
                             renderedPolygons[poly.id] = polygon;
 
-                            let nameStr = `<div style="position:relative; z-index:80;"><div class="poly-nametag">${poly.name}</div></div>`;
+                            let nameStr = `<div style="position:relative; z-index:80;"><div class="poly-nametag">${escapeHtml(poly.name)}</div></div>`;
                             let nametag = new kakao.maps.CustomOverlay({
                                 position: new kakao.maps.LatLng(poly.centerLat, poly.centerLng),
                                 content: nameStr,
-                                xAnchor: 0.5, yAnchor: 0.5
+                                xAnchor: 0.5,
+                                yAnchor: 0.5
                             });
                             nametag.setMap(map);
                             renderedNametags[poly.id] = nametag;
@@ -384,44 +507,61 @@
         }
 
         function deletePolygon(id) {
-            if(!confirm("이 영토를 삭제하시겠습니까?")) return;
+            if (!confirm('이 영토를 삭제하시겠습니까?')) return;
             savedPolygons = savedPolygons.filter(p => p.id !== id);
             localStorage.setItem('lensmePolygonsV43_2', JSON.stringify(savedPolygons));
-            if(activePolygonId === id) clearActivePolygon();
+            if (activePolygonId === id) clearActivePolygon();
             renderPolygonTree();
         }
 
         function selectSavedPolygon(id) {
-            if(isScanningAPI) return alert("현재 분석이 진행 중입니다. 잠시 기다려주세요.");
+            if (isScanningAPI) return alert('현재 분석이 진행 중입니다. 분석이 끝난 뒤 다시 눌러주세요.');
             let poly = savedPolygons.find(p => p.id === id);
-            if(!poly) return;
-            activePolygonId = id; activePolygonPath = poly.path; 
+            if (!poly) return;
+
+            activePolygonId = id;
+            activePolygonPath = poly.path;
             document.getElementById('targetLocationInput').innerText = `[${poly.dong}] ${poly.name}`;
             document.getElementById('btnClearPolygon').classList.remove('hidden');
+
             let bounds = new kakao.maps.LatLngBounds();
             activePolygonPath.forEach(p => bounds.extend(new kakao.maps.LatLng(p.lat, p.lng)));
             map.setBounds(bounds);
             searchCenter = bounds.getCenter();
+
             Object.values(renderedPolygons).forEach(p => p.setOptions({ fillColor: '#f43f5e', fillOpacity: 0.1, strokeWeight: 2 }));
-            renderedPolygons[id].setOptions({ fillColor: '#ec4899', fillOpacity: 0.25, strokeWeight: 4 });
-            runGridHotspotScan(activePolygonPath); 
+            if (renderedPolygons[id]) renderedPolygons[id].setOptions({ fillColor: '#ec4899', fillOpacity: 0.25, strokeWeight: 4 });
+            runGridHotspotScan(activePolygonPath);
         }
 
-        function clearActivePolygon() {
-            activePolygonId = null; activePolygonPath = null; tempDrawnPath = null;
-            document.getElementById('targetLocationInput').innerText = "선택 없음 (자유 탐색)";
+        function clearActivePolygon(silent = false) {
+            activePolygonId = null;
+            activePolygonPath = null;
+            tempDrawnPath = null;
+            document.getElementById('targetLocationInput').innerText = '선택 없음 (자유 탐색)';
             document.getElementById('btnClearPolygon').classList.add('hidden');
-            document.getElementById('comp_count').innerText = "-개";
-            document.getElementById('anchor_count').innerText = "-개";
+            document.getElementById('comp_count').innerText = '-개';
+            document.getElementById('anchor_count').innerText = '-개';
             document.getElementById('rankingResultBox').classList.add('hidden');
             document.getElementById('rankingResultText').innerHTML = '';
             Object.values(renderedPolygons).forEach(p => p.setOptions({ fillColor: '#f43f5e', fillOpacity: 0.1, strokeWeight: 2 }));
-            clearRankMarkers(); 
-            triggerScan();
+            clearRankMarkers();
+            if (!silent && !isDrawingMode) triggerScan();
         }
 
         function clearRankMarkers() {
-            rankOverlays.forEach(o => o.setMap(null)); rankOverlays = [];
+            rankOverlays.forEach(o => o.setMap(null));
+            rankOverlays = [];
+        }
+
+        // ---------- Basic geometry ----------
+        function getDistanceMeters(lat1, lon1, lat2, lon2) {
+            const R = 6371000;
+            const dLat = (lat2 - lat1) * Math.PI / 180;
+            const dLon = (lon2 - lon1) * Math.PI / 180;
+            const a = Math.sin(dLat / 2) ** 2 +
+                Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLon / 2) ** 2;
+            return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
         }
 
         function isPointInPolygon(lat, lng, polygonPath) {
@@ -429,15 +569,16 @@
             for (let i = 0, j = polygonPath.length - 1; i < polygonPath.length; j = i++) {
                 let xi = polygonPath[i].lng, yi = polygonPath[i].lat;
                 let xj = polygonPath[j].lng, yj = polygonPath[j].lat;
-                let intersect = ((yi > lat) != (yj > lat)) && (lng < (xj - xi) * (lat - yi) / (yj - yi) + xi);
+                let intersect = ((yi > lat) !== (yj > lat)) &&
+                    (lng < (xj - xi) * (lat - yi) / ((yj - yi) || Number.EPSILON) + xi);
                 if (intersect) inside = !inside;
             }
             return inside;
         }
 
         function distToSegment(px, py, x1, y1, x2, y2) {
-            let l2 = (x1 - x2)*(x1 - x2) + (y1 - y2)*(y1 - y2);
-            if (l2 == 0) return getDistanceMeters(py, px, y1, x1);
+            let l2 = (x1 - x2) * (x1 - x2) + (y1 - y2) * (y1 - y2);
+            if (l2 === 0) return getDistanceMeters(py, px, y1, x1);
             let t = ((px - x1) * (x2 - x1) + (py - y1) * (y2 - y1)) / l2;
             t = Math.max(0, Math.min(1, t));
             let projX = x1 + t * (x2 - x1);
@@ -445,595 +586,983 @@
             return getDistanceMeters(py, px, projY, projX);
         }
 
+        function bearingDegrees(lat1, lng1, lat2, lng2) {
+            const y = Math.sin((lng2 - lng1) * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180);
+            const x = Math.cos(lat1 * Math.PI / 180) * Math.sin(lat2 * Math.PI / 180) -
+                Math.sin(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.cos((lng2 - lng1) * Math.PI / 180);
+            return (Math.atan2(y, x) * 180 / Math.PI + 360) % 360;
+        }
+
+        function circularDiff(a, b) {
+            let d = Math.abs(a - b) % 360;
+            return Math.min(d, 360 - d);
+        }
+
+        function orientationDiff(a, b) {
+            let aa = ((a % 180) + 180) % 180;
+            let bb = ((b % 180) + 180) % 180;
+            let d = Math.abs(aa - bb);
+            return Math.min(d, 180 - d);
+        }
+
+        function polylineDistanceMeters(pt, coords) {
+            let best = Infinity;
+            let bestIndex = -1;
+            for (let i = 0; i < coords.length - 1; i++) {
+                let d = distToSegment(pt.lng, pt.lat, coords[i].lng, coords[i].lat, coords[i + 1].lng, coords[i + 1].lat);
+                if (d < best) {
+                    best = d;
+                    bestIndex = i;
+                }
+            }
+            return { distance: best, segmentIndex: bestIndex };
+        }
+
+        function samplePolylineCoords(coords, spacingMeters = CONFIG.CANDIDATE_SPACING_METERS) {
+            if (!coords || coords.length < 2) return coords || [];
+            let out = [{ ...coords[0] }];
+            for (let i = 0; i < coords.length - 1; i++) {
+                const a = coords[i], b = coords[i + 1];
+                const dist = getDistanceMeters(a.lat, a.lng, b.lat, b.lng);
+                const steps = Math.max(1, Math.ceil(dist / spacingMeters));
+                for (let s = 1; s <= steps; s++) {
+                    const t = s / steps;
+                    out.push({ lat: a.lat + (b.lat - a.lat) * t, lng: a.lng + (b.lng - a.lng) * t });
+                }
+            }
+            return out;
+        }
+
+        function clusterAngles(angles, tolerance = 30) {
+            const clusters = [];
+            for (const angle of angles) {
+                let found = clusters.find(c => circularDiff(c.mean, angle) <= tolerance);
+                if (!found) {
+                    clusters.push({ mean: angle, values: [angle] });
+                } else {
+                    found.values.push(angle);
+                    // Circular mean
+                    let sx = 0, sy = 0;
+                    found.values.forEach(v => {
+                        sx += Math.cos(v * Math.PI / 180);
+                        sy += Math.sin(v * Math.PI / 180);
+                    });
+                    found.mean = (Math.atan2(sy, sx) * 180 / Math.PI + 360) % 360;
+                }
+            }
+            // 0도/360도 경계 때문에 마지막으로 가까운 군집 병합
+            let changed = true;
+            while (changed) {
+                changed = false;
+                outer: for (let i = 0; i < clusters.length; i++) {
+                    for (let j = i + 1; j < clusters.length; j++) {
+                        if (circularDiff(clusters[i].mean, clusters[j].mean) <= tolerance) {
+                            clusters[i].values.push(...clusters[j].values);
+                            let sx = 0, sy = 0;
+                            clusters[i].values.forEach(v => {
+                                sx += Math.cos(v * Math.PI / 180);
+                                sy += Math.sin(v * Math.PI / 180);
+                            });
+                            clusters[i].mean = (Math.atan2(sy, sx) * 180 / Math.PI + 360) % 360;
+                            clusters.splice(j, 1);
+                            changed = true;
+                            break outer;
+                        }
+                    }
+                }
+            }
+            return clusters;
+        }
+
+        // ---------- Free-map markers ----------
         kakao.maps.event.addListener(map, 'idle', async function() {
-            if(!isDrawingMode && !activePolygonPath && !isScanningAPI) await scanMarkersInBoundsSequential(); 
+            if (!isDrawingMode && !activePolygonPath && !isScanningAPI) {
+                await scanMarkersInBoundsSequential();
+            }
         });
 
         async function scanMarkersInBoundsSequential() {
             if (isScanningAPI) return;
             isScanningAPI = true;
+            const mySeq = ++scanSequence;
             try {
                 let bounds = map.getBounds();
-                let activeKeys = Object.keys(BRAND_CONFIG).filter(key => document.getElementById(key) && document.getElementById(key).checked);
-                
-                for (let i=0; i<activeKeys.length; i++) {
-                    let key = activeKeys[i];
-                    await new Promise(resolve => {
-                        ps.keywordSearch(BRAND_CONFIG[key].kw, function(data, status) {
-                            if (status === kakao.maps.services.Status.OK) {
-                                data.forEach(place => processPlaceAndDrawMarker(place, key));
-                            }
-                            resolve(); 
-                        }, { bounds: bounds, size: 15 });
-                    });
-                    await delay(50);
+                let activeKeys = Object.keys(BRAND_CONFIG).filter(key => {
+                    let el = document.getElementById(key);
+                    return el && el.checked;
+                });
+
+                for (let key of activeKeys) {
+                    if (mySeq !== scanSequence) return;
+                    let data = await kakaoKeywordAll(BRAND_CONFIG[key].kw, { bounds }, CONFIG.MAP_MAX_PAGES);
+                    data.forEach(place => processPlaceAndDrawMarker(place, key));
+                    await delay(30);
                 }
 
-                await new Promise(resolve => {
-                    ps.keywordSearch('안경', function(data, status) {
-                        if (status === kakao.maps.services.Status.OK) {
-                            data.forEach(place => {
-                                if(place.place_name.indexOf('렌즈') === -1 && place.place_name.indexOf('다비치') === -1) {
-                                    processPlaceAndDrawMarker(place, 'f_optical_gen', '%2394a3b8'); 
-                                }
-                            });
-                        }
-                        resolve(); 
-                    }, { bounds: bounds, size: 15 });
+                let optical = await kakaoKeywordAll('안경', { bounds }, CONFIG.MAP_MAX_PAGES);
+                optical.forEach(place => {
+                    if (!place.place_name.includes('렌즈') && !place.place_name.includes('다비치')) {
+                        processPlaceAndDrawMarker(place, 'f_optical_gen', '%2394a3b8');
+                    }
                 });
-            } catch(e) {} finally {
+            } catch (e) {
+                console.error('지도 마커 검색 오류:', e);
+            } finally {
                 isScanningAPI = false;
             }
         }
 
         function searchLocation() {
             let q = document.getElementById('searchInput').value.trim();
-            if(!q) return;
+            if (!q) return;
             ps.keywordSearch(q, function(data, status) {
-                if (status === kakao.maps.services.Status.OK) {
-                    clearActivePolygon();
+                if (status === kakao.maps.services.Status.OK && data.length) {
+                    clearActivePolygon(true);
                     let place = data[0];
                     searchCenter = new kakao.maps.LatLng(place.y, place.x);
-                    map.setCenter(searchCenter); triggerScan();
+                    map.setCenter(searchCenter);
+                    map.setLevel(3);
+                    triggerScan();
                 }
             });
         }
 
-        async function triggerScan() { 
-            placeCache.clear(); 
-            mapMarkers.forEach(m => m.setMap(null)); mapMarkers = [];
+        async function triggerScan() {
+            if (isDrawingMode || activePolygonPath) return;
+            scanSequence++;
+            placeCache.clear();
+            mapMarkers.forEach(m => m.setMap(null));
+            mapMarkers = [];
             await scanMarkersInBoundsSequential();
         }
 
         function processPlaceAndDrawMarker(place, key, customHex) {
-            if (placeCache.has(place.id)) return false; 
+            const placeId = place.id || `${place.place_name}|${place.x}|${place.y}`;
+            if (placeCache.has(placeId)) return false;
+
             let isDuplicate = false;
             let skipDeduplication = ['f_daiso', 'f_olive', 'f_olive_hapa', 'f_davich'].includes(key);
-
             if (!skipDeduplication) {
-                placeCache.forEach((existingItem) => {
-                    if(existingItem.brand === key) {
-                        let dist = getDistanceMeters(parseFloat(place.y), parseFloat(place.x), parseFloat(existingItem.rawData.y), parseFloat(existingItem.rawData.x));
-                        if(dist <= 3) isDuplicate = true; 
+                placeCache.forEach(existingItem => {
+                    if (existingItem.brand === key) {
+                        let dist = getDistanceMeters(
+                            parseFloat(place.y), parseFloat(place.x),
+                            parseFloat(existingItem.rawData.y), parseFloat(existingItem.rawData.x)
+                        );
+                        if (dist <= 3) isDuplicate = true;
                     }
                 });
             }
             if (isDuplicate) return false;
 
-            let hex = customHex;
-            if(!hex && BRAND_CONFIG[key]) hex = BRAND_CONFIG[key].hex;
-            
-            let rSize = customHex ? "7" : "10"; 
+            let hex = customHex || (BRAND_CONFIG[key] ? BRAND_CONFIG[key].hex : '%2394a3b8');
+            let rSize = customHex ? '7' : '10';
             let svgString = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24"><circle cx="12" cy="12" r="${rSize}" fill="${hex}" stroke="white" stroke-width="2"/></svg>`;
-            let markerImage = new kakao.maps.MarkerImage('data:image/svg+xml;utf-8,' + svgString, new kakao.maps.Size(24, 24), { offset: new kakao.maps.Point(12, 12) });
-            
-            let marker = new kakao.maps.Marker({ position: new kakao.maps.LatLng(place.y, place.x), image: markerImage });
-            marker.setMap(map); mapMarkers.push(marker);
-            
-            placeCache.set(place.id, { brand: key, rawData: place, marker: marker });
-            
-            kakao.maps.event.addListener(marker, 'mouseover', function() {
-                tooltipOverlay.setContent(`<div class="store-tooltip">${place.place_name}</div>`);
-                tooltipOverlay.setPosition(marker.getPosition()); tooltipOverlay.setMap(map);
+            let markerImage = new kakao.maps.MarkerImage(
+                'data:image/svg+xml;utf-8,' + svgString,
+                new kakao.maps.Size(24, 24),
+                { offset: new kakao.maps.Point(12, 12) }
+            );
+
+            let marker = new kakao.maps.Marker({
+                position: new kakao.maps.LatLng(place.y, place.x),
+                image: markerImage
             });
-            kakao.maps.event.addListener(marker, 'mouseout', function() { tooltipOverlay.setMap(null); });
+            marker.setMap(map);
+            mapMarkers.push(marker);
+            placeCache.set(placeId, { brand: key, rawData: place, marker });
+
+            kakao.maps.event.addListener(marker, 'mouseover', function() {
+                tooltipOverlay.setContent(`<div class="store-tooltip">${escapeHtml(place.place_name)}</div>`);
+                tooltipOverlay.setPosition(marker.getPosition());
+                tooltipOverlay.setMap(map);
+            });
+            kakao.maps.event.addListener(marker, 'mouseout', () => tooltipOverlay.setMap(null));
             return true;
         }
 
         function getAddressAsync(lat, lng) {
             return new Promise(resolve => {
                 geocoder.coord2Address(lng, lat, function(result, status) {
-                    if (status === kakao.maps.services.Status.OK) {
+                    if (status === kakao.maps.services.Status.OK && result.length) {
                         resolve(result[0].road_address ? result[0].road_address.address_name : result[0].address.address_name);
                     } else {
-                        resolve("펜스 내 핵심 구간");
+                        resolve('펜스 내 핵심 구간');
                     }
                 });
             });
         }
 
-        function generateExpertComment(totalScore, spot) {
-            if (totalScore >= 85) {
-                return "상위 1% 초정밀 핵심 입지입니다. 목적성 뷰티 고객, 1020 유동인구, 가시성, 완벽한 낙수효과를 모두 기대할 수 있는 A급 상권입니다.";
-            } else if (totalScore >= 70) {
-                return "앵커 시설 및 동선이 훌륭하게 뒷받침되는 B+급 상권입니다. 안정적인 매출과 자연 유입이 기대되는 우수한 입지입니다.";
-            } else if (totalScore >= 50) {
-                return "특정 조건(동선 또는 앵커)에 의존하는 C급 입지입니다. 단일 집객력은 있으나 주변 시너지나 체류 시간이 다소 부족할 수 있습니다.";
-            } else {
-                return "메인 앵커나 주 동선과 물리적으로 거리가 멀어 목적성 방문 유도가 필요한 D급 상권입니다. 전략적인 재검토가 필요합니다.";
-            }
+        // ---------- TMAP route ----------
+        function routeCacheKey(startX, startY, endX, endY) {
+            return [startX, startY, endX, endY].map(v => Number(v).toFixed(5)).join('|');
         }
 
         async function fetchTmapPedestrianRoute(startX, startY, endX, endY) {
-            if (!TMAP_APP_KEY || TMAP_APP_KEY === "여기에_사장님_티맵_앱키_입력") return null;
+            if (!TMAP_APP_KEY || TMAP_APP_KEY === '여기에_사장님_티맵_앱키_입력') return null;
+            const key = routeCacheKey(startX, startY, endX, endY);
+            if (routeCache.has(key)) return routeCache.get(key);
+
             try {
                 const url = 'https://apis.openapi.sk.com/tmap/routes/pedestrian?version=1&format=json';
                 const payload = {
-                    startX: startX, startY: startY, endX: endX, endY: endY,
-                    reqCoordType: "WGS84GEO", resCoordType: "WGS84GEO", startName: "출발", endName: "도착"
+                    startX, startY, endX, endY,
+                    reqCoordType: 'WGS84GEO',
+                    resCoordType: 'WGS84GEO',
+                    startName: '출발',
+                    endName: '도착'
                 };
                 const response = await fetch(url, {
                     method: 'POST',
-                    headers: { 'Accept': 'application/json', 'Content-Type': 'application/json', 'appKey': TMAP_APP_KEY },
+                    headers: {
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json',
+                        'appKey': TMAP_APP_KEY
+                    },
                     body: JSON.stringify(payload)
                 });
+                if (!response.ok) {
+                    console.warn('TMAP HTTP 오류:', response.status);
+                    routeCache.set(key, null);
+                    return null;
+                }
                 const data = await response.json();
-                return data.features;
+                const features = Array.isArray(data.features) ? data.features : null;
+                routeCache.set(key, features);
+                return features;
             } catch (e) {
-                console.error("TMAP API 에러:", e);
+                console.error('TMAP API 에러:', e);
+                routeCache.set(key, null);
                 return null;
             }
         }
 
-        async function drawTmapPedestrianStreet(spot, idx, map, validNodes, rawGates, polygonPath) {
-            let color = idx === 0 ? '#ef4444' : (idx === 1 ? '#3b82f6' : '#10b981');
-            let rankNum = idx + 1;
-            
-            let targetPoints = [];
-            [...validNodes].sort((a,b) => getDistanceMeters(spot.lat, spot.lng, parseFloat(a.y), parseFloat(a.x)) - getDistanceMeters(spot.lat, spot.lng, parseFloat(b.y), parseFloat(b.x))).slice(0, 3).forEach(n => targetPoints.push({lat: parseFloat(n.y), lng: parseFloat(n.x)}));
-            [...rawGates].sort((a,b) => getDistanceMeters(spot.lat, spot.lng, a.lat, a.lng) - getDistanceMeters(spot.lat, spot.lng, b.lat, b.lng)).slice(0, 1).forEach(g => targetPoints.push({lat: g.lat, lng: g.lng}));
+        function extractLineCoords(features) {
+            if (!Array.isArray(features)) return [];
+            const coords = [];
+            features.forEach(f => {
+                if (f?.geometry?.type === 'LineString' && Array.isArray(f.geometry.coordinates)) {
+                    f.geometry.coordinates.forEach(c => {
+                        if (!Array.isArray(c) || c.length < 2) return;
+                        const p = { lng: parseFloat(c[0]), lat: parseFloat(c[1]) };
+                        const prev = coords[coords.length - 1];
+                        if (!prev || getDistanceMeters(prev.lat, prev.lng, p.lat, p.lng) > 0.5) coords.push(p);
+                    });
+                }
+            });
+            return coords;
+        }
 
-            let clippedPaths = [];
-            let endPoints = []; 
+        function gateWeight(type) {
+            if (type === 'subway_exit') return 1.55;
+            if (type === 'subway') return 1.40;
+            if (type === 'bus') return 1.00;
+            if (type === 'school') return 0.80;
+            return 0.70;
+        }
 
-            if(TMAP_APP_KEY && TMAP_APP_KEY !== "여기에_사장님_티맵_앱키_입력") {
-                for (let i=0; i<targetPoints.length; i++) {
-                    let features = await fetchTmapPedestrianRoute(spot.lng, spot.lat, targetPoints[i].lng, targetPoints[i].lat);
-                    if (features) {
-                        let pathArr = [];
-                        features.forEach(f => {
-                            if (f.geometry.type === "LineString") {
-                                f.geometry.coordinates.forEach(coord => {
-                                    let pLat = coord[1]; let pLng = coord[0];
-                                    let dist = getDistanceMeters(spot.lat, spot.lng, pLat, pLng);
-                                    if (dist <= 35 && isPointInPolygon(pLat, pLng, polygonPath)) {
-                                        pathArr.push(new kakao.maps.LatLng(pLat, pLng));
-                                    }
-                                });
-                            }
-                        });
-                        if (pathArr.length > 1) {
-                            clippedPaths.push(pathArr);
-                            endPoints.push(pathArr[pathArr.length - 1]); 
-                        }
+        function destinationWeight(kind) {
+            if (kind === 'olive') return 1.35;
+            if (kind === 'daiso') return 1.25;
+            if (kind === 'play') return 1.05;
+            if (kind === 'coffee') return 0.75;
+            if (kind === 'center') return 0.55;
+            return 0.80;
+        }
+
+        function dedupeNearbyPoints(points, meters = 12) {
+            const out = [];
+            points.forEach(p => {
+                const exists = out.some(o => getDistanceMeters(p.lat, p.lng, o.lat, o.lng) <= meters && p.type === o.type);
+                if (!exists) out.push(p);
+            });
+            return out;
+        }
+
+        async function expandSubwayExits(stations) {
+            const out = [];
+            const nearestStations = stations.slice(0, 3);
+            for (const s of nearestStations) {
+                const stationLat = parseFloat(s.y), stationLng = parseFloat(s.x);
+                let exitResults = await kakaoKeywordAll(
+                    `${s.place_name} 출구`,
+                    {
+                        location: new kakao.maps.LatLng(stationLat, stationLng),
+                        radius: 300,
+                        sort: kakao.maps.services.SortBy.DISTANCE
+                    },
+                    1
+                );
+                const exits = exitResults.filter(p => /출구/.test(p.place_name));
+                if (exits.length) {
+                    exits.slice(0, 8).forEach(p => out.push({
+                        lat: parseFloat(p.y), lng: parseFloat(p.x), type: 'subway_exit', name: p.place_name
+                    }));
+                } else {
+                    out.push({ lat: stationLat, lng: stationLng, type: 'subway', name: s.place_name });
+                }
+                await delay(30);
+            }
+            return dedupeNearbyPoints(out, 10);
+        }
+
+        function buildRoutePairs(gates, destinations, centerLat, centerLng) {
+            const gatePriority = { subway_exit: 4, subway: 3.5, bus: 2, school: 1 };
+            const sortedGates = [...gates].sort((a, b) => {
+                let pa = gatePriority[a.type] || 0, pb = gatePriority[b.type] || 0;
+                if (pb !== pa) return pb - pa;
+                return getDistanceMeters(a.lat, a.lng, centerLat, centerLng) - getDistanceMeters(b.lat, b.lng, centerLat, centerLng);
+            });
+
+            // 지하철 출구만 4개 뽑히는 편향을 막기 위해 유입구 종류를 섞는다.
+            const topGates = [];
+            const subwayLike = sortedGates.filter(g => g.type === 'subway_exit' || g.type === 'subway').slice(0, 2);
+            const busLike = sortedGates.filter(g => g.type === 'bus').slice(0, 1);
+            const schoolLike = sortedGates.filter(g => g.type === 'school').slice(0, 1);
+            [...subwayLike, ...busLike, ...schoolLike].forEach(g => {
+                if (!topGates.includes(g)) topGates.push(g);
+            });
+            for (const g of sortedGates) {
+                if (topGates.length >= 4) break;
+                if (!topGates.includes(g)) topGates.push(g);
+            }
+
+            const destPriority = { olive: 4, daiso: 3.5, play: 2.5, coffee: 1.5, center: 0.5 };
+            const topDest = [...destinations]
+                .sort((a, b) => {
+                    let pa = destPriority[a.kind] || 0, pb = destPriority[b.kind] || 0;
+                    if (pb !== pa) return pb - pa;
+                    return getDistanceMeters(a.lat, a.lng, centerLat, centerLng) - getDistanceMeters(b.lat, b.lng, centerLat, centerLng);
+                })
+                .slice(0, 6);
+
+            const pairs = [];
+            const seen = new Set();
+
+            for (const gate of topGates) {
+                const nearest = [...topDest]
+                    .sort((a, b) => getDistanceMeters(gate.lat, gate.lng, a.lat, a.lng) - getDistanceMeters(gate.lat, gate.lng, b.lat, b.lng))
+                    .slice(0, 2);
+                for (const dest of nearest) {
+                    const d = getDistanceMeters(gate.lat, gate.lng, dest.lat, dest.lng);
+                    if (d < 35 || d > 3000) continue;
+                    const key = `${gate.name}|${dest.name}`;
+                    if (!seen.has(key)) {
+                        seen.add(key);
+                        pairs.push({ gate, dest });
                     }
-                    await delay(100); 
+                    if (pairs.length >= CONFIG.MAX_TMAP_ROUTES_PER_SCAN) return pairs;
                 }
             }
 
-            let isCross = false;
-            if(endPoints.length > 0) {
-                let q1=0, q2=0, q3=0, q4=0;
-                endPoints.forEach(pt => {
-                    let dy = pt.getLat() - spot.lat; let dx = pt.getLng() - spot.lng;
-                    if(dx>=0 && dy>=0) q1=1;
-                    else if(dx<0 && dy>=0) q2=1;
-                    else if(dx<0 && dy<0) q3=1;
-                    else q4=1;
-                });
-                if(q1+q2+q3+q4 >= 3) isCross = true;
-            } else {
-                isCross = targetPoints.length >= 3;
+            // 한쪽 종류가 적어서 route 수가 부족하면 남은 조합으로 채운다.
+            if (pairs.length < CONFIG.MAX_TMAP_ROUTES_PER_SCAN) {
+                for (const gate of topGates) {
+                    for (const dest of topDest) {
+                        const d = getDistanceMeters(gate.lat, gate.lng, dest.lat, dest.lng);
+                        if (d < 35 || d > 3000) continue;
+                        const key = `${gate.name}|${dest.name}`;
+                        if (seen.has(key)) continue;
+                        seen.add(key);
+                        pairs.push({ gate, dest });
+                        if (pairs.length >= CONFIG.MAX_TMAP_ROUTES_PER_SCAN) return pairs;
+                    }
+                }
+            }
+            return pairs;
+        }
+
+        async function buildActualFlowRoutes(gates, destinations, centerLat, centerLng, targetPath, statusEl) {
+            const pairs = buildRoutePairs(gates, destinations, centerLat, centerLng);
+            const routes = [];
+            let routeNo = 1;
+
+            for (let i = 0; i < pairs.length; i++) {
+                const { gate, dest } = pairs[i];
+                statusEl.innerText = `🚶 TMAP 실제 보행경로 생성 중... (${i + 1}/${pairs.length})`;
+                const features = await fetchTmapPedestrianRoute(gate.lng, gate.lat, dest.lng, dest.lat);
+                const coords = extractLineCoords(features);
+                if (coords.length >= 2) {
+                    const samples = samplePolylineCoords(coords, CONFIG.CANDIDATE_SPACING_METERS);
+                    const insideCount = samples.reduce((n, p) => n + (isPointInPolygon(p.lat, p.lng, targetPath) ? 1 : 0), 0);
+                    if (insideCount > 0) {
+                        routes.push({
+                            id: `R${routeNo++}`,
+                            gate,
+                            dest,
+                            coords,
+                            samples,
+                            weight: gateWeight(gate.type) * destinationWeight(dest.kind)
+                        });
+                    }
+                }
+                await delay(CONFIG.TMAP_DELAY_MS);
+            }
+            return routes;
+        }
+
+        function routeHitInfo(pt, routes, radius = CONFIG.FLOW_HIT_RADIUS) {
+            const hits = [];
+            routes.forEach(route => {
+                const info = polylineDistanceMeters(pt, route.coords);
+                if (info.distance <= radius) {
+                    hits.push({ route, distance: info.distance, segmentIndex: info.segmentIndex });
+                }
+            });
+            return hits;
+        }
+
+        function findArmPoint(route, pt, segmentIndex, direction) {
+            if (segmentIndex < 0) return null;
+            let idx = direction < 0 ? segmentIndex : segmentIndex + 1;
+            let last = route.coords[idx];
+            if (!last) return null;
+            let walked = getDistanceMeters(pt.lat, pt.lng, last.lat, last.lng);
+            let current = idx;
+
+            while (walked < CONFIG.ARM_LOOKAHEAD_METERS) {
+                const next = current + direction;
+                if (next < 0 || next >= route.coords.length) break;
+                walked += getDistanceMeters(route.coords[current].lat, route.coords[current].lng, route.coords[next].lat, route.coords[next].lng);
+                current = next;
+                last = route.coords[current];
+            }
+            return last;
+        }
+
+        function analyzeJunction(pt, routeHits) {
+            const armAngles = [];
+            const orientationCandidates = [];
+
+            routeHits.forEach(hit => {
+                const route = hit.route;
+                const i = hit.segmentIndex;
+                if (i < 0 || i >= route.coords.length - 1) return;
+
+                const a = route.coords[i], b = route.coords[i + 1];
+                orientationCandidates.push(bearingDegrees(a.lat, a.lng, b.lat, b.lng) % 180);
+
+                const back = findArmPoint(route, pt, i, -1);
+                const forward = findArmPoint(route, pt, i, +1);
+                if (back && getDistanceMeters(pt.lat, pt.lng, back.lat, back.lng) >= 8) {
+                    armAngles.push(bearingDegrees(pt.lat, pt.lng, back.lat, back.lng));
+                }
+                if (forward && getDistanceMeters(pt.lat, pt.lng, forward.lat, forward.lng) >= 8) {
+                    armAngles.push(bearingDegrees(pt.lat, pt.lng, forward.lat, forward.lng));
+                }
+            });
+
+            const clusters = clusterAngles(armAngles, 28);
+            const armCount = Math.min(4, clusters.length);
+            let type = 'line', cornerScore = 0;
+            if (armCount >= 4) {
+                type = 'cross';
+                cornerScore = 12;
+            } else if (armCount === 3) {
+                type = 'junction';
+                cornerScore = 9;
+            } else if (armCount === 2) {
+                type = 'line';
+                cornerScore = 2;
             }
 
-            if (clippedPaths.length > 0) {
-                clippedPaths.forEach(p => {
-                    let pl = new kakao.maps.Polyline({path: p, strokeWeight: 10, strokeColor: color, strokeOpacity: 0.7, strokeStyle: 'solid'});
-                    pl.setMap(map); rankOverlays.push(pl);
-                });
+            let dominantBearing = orientationCandidates.length ? orientationCandidates[0] : 0;
+            if (orientationCandidates.length > 1) {
+                // 첫 번째 hit의 도로 방향을 corridor 대표 방향으로 사용하되 0~180 정규화
+                dominantBearing = ((dominantBearing % 180) + 180) % 180;
+            }
+            return { type, cornerScore, armCount, dominantBearing };
+        }
+
+        function buildCandidatesFromRoutes(routes, targetPath) {
+            const candidates = [];
+            const addPoint = (p, source = 'route') => {
+                if (!isPointInPolygon(p.lat, p.lng, targetPath)) return;
+                if (candidates.some(c => getDistanceMeters(c.lat, c.lng, p.lat, p.lng) < 8)) return;
+                candidates.push({ lat: p.lat, lng: p.lng, score: 0, source });
+            };
+            routes.forEach(route => route.samples.forEach(p => addPoint(p, 'route')));
+            return candidates;
+        }
+
+        function buildFallbackGrid(minLat, maxLat, minLng, maxLng, targetPath) {
+            const out = [];
+            const latDiff = maxLat - minLat;
+            const lngDiff = maxLng - minLng;
+            const stepLat = Math.max(latDiff / 28, 0.000025);
+            const stepLng = Math.max(lngDiff / 28, 0.000025);
+            for (let lat = minLat; lat <= maxLat; lat += stepLat) {
+                for (let lng = minLng; lng <= maxLng; lng += stepLng) {
+                    if (isPointInPolygon(lat, lng, targetPath)) out.push({ lat, lng, score: 0, source: 'fallback' });
+                }
+            }
+            return out;
+        }
+
+        function scoreCandidate(pt, validNodes, routes) {
+            let sOlive = 0, sDaiso = 0, sStealth = 0, sCoffee = 0;
+            let competitorProximity = 0;
+            let localOliveCount = 0, localDaisoCount = 0, localLensCount = 0;
+            let isTeamKill = false;
+
+            for (const node of validNodes) {
+                const lat = parseFloat(node.y), lng = parseFloat(node.x);
+                const dist = getDistanceMeters(pt.lat, pt.lng, lat, lng);
+
+                if (node.brandKey === 'f_lensme' && currentMode === 'new' && dist <= CONFIG.TEAM_KILL_METERS) {
+                    isTeamKill = true;
+                }
+
+                if (node.isStealth) {
+                    const sd = node.stealthData;
+                    if (dist <= sd.radius) {
+                        const value = ((sd.radius - dist) / sd.radius) * sd.weight;
+                        if (sd.type === 'coffee') sCoffee += value;
+                        else sStealth += value;
+                    }
+                    continue;
+                }
+
+                if (!node.brandKey || !BRAND_CONFIG[node.brandKey]) continue;
+                const cfg = BRAND_CONFIG[node.brandKey];
+                if (dist > CONFIG.PLACE_SCORE_RADIUS) continue;
+                const proximity = (CONFIG.PLACE_SCORE_RADIUS - dist) / CONFIG.PLACE_SCORE_RADIUS;
+
+                if (cfg.isOlive) {
+                    sOlive = Math.max(sOlive, proximity * 18);
+                    localOliveCount++;
+                } else if (cfg.isDaiso) {
+                    sDaiso = Math.max(sDaiso, proximity * 10);
+                    localDaisoCount++;
+                } else if (cfg.isComp && !cfg.isLensme) {
+                    competitorProximity = Math.max(competitorProximity, proximity);
+                    localLensCount++;
+                }
             }
 
-            let shapeTitle = isCross ? `${rankNum}위 사거리` : `${rankNum}위 길목(거리)`;
-            let badgePrefix = rankNum === 1 ? '💎 ' : (rankNum === 2 ? '⭐ ' : '✅ ');
-            let fullTitle = badgePrefix + shapeTitle;
+            // 경쟁 렌즈샵은 '수요 검증'은 플러스, 과밀은 별도 마이너스.
+            let sLensDemand = localLensCount > 0
+                ? Math.min(12, 5 + competitorProximity * 5 + Math.min(2, Math.max(0, localLensCount - 1)))
+                : 0;
+            let competitionPenalty = localLensCount >= 2 ? Math.min(8, (localLensCount - 1) * 2.5) : 0;
+
+            sOlive = Math.min(sOlive, 18);
+            sDaiso = Math.min(sDaiso, 10);
+            sStealth = Math.min(sStealth, 7);
+            sCoffee = Math.min(sCoffee, 3);
+
+            const hits = routeHitInfo(pt, routes);
+            const weightedFlow = hits.reduce((sum, h) => sum + h.route.weight * Math.max(0.35, 1 - h.distance / CONFIG.FLOW_HIT_RADIUS), 0);
+            const sFlowBase = Math.min(18, weightedFlow * 4.4);
+            const junction = analyzeJunction(pt, hits);
+            const sCorner = Math.min(12, junction.cornerScore);
+            const sFlow = Math.min(30, sFlowBase + sCorner);
+
+            let sSynergy = 0;
+            if (localOliveCount >= 1 && localDaisoCount >= 1 && localLensCount >= 1) sSynergy = 20;
+            else if (localOliveCount >= 1 && localDaisoCount >= 1) sSynergy = 10;
+            else if ((localOliveCount >= 1 || localDaisoCount >= 1) && localLensCount >= 1) sSynergy = 6;
+
+            let catAnchor = Math.min(40, sOlive + sDaiso + sLensDemand);
+            let catInfra = Math.min(10, sStealth + sCoffee);
+            let totalScore = catAnchor + sFlow + sSynergy + catInfra - competitionPenalty;
+
+            if (isTeamKill) totalScore = 0;
+            totalScore = Math.max(0, Math.min(100, totalScore));
+
+            pt.score = totalScore;
+            pt.catAnchor = catAnchor;
+            pt.catFlow = sFlow;
+            pt.catSynergy = sSynergy;
+            pt.catInfra = catInfra;
+            pt.competitionPenalty = competitionPenalty;
+            pt.detailOlive = sOlive;
+            pt.detailDaiso = sDaiso;
+            pt.detailLens = sLensDemand;
+            pt.detailFlowBase = sFlowBase;
+            pt.detailCorner = sCorner;
+            pt.localLensCount = localLensCount;
+            pt.localOliveCount = localOliveCount;
+            pt.localDaisoCount = localDaisoCount;
+            pt.isTeamKill = isTeamKill;
+            pt.routeHitIds = hits.map(h => h.route.id);
+            pt.routeHitCount = hits.length;
+            pt.primaryRouteId = hits.length ? hits.sort((a, b) => a.distance - b.distance)[0].route.id : null;
+            pt.junctionType = junction.type;
+            pt.armCount = junction.armCount;
+            pt.dominantBearing = junction.dominantBearing;
+            return pt;
+        }
+
+        function sameCorridor(a, b) {
+            const dist = getDistanceMeters(a.lat, a.lng, b.lat, b.lng);
+            if (dist < CONFIG.TOP_SPOT_MIN_DISTANCE) return true;
+
+            const aSet = new Set(a.routeHitIds || []);
+            const bSet = new Set(b.routeHitIds || []);
+            const shared = [...aSet].filter(id => bSet.has(id));
+            const union = new Set([...aSet, ...bSet]);
+            const jaccard = union.size ? shared.length / union.size : 0;
+            const sameBearing = orientationDiff(a.dominantBearing || 0, b.dominantBearing || 0) <= 20;
+
+            if (dist <= CONFIG.SAME_CORRIDOR_MAX_DISTANCE && a.primaryRouteId && a.primaryRouteId === b.primaryRouteId) return true;
+            if (dist <= CONFIG.SAME_CORRIDOR_MAX_DISTANCE && jaccard >= 0.5 && sameBearing) return true;
+            return false;
+        }
+
+        function pickTopUniqueSpots(candidates, maxCount = 3) {
+            const sorted = [...candidates].sort((a, b) => b.score - a.score);
+            const top = [];
+            for (const candidate of sorted) {
+                if (candidate.score < 1 || candidate.isTeamKill) continue;
+                if (top.some(existing => sameCorridor(candidate, existing))) continue;
+                top.push(candidate);
+                if (top.length >= maxCount) break;
+            }
+            return top;
+        }
+
+        function getSpotTitle(spot, idx) {
+            const rank = idx + 1;
+            const prefix = rank === 1 ? '💎' : (rank === 2 ? '⭐' : '✅');
+            let typeText = '길목';
+            if (spot.junctionType === 'cross') typeText = '사거리';
+            else if (spot.junctionType === 'junction') typeText = '삼거리/분기점';
+            return `${prefix} ${rank}위 ${typeText}`;
+        }
+
+        function splitNearbyRouteSegments(route, spot, targetPath, radius = 65) {
+            const segments = [];
+            let current = [];
+            for (const p of route.samples) {
+                const ok = isPointInPolygon(p.lat, p.lng, targetPath) &&
+                    getDistanceMeters(spot.lat, spot.lng, p.lat, p.lng) <= radius;
+                if (ok) {
+                    current.push(new kakao.maps.LatLng(p.lat, p.lng));
+                } else if (current.length) {
+                    if (current.length >= 2) segments.push(current);
+                    current = [];
+                }
+            }
+            if (current.length >= 2) segments.push(current);
+            return segments;
+        }
+
+        function drawRankSpot(spot, idx, routes, targetPath) {
+            const colors = ['#ef4444', '#3b82f6', '#10b981'];
+            const color = colors[idx] || '#64748b';
+            const title = getSpotTitle(spot, idx);
+
+            let relevant = routes.filter(r => (spot.routeHitIds || []).includes(r.id)).slice(0, 4);
+            relevant.forEach(route => {
+                splitNearbyRouteSegments(route, spot, targetPath).forEach(path => {
+                    let pl = new kakao.maps.Polyline({
+                        path,
+                        strokeWeight: 9,
+                        strokeColor: color,
+                        strokeOpacity: 0.68,
+                        strokeStyle: 'solid'
+                    });
+                    pl.setMap(map);
+                    rankOverlays.push(pl);
+                });
+            });
 
             let badgeStr = `
                 <div style="position:relative; z-index:999; text-align:center;">
                     <div style="background:${color}; color:white; padding:4px 10px; border-radius:6px; font-weight:900; font-size:12px; border:2px solid white; box-shadow:0 3px 6px rgba(0,0,0,0.3); white-space:nowrap;">
-                        ${fullTitle}
+                        ${title}
                     </div>
-                </div>
-            `;
-            let badgeOverlay = new kakao.maps.CustomOverlay({ position: new kakao.maps.LatLng(spot.lat, spot.lng), content: badgeStr, xAnchor: 0.5, yAnchor: 0.5 });
-            badgeOverlay.setMap(map); rankOverlays.push(badgeOverlay);
-
-            return { title: fullTitle, type: isCross ? 'cross' : 'line' };
+                </div>`;
+            let badgeOverlay = new kakao.maps.CustomOverlay({
+                position: new kakao.maps.LatLng(spot.lat, spot.lng),
+                content: badgeStr,
+                xAnchor: 0.5,
+                yAnchor: 0.5
+            });
+            badgeOverlay.setMap(map);
+            rankOverlays.push(badgeOverlay);
+            return title;
         }
 
+        function generateExpertComment(totalScore, spot, hasTmapRoutes) {
+            if (!hasTmapRoutes) {
+                return 'TMAP 보행경로가 충분히 확보되지 않아 시설 접근성 중심으로 산정한 보조 결과입니다. 실제 현장 보행 동선 확인이 필요합니다.';
+            }
+
+            const flowText = spot.routeHitCount >= 3
+                ? `실제 보행경로 ${spot.routeHitCount}개가 겹치는 구간`
+                : (spot.routeHitCount >= 1 ? `실제 보행경로 ${spot.routeHitCount}개가 통과하는 구간` : '보행경로 직접 겹침이 약한 구간');
+            const junctionText = spot.armCount >= 4
+                ? '여러 방향의 분기가 확인되는 교차 지점입니다.'
+                : (spot.armCount === 3 ? '3방향 분기가 확인되는 지점입니다.' : '직선형 길목 성격이 강합니다.');
+
+            if (totalScore >= 80) {
+                return `${flowText}이며 앵커 접근성도 높습니다. ${junctionText} 현장에서는 횡단보도 위치와 실제 점포 가시성을 최종 확인하세요.`;
+            } else if (totalScore >= 65) {
+                return `${flowText}입니다. 앵커·체류시설과의 결합이 비교적 좋습니다. ${junctionText}`;
+            } else if (totalScore >= 45) {
+                return `${flowText}이지만 특정 앵커 또는 단일 동선 의존도가 있습니다. 시간대별 현장 유동 확인을 함께 권장합니다.`;
+            }
+            return '보행경로 중첩이나 앵커 결합이 상대적으로 약한 구간입니다. 점포 가시성·횡단 동선·실제 유동을 현장에서 추가 확인하는 편이 좋습니다.';
+        }
+
+        // ---------- Main analysis ----------
         async function runGridHotspotScan(targetPath) {
-            if(isScanningAPI) return;
+            if (isScanningAPI || !targetPath || targetPath.length < 3) return;
             isScanningAPI = true;
+            const mySeq = ++scanSequence;
             clearRankMarkers();
             document.getElementById('rankingResultBox').classList.add('hidden');
             document.getElementById('rankingResultText').innerHTML = '';
-            
-            let statusEl = document.getElementById('statusMessage');
-            
+            const statusEl = document.getElementById('statusMessage');
+
             try {
                 let cLat = 0, cLng = 0;
                 let minLat = 90, maxLat = -90, minLng = 180, maxLng = -180;
-                for(let i=0; i<targetPath.length; i++) {
-                    let lat = targetPath[i].lat; let lng = targetPath[i].lng;
-                    cLat += lat; cLng += lng;
-                    if(lat < minLat) minLat = lat; if(lat > maxLat) maxLat = lat;
-                    if(lng < minLng) minLng = lng; if(lng > maxLng) maxLng = lng;
-                }
-                cLat /= targetPath.length; cLng /= targetPath.length;
-                let centerPos = new kakao.maps.LatLng(cLat, cLng);
-
-                let latDiff = maxLat - minLat;
-                let lngDiff = maxLng - minLng;
+                targetPath.forEach(p => {
+                    cLat += p.lat; cLng += p.lng;
+                    minLat = Math.min(minLat, p.lat); maxLat = Math.max(maxLat, p.lat);
+                    minLng = Math.min(minLng, p.lng); maxLng = Math.max(maxLng, p.lng);
+                });
+                cLat /= targetPath.length;
+                cLng /= targetPath.length;
+                const centerPos = new kakao.maps.LatLng(cLat, cLng);
 
                 let maxRadius = 50;
-                for(let i=0; i<targetPath.length; i++) {
-                    let d = getDistanceMeters(targetPath[i].lat, targetPath[i].lng, cLat, cLng);
-                    if(d > maxRadius) maxRadius = d;
-                }
-                let searchRadius = Math.min(Math.ceil(maxRadius + 150), 2000); 
+                targetPath.forEach(p => {
+                    maxRadius = Math.max(maxRadius, getDistanceMeters(p.lat, p.lng, cLat, cLng));
+                });
+                const searchRadius = Math.min(Math.ceil(maxRadius + 180), CONFIG.SEARCH_RADIUS_MAX);
 
+                // 1) 유입구 수집
+                statusEl.innerText = '🚇 지하철 출구·버스정류장·학교 유입구 수집 중...';
+                let subwayStations = await kakaoCategoryAll('SW8', {
+                    location: centerPos,
+                    radius: Math.min(1500, Math.max(700, searchRadius)),
+                    sort: kakao.maps.services.SortBy.DISTANCE
+                }, 2);
+                subwayStations = uniquePlaces(subwayStations);
+
+                let subwayGates = await expandSubwayExits(subwayStations);
+                let busResults = await kakaoKeywordAll('버스정류장', {
+                    location: centerPos,
+                    radius: searchRadius,
+                    sort: kakao.maps.services.SortBy.DISTANCE
+                }, 2);
+                let rawGates = [
+                    ...subwayGates,
+                    ...busResults.slice(0, 20).map(p => ({ lat: parseFloat(p.y), lng: parseFloat(p.x), type: 'bus', name: p.place_name }))
+                ];
+
+                for (const kw of ['중학교', '고등학교', '대학교']) {
+                    let schools = await kakaoKeywordAll(kw, {
+                        location: centerPos,
+                        radius: Math.min(searchRadius + 300, CONFIG.SEARCH_RADIUS_MAX),
+                        sort: kakao.maps.services.SortBy.DISTANCE
+                    }, 2);
+                    schools.forEach(p => {
+                        const n = p.place_name || '';
+                        if (n.includes('남중') || n.includes('남자중') || n.includes('남고') || n.includes('남자고')) return;
+                        rawGates.push({ lat: parseFloat(p.y), lng: parseFloat(p.x), type: 'school', name: n });
+                    });
+                }
+                rawGates = dedupeNearbyPoints(rawGates, 12);
+
+                if (mySeq !== scanSequence) return;
+
+                // 2) 매장/앵커/체류시설 수집
+                statusEl.innerText = '🎯 앵커·렌즈샵·체류시설을 다중 페이지로 조사 중...';
                 let rawScannedNodes = [];
-                let seenIds = {};
-                let rawGates = []; 
-
-                statusEl.innerText = `🚇 주변 유입구(지하철/정류장/학교) 확장 스캔 중...`;
-                await new Promise(resolve => {
-                    ps.categorySearch('SW8', function(data, status) {
-                        if (status === kakao.maps.services.Status.OK) {
-                            rawGates.push({ lat: parseFloat(data[0].y), lng: parseFloat(data[0].x), type: 'subway', name: data[0].place_name });
-                        }
-                        resolve();
-                    }, { location: centerPos, radius: 1500 });
+                let seenIds = new Set();
+                let activeKeys = Object.keys(BRAND_CONFIG).filter(key => {
+                    let el = document.getElementById(key);
+                    return el && el.checked;
                 });
 
-                await new Promise(resolve => {
-                    ps.keywordSearch('버스정류장', function(data, status) {
-                        if (status === kakao.maps.services.Status.OK) {
-                            for(let k=0; k<data.length; k++) {
-                                rawGates.push({ lat: parseFloat(data[k].y), lng: parseFloat(data[k].x), type: 'bus', name: data[k].place_name });
-                                if(k >= 4) break; 
-                            }
-                        }
-                        resolve();
-                    }, { location: centerPos, radius: searchRadius });
-                });
-
-                let schoolKeywords = ['중학교', '고등학교', '대학교'];
-                for(let i=0; i<schoolKeywords.length; i++) {
-                    await new Promise(resolve => {
-                        ps.keywordSearch(schoolKeywords[i], function(data, status) {
-                            if (status === kakao.maps.services.Status.OK) {
-                                for(let k=0; k<data.length; k++) {
-                                    let pName = data[k].place_name;
-                                    if(pName.includes('남중') || pName.includes('남자중') || pName.includes('남고') || pName.includes('남자고')) continue;
-                                    rawGates.push({ lat: parseFloat(data[k].y), lng: parseFloat(data[k].x), type: 'school', name: pName });
-                                }
-                            }
-                            resolve();
-                        }, { location: centerPos, radius: searchRadius + 300 });
+                for (const key of activeKeys) {
+                    let data = await kakaoKeywordAll(BRAND_CONFIG[key].kw, {
+                        location: centerPos,
+                        radius: searchRadius,
+                        sort: kakao.maps.services.SortBy.DISTANCE
+                    }, CONFIG.ANALYSIS_MAX_PAGES);
+                    data.forEach(place => {
+                        const id = place.id || `${place.place_name}|${place.x}|${place.y}`;
+                        if (seenIds.has(id)) return;
+                        seenIds.add(id);
+                        place.brandKey = key;
+                        rawScannedNodes.push(place);
                     });
-                    await delay(50);
+                    await delay(25);
                 }
 
-                statusEl.innerText = `🎯 펜스 내 앵커 및 인프라 시설 조사 중...`;
-                let activeKeys = Object.keys(BRAND_CONFIG).filter(key => document.getElementById(key) && document.getElementById(key).checked);
-                for (let i = 0; i < activeKeys.length; i++) {
-                    let key = activeKeys[i];
-                    await new Promise(resolve => {
-                        ps.keywordSearch(BRAND_CONFIG[key].kw, function(data, status) {
-                            if (status === kakao.maps.services.Status.OK) {
-                                for(let k=0; k<data.length; k++) {
-                                    let place = data[k];
-                                    if(!seenIds[place.id]) {
-                                        seenIds[place.id] = true; place.brandKey = key; rawScannedNodes.push(place);
-                                    }
-                                }
-                            }
-                            resolve(); 
-                        }, { location: centerPos, radius: searchRadius, size: 15 });
+                for (const stealth of STEALTH_KEYWORDS) {
+                    let data = await kakaoKeywordAll(stealth.kw, {
+                        location: centerPos,
+                        radius: searchRadius,
+                        sort: kakao.maps.services.SortBy.DISTANCE
+                    }, 2);
+                    data.forEach(place => {
+                        const id = place.id || `${place.place_name}|${place.x}|${place.y}`;
+                        if (seenIds.has(id)) return;
+                        seenIds.add(id);
+                        place.isStealth = true;
+                        place.stealthData = stealth;
+                        rawScannedNodes.push(place);
                     });
-                    await delay(50); 
+                    await delay(25);
                 }
 
-                for(let i = 0; i < STEALTH_KEYWORDS.length; i++) {
-                    let stealth = STEALTH_KEYWORDS[i];
-                    await new Promise(resolve => {
-                        ps.keywordSearch(stealth.kw, function(data, status) {
-                            if (status === kakao.maps.services.Status.OK) {
-                                for(let k=0; k<data.length; k++) {
-                                    let place = data[k];
-                                    if(!seenIds[place.id]) {
-                                        seenIds[place.id] = true; place.isStealth = true; place.stealthData = stealth; rawScannedNodes.push(place);
-                                    }
-                                }
-                            }
-                            resolve(); 
-                        }, { location: centerPos, radius: searchRadius, size: 15 });
-                    });
-                    await delay(50); 
-                }
+                const validNodes = rawScannedNodes;
 
-                // 💡 [버그 픽스 1] 펜스 밖에 있는 매장이라도 가까우면 점수에 반영되도록 시야 제한 완벽 해제!
-                let validNodes = rawScannedNodes; 
-                let validAnchors = [];
-
-                for (let i = 0; i < validNodes.length; i++) {
-                    let p = validNodes[i];
-                    if (BRAND_CONFIG[p.brandKey] && (BRAND_CONFIG[p.brandKey].isOlive || BRAND_CONFIG[p.brandKey].isDaiso)) {
-                        validAnchors.push({ lat: parseFloat(p.y), lng: parseFloat(p.x), name: p.place_name });
-                    }
-                }
-
-                let gates = [];
-                for(let i=0; i<rawGates.length; i++) {
-                    if(rawGates[i].type === 'subway' || rawGates[i].type === 'school') {
-                        gates.push(rawGates[i]);
-                    } else if (rawGates[i].type === 'bus') {
-                        let nearbyStoreCount = 0;
-                        for(let j=0; j<rawScannedNodes.length; j++) {
-                            let dist = getDistanceMeters(rawGates[i].lat, rawGates[i].lng, parseFloat(rawScannedNodes[j].y), parseFloat(rawScannedNodes[j].x));
-                            if(dist <= 100) nearbyStoreCount++;
-                        }
-                        if(nearbyStoreCount >= 3) gates.push(rawGates[i]);
-                    }
-                }
-
-                // UI 표출용 펜스 내부 매장 카운트 (이건 펜스 안쪽만 세는게 맞으므로 기존 로직 유지)
+                // 펜스 내부 카운트
                 let targetStats = { comp: 0, anchor: 0 };
-                for (let i = 0; i < rawScannedNodes.length; i++) {
-                    let p = rawScannedNodes[i];
-                    if(isPointInPolygon(parseFloat(p.y), parseFloat(p.x), targetPath)) {
-                        if (p.brandKey && BRAND_CONFIG[p.brandKey]) {
-                            if (BRAND_CONFIG[p.brandKey].isComp) targetStats.comp++;
-                            else if (BRAND_CONFIG[p.brandKey].isAnchor) targetStats.anchor++;
-                        }
+                validNodes.forEach(p => {
+                    if (!isPointInPolygon(parseFloat(p.y), parseFloat(p.x), targetPath)) return;
+                    if (p.brandKey && BRAND_CONFIG[p.brandKey]) {
+                        if (BRAND_CONFIG[p.brandKey].isComp) targetStats.comp++;
+                        else if (BRAND_CONFIG[p.brandKey].isAnchor) targetStats.anchor++;
                     }
-                }
+                });
                 document.getElementById('comp_count').innerText = targetStats.comp + '개';
                 document.getElementById('anchor_count').innerText = targetStats.anchor + '개';
 
-                statusEl.innerText = `🌐 TMAP 실 보행로(선) 추출 및 100점 만점 평가 중...`;
-                
-                let gridPoints = []; 
-                let flowPaths = []; 
-
-                for(let g=0; g<gates.length; g++) {
-                    for(let a=0; a<validAnchors.length; a++) {
-                        flowPaths.push({ x1: gates[g].lng, y1: gates[g].lat, x2: validAnchors[a].lng, y2: validAnchors[a].lat, type: gates[g].type });
+                // 버스정류장은 주변 상업 노드가 2개 이상 있는 정류장 위주로 사용
+                const gates = rawGates.filter(g => {
+                    if (g.type !== 'bus') return true;
+                    let nearby = 0;
+                    for (const node of validNodes) {
+                        const d = getDistanceMeters(g.lat, g.lng, parseFloat(node.y), parseFloat(node.x));
+                        if (d <= 120) nearby++;
+                        if (nearby >= 2) return true;
                     }
+                    return false;
+                });
+
+                // 실제 경로의 목적지: 올리브영/다이소 + 사진/놀이 + 커피
+                let destinations = [];
+                validNodes.forEach(p => {
+                    const lat = parseFloat(p.y), lng = parseFloat(p.x);
+                    if (p.brandKey && BRAND_CONFIG[p.brandKey]) {
+                        const cfg = BRAND_CONFIG[p.brandKey];
+                        if (cfg.isOlive) destinations.push({ lat, lng, kind: 'olive', name: p.place_name });
+                        else if (cfg.isDaiso) destinations.push({ lat, lng, kind: 'daiso', name: p.place_name });
+                    } else if (p.isStealth) {
+                        destinations.push({ lat, lng, kind: p.stealthData.type, name: p.place_name });
+                    }
+                });
+
+                // 목적지가 전혀 없으면 중심점을 보조 목적지로 둔다. 점수상 앵커로 가산하지는 않는다.
+                if (!destinations.length) {
+                    destinations.push({ lat: cLat, lng: cLng, kind: 'center', name: '펜스 중심부' });
                 }
 
-                let topGates = [...gates].sort((a,b) => getDistanceMeters(a.lat, a.lng, cLat, cLng) - getDistanceMeters(b.lat, b.lng, cLat, cLng)).slice(0, 2);
-                let topAnchors = [...validAnchors].sort((a,b) => getDistanceMeters(a.lat, a.lng, cLat, cLng) - getDistanceMeters(b.lat, b.lng, cLat, cLng)).slice(0, 2);
+                // 너무 가까운 동일 목적지 제거
+                const dedupDest = [];
+                destinations.forEach(d => {
+                    if (!dedupDest.some(o => getDistanceMeters(d.lat, d.lng, o.lat, o.lng) < 8 && d.kind === o.kind)) dedupDest.push(d);
+                });
+                destinations = dedupDest;
 
-                if (TMAP_APP_KEY && TMAP_APP_KEY !== "여기에_사장님_티맵_앱키_입력" && topGates.length > 0 && topAnchors.length > 0) {
-                    for (let g of topGates) {
-                        for (let a of topAnchors) {
-                            let features = await fetchTmapPedestrianRoute(g.lng, g.lat, a.lng, a.lat);
-                            if (features) {
-                                features.forEach(f => {
-                                    if (f.geometry.type === "LineString") {
-                                        f.geometry.coordinates.forEach(coord => {
-                                            let pLat = coord[1]; let pLng = coord[0];
-                                            if (isPointInPolygon(pLat, pLng, targetPath)) {
-                                                let tooClose = gridPoints.some(pt => getDistanceMeters(pt.lat, pt.lng, pLat, pLng) < 15);
-                                                if (!tooClose) gridPoints.push({ lat: pLat, lng: pLng, score: 0 });
-                                            }
-                                        });
-                                    }
-                                });
-                            }
-                            await delay(100);
-                        }
-                    }
+                // 3) TMAP 실제 보행로 생성
+                statusEl.innerText = '🌐 TMAP 실제 보행로를 생성하고 있습니다...';
+                const actualRoutes = await buildActualFlowRoutes(gates, destinations, cLat, cLng, targetPath, statusEl);
+
+                if (mySeq !== scanSequence) return;
+
+                // 4) 후보점 생성: TMAP 실제 경로 좌표를 우선 사용. 경로가 하나도 없을 때만 grid fallback.
+                let candidates = buildCandidatesFromRoutes(actualRoutes, targetPath);
+                const hasTmapRoutes = actualRoutes.length > 0 && candidates.length > 0;
+                if (!candidates.length) {
+                    statusEl.innerText = '⚠️ TMAP 경로를 확보하지 못해 시설 기반 보조 분석으로 전환합니다.';
+                    candidates = buildFallbackGrid(minLat, maxLat, minLng, maxLng, targetPath);
+                } else {
+                    statusEl.innerText = `🧭 실제 보행경로 ${actualRoutes.length}개에서 핵심 길목 후보 ${candidates.length}개 채점 중...`;
                 }
 
-                if(gridPoints.length === 0) {
-                    let stepLat = Math.max(latDiff / 30, 0.00002); let stepLng = Math.max(lngDiff / 30, 0.00002);
-                    for(let lat = minLat; lat <= maxLat; lat += stepLat) {
-                        for(let lng = minLng; lng <= maxLng; lng += stepLng) {
-                            if(isPointInPolygon(lat, lng, targetPath)) gridPoints.push({ lat: lat, lng: lng, score: 0 });
-                        }
-                    }
-                }
+                // 5) 후보 채점
+                candidates.forEach(pt => scoreCandidate(pt, validNodes, actualRoutes));
 
-                for(let i=0; i<gridPoints.length; i++) {
-                    let pt = gridPoints[i];
-                    
-                    let sOlive = 0, sLens = 0, sDaiso = 0, sStealth = 0, sCoffee = 0;
-                    let localOliveCount = 0, localLensCount = 0, localDaisoCount = 0;
-                    let isTeamKill = false; 
+                // 지하철 출구 바로 위는 '점포 입지'가 아니라 출입구 자체일 가능성이 커 제외
+                const usableCandidates = candidates.filter(pt => {
+                    const tooNearSubway = gates.some(g =>
+                        (g.type === 'subway_exit' || g.type === 'subway') &&
+                        getDistanceMeters(pt.lat, pt.lng, g.lat, g.lng) < 18
+                    );
+                    return !tooNearSubway;
+                });
 
-                    for(let j=0; j<validNodes.length; j++) {
-                        let node = validNodes[j];
-                        let dist = getDistanceMeters(pt.lat, pt.lng, parseFloat(node.y), parseFloat(node.x));
-                        
-                        if (node.brandKey === 'f_lensme' && currentMode === 'new' && dist <= 100) {
-                            isTeamKill = true;
-                        }
+                const topSpots = pickTopUniqueSpots(usableCandidates, 3);
+                const rBox = document.getElementById('rankingResultText');
 
-                        if(dist <= 40) {
-                            if(node.isStealth) {
-                                let sData = node.stealthData;
-                                if(sData.type === 'coffee') sCoffee += ((40 - dist) / 40) * 3.0; 
-                                else sStealth += ((40 - dist) / 40) * 7.0; 
-                            } else if (node.brandKey && BRAND_CONFIG[node.brandKey]) {
-                                let cfg = BRAND_CONFIG[node.brandKey];
-                                if(cfg.isOlive) {
-                                    sOlive += ((40 - dist) / 40) * 18.0; localOliveCount++;
-                                } else if(cfg.isComp) {
-                                    sLens += ((40 - dist) / 40) * 12.0; localLensCount++;
-                                } else if(cfg.isDaiso) {
-                                    sDaiso += ((40 - dist) / 40) * 10.0; localDaisoCount++;
-                                }
-                            }
-                        }
-                    }
-
-                    sOlive = Math.min(sOlive, 18);
-                    sLens = Math.min(sLens, 12);
-                    sDaiso = Math.min(sDaiso, 10);
-                    sStealth = Math.min(sStealth, 7); 
-                    sCoffee = Math.min(sCoffee, 3);   
-                    
-                    let sFlow = 0;
-                    let closeFlowEnds = new Set();
-                    for(let pIdx=0; pIdx<flowPaths.length; pIdx++) {
-                        let f = flowPaths[pIdx];
-                        let distToFlow = distToSegment(pt.lng, pt.lat, f.x1, f.y1, f.x2, f.y2);
-                        if(distToFlow <= 30) {
-                            sFlow += ((30 - distToFlow) / 30) * 10.0;
-                            closeFlowEnds.add(`${f.x1},${f.y1}`);
-                            closeFlowEnds.add(`${f.x2},${f.y2}`);
-                        }
-                    }
-                    sFlow = Math.min(sFlow, 10);
-
-                    let sCorner = 0;
-                    if(closeFlowEnds.size >= 3) {
-                        sCorner = 20; 
-                    }
-
-                    let sSynergy = 0;
-                    if (localOliveCount >= 1 && localDaisoCount >= 1 && localLensCount >= 1) {
-                        sSynergy = 20; 
-                    }
-
-                    let totalScore = sOlive + sLens + sDaiso + sStealth + sCoffee + sFlow + sCorner + sSynergy;
-                    
-                    if(isTeamKill) totalScore *= 0.01; 
-
-                    pt.score = totalScore; 
-                    
-                    pt.catAnchor = sOlive + sLens + sDaiso; 
-                    pt.catFlow = sFlow + sCorner;           
-                    pt.catSynergy = sSynergy;               
-                    pt.catInfra = sStealth + sCoffee;       
-                    
-                    pt.detailOlive = sOlive; pt.detailLens = sLens; pt.detailDaiso = sDaiso;
-                    pt.detailCorner = sCorner; pt.detailFlow = sFlow; pt.detailSynergy = sSynergy; pt.detailInfra = sStealth + sCoffee;
-                    pt.isTeamKill = isTeamKill;
-                }
-
-                gridPoints.sort(function(a, b) { return b.score - a.score; });
-                
-                let topSpots = [];
-
-                for(let i=0; i<gridPoints.length; i++) {
-                    let candidate = gridPoints[i];
-                    if(candidate.score < 1) continue; 
-
-                    let isNearSubway = false;
-                    for(let g=0; g<rawGates.length; g++) {
-                        if(rawGates[g].type === 'subway') {
-                            if(getDistanceMeters(candidate.lat, candidate.lng, rawGates[g].lat, rawGates[g].lng) < 25) {
-                                isNearSubway = true; break;
-                            }
-                        }
-                    }
-                    if(isNearSubway) continue;
-
-                    // 💡 [버그 픽스 2] 1위 밀어내기 강제 룰 30m 유지 (펜스 내 1,2,3위 모두 표시)
-                    let tooClose = false;
-                    for(let k=0; k<topSpots.length; k++) {
-                        if(getDistanceMeters(candidate.lat, candidate.lng, topSpots[k].lat, topSpots[k].lng) < 30) { 
-                            tooClose = true; break; 
-                        }
-                    }
-                    if(!tooClose && topSpots.length < 3) topSpots.push(candidate);
-                }
-
-                let rBox = document.getElementById('rankingResultText');
-
-                if (topSpots.length > 0) {
-                    let rankingHtml = "";
-
+                if (topSpots.length) {
+                    let rankingHtml = '';
                     for (let idx = 0; idx < topSpots.length; idx++) {
-                        let spot = topSpots[idx];
-                        let addrName = await getAddressAsync(spot.lat, spot.lng);
-                        
-                        let shapeData = await drawTmapPedestrianStreet(spot, idx, map, validNodes, rawGates, targetPath);
-                        let rankTitle = shapeData.title;
-                        let expertComment = generateExpertComment(spot.score, spot);
-                        let finalScore = Math.round(spot.score);
+                        const spot = topSpots[idx];
+                        const addrName = await getAddressAsync(spot.lat, spot.lng);
+                        const rankTitle = drawRankSpot(spot, idx, actualRoutes, targetPath);
+                        const finalScore = Math.round(spot.score);
+                        const expertComment = generateExpertComment(spot.score, spot, hasTmapRoutes);
+                        const flowDetail = hasTmapRoutes
+                            ? `실보행 경로 ${spot.routeHitCount}개 · 분기 ${spot.armCount}방향`
+                            : 'TMAP 경로 미확보 · 시설 기반 보조점수';
 
                         let receiptHtml = `
                             <div class="flex justify-between items-center text-teal-700"><span>🌿 핵심 앵커 파워 (Max 40)</span><span class="font-black">${Math.round(spot.catAnchor)}점</span></div>
-                            <div class="flex justify-between items-center text-indigo-700"><span>🔀 길목 동선 파워 (Max 30)</span><span class="font-black">${Math.round(spot.catFlow)}점</span></div>
-                            <div class="flex justify-between items-center text-fuchsia-600"><span>💥 3대장 시너지 (Max 20)</span><span class="font-black">${Math.round(spot.catSynergy)}점</span></div>
+                            <div class="flex justify-between items-center text-indigo-700"><span>🚶 실제 보행동선 파워 (Max 30)</span><span class="font-black">${Math.round(spot.catFlow)}점</span></div>
+                            <div class="pl-4 text-[10px] text-indigo-500">└ ${flowDetail}</div>
+                            <div class="flex justify-between items-center text-fuchsia-600"><span>💥 앵커 시너지 (Max 20)</span><span class="font-black">${Math.round(spot.catSynergy)}점</span></div>
                             <div class="flex justify-between items-center text-amber-700"><span>📸 체류 인프라 (Max 10)</span><span class="font-black">${Math.round(spot.catInfra)}점</span></div>
+                            ${spot.competitionPenalty > 0 ? `<div class="flex justify-between items-center text-rose-600"><span>⚔️ 경쟁 과밀 감점</span><span class="font-black">-${Math.round(spot.competitionPenalty)}점</span></div>` : ''}
                         `;
 
                         rankingHtml += `
-                        <div class="bg-white px-3 py-3 rounded-xl border border-slate-200 shadow-sm mb-3 relative overflow-hidden">
-                            ${currentMode === 'reloc' && idx === 0 ? '<div class="absolute top-0 right-0 bg-rose-500 text-white text-[10px] font-bold px-2 py-1 rounded-bl-lg">추천 이전지</div>' : ''}
-                            <div class="flex justify-between items-center border-b border-slate-100 pb-1.5 mb-1.5 mt-1">
-                                <span class="text-[14px] text-slate-800 font-extrabold">${rankTitle} <span class="text-rose-600 text-[13px] font-black ml-1">(총 ${finalScore}점)</span></span>
-                            </div>
-                            <div class="text-[12px] text-slate-600 mb-2 font-bold tracking-tight">📍 구간: ${addrName} 주변</div>
-                            
-                            <div class="bg-slate-50 p-2 rounded-lg text-[11px] space-y-1.5 border border-slate-100 mb-2">
-                                <p class="font-extrabold text-slate-700 mb-1 border-b border-slate-200 pb-1">📊 100점 만점 상세 영수증</p>
-                                ${receiptHtml}
-                            </div>
-                            
-                            <div class="bg-indigo-50/80 p-2.5 rounded-lg text-[11.5px] border border-indigo-100">
-                                <p class="font-extrabold text-indigo-800 mb-1">💬 상권 전문가 코멘트</p>
-                                <p class="text-indigo-700 leading-snug font-medium break-keep">${expertComment}</p>
-                            </div>
-                        </div>
-                        `;
+                            <div class="bg-white px-3 py-3 rounded-xl border border-slate-200 shadow-sm mb-3 relative overflow-hidden">
+                                ${currentMode === 'reloc' && idx === 0 ? '<div class="absolute top-0 right-0 bg-rose-500 text-white text-[10px] font-bold px-2 py-1 rounded-bl-lg">추천 이전 후보</div>' : ''}
+                                <div class="flex justify-between items-center border-b border-slate-100 pb-1.5 mb-1.5 mt-1">
+                                    <span class="text-[14px] text-slate-800 font-extrabold">${rankTitle} <span class="text-rose-600 text-[13px] font-black ml-1">(총 ${finalScore}점)</span></span>
+                                </div>
+                                <div class="text-[12px] text-slate-600 mb-2 font-bold tracking-tight">📍 구간: ${escapeHtml(addrName)} 주변</div>
+                                <div class="bg-slate-50 p-2 rounded-lg text-[11px] space-y-1.5 border border-slate-100 mb-2">
+                                    <p class="font-extrabold text-slate-700 mb-1 border-b border-slate-200 pb-1">📊 100점 만점 상세 근거</p>
+                                    ${receiptHtml}
+                                </div>
+                                <div class="bg-indigo-50/80 p-2.5 rounded-lg text-[11.5px] border border-indigo-100">
+                                    <p class="font-extrabold text-indigo-800 mb-1">💬 분석 코멘트</p>
+                                    <p class="text-indigo-700 leading-snug font-medium break-keep">${escapeHtml(expertComment)}</p>
+                                </div>
+                            </div>`;
                     }
                     rBox.innerHTML = rankingHtml;
                 } else {
-                    let failMsg = currentMode === 'new' 
-                        ? "⚠️ 주변에 기존 렌즈미가 너무 가깝거나(100m 이내) 유효한 명당이 없습니다. (팀킬 방지 쉴드 작동 중)"
-                        : "분석 조건을 만족하는 1~3위 입지가 없습니다.";
+                    const failMsg = currentMode === 'new'
+                        ? `⚠️ 유효한 입지를 찾지 못했습니다. 신규 출점은 기존 렌즈미 ${CONFIG.TEAM_KILL_METERS}m 이내 후보를 자동 제외합니다.`
+                        : '분석 조건을 만족하는 서로 다른 길목 후보를 찾지 못했습니다.';
                     rBox.innerHTML = `<div class="text-xs text-rose-600 font-bold mt-1">${failMsg}</div>`;
                 }
 
                 document.getElementById('rankingResultBox').classList.remove('hidden');
-                statusEl.innerText = `✅ [V43.2 버그픽스] 랭킹 증발 원인 해결! 30m 간격으로 1~3위 정상 표출됩니다.`;
-
-            } catch(e) {
-                console.error("분석 에러:", e);
-                statusEl.innerText = "⚠️ 분석 중 에러가 발생했습니다.";
+                if (hasTmapRoutes) {
+                    statusEl.innerText = `✅ 실제 TMAP 보행경로 ${actualRoutes.length}개 기반 분석 완료 · 동일 길 중복 제거 후 ${topSpots.length}개 표시`;
+                } else {
+                    statusEl.innerText = `⚠️ TMAP 실제 경로 미확보 · 시설 기반 보조 분석 결과 ${topSpots.length}개 표시`;
+                }
+            } catch (e) {
+                console.error('분석 에러:', e);
+                statusEl.innerText = '⚠️ 분석 중 에러가 발생했습니다. 개발자도구 Console을 확인하세요.';
             } finally {
                 isScanningAPI = false;
             }
         }
 
-        function getDistanceMeters(lat1, lon1, lat2, lon2) {
-            let R = 6371000; 
-            let dLat = (lat2-lat1)*(Math.PI/180), dLon = (lon2-lon1)*(Math.PI/180);
-            let a = Math.sin(dLat/2)*Math.sin(dLat/2) + Math.cos(lat1*(Math.PI/180))*Math.cos(lat2*(Math.PI/180))*Math.sin(dLon/2)*Math.sin(dLon/2);
-            return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-        }
-
+        // 현재 화면은 map 탭 하나만 사용한다. 과거 tab-radar 참조 오류 제거.
         function switchTab(tabId) {
-            document.getElementById('tab-map').classList.add('hidden'); document.getElementById('tab-radar').classList.add('hidden');
-            document.getElementById('btn-map').classList.remove('active'); document.getElementById('btn-radar').classList.remove('active');
-            document.getElementById('tab-' + tabId).classList.remove('hidden'); document.getElementById('btn-' + tabId).classList.add('active');
-            if(tabId === 'map') { map.relayout(); map.setCenter(map.getCenter()); }
+            if (tabId !== 'map') return;
+            const tab = document.getElementById('tab-map');
+            const btn = document.getElementById('btn-map');
+            if (tab) tab.classList.remove('hidden');
+            if (btn) btn.classList.add('active');
+            map.relayout();
         }
 
         renderPolygonTree();
