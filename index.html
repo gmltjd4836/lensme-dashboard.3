@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>렌즈미 상권 분석 대시보드 (V45.0 보행 Segment 입지 엔진)</title>
+    <title>렌즈미 상권 분석 대시보드 (V46.0 자동 상권 탐색 + 보행 Segment 입지 엔진)</title>
     <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
@@ -37,7 +37,7 @@
     <div class="w-full md:w-1/4 bg-white border-r border-gray-200 p-6 flex flex-col shadow-lg z-20 overflow-y-auto">
         <h1 class="text-xl font-extrabold text-slate-800 border-b-4 border-indigo-500 pb-3 mb-4 flex justify-between items-center">
             <span>🗺️ 전국 상권 관제탑</span>
-            <span class="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded-full font-bold">V45.0 🔥</span>
+            <span class="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded-full font-bold">V46.0 🧭</span>
         </h1>
 
         <div class="mb-4">
@@ -54,6 +54,23 @@
                 <input type="text" id="searchInput" placeholder="예: 의정부역, 부평역" class="w-full bg-white border border-indigo-300 px-3 py-2 rounded-lg text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500" onkeypress="if(event.key==='Enter') searchLocation()">
                 <button onclick="searchLocation()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-2 rounded-lg text-sm font-bold transition shadow-sm whitespace-nowrap">검색</button>
             </div>
+        </div>
+
+        <div class="mb-4 bg-cyan-50 p-4 rounded-xl border border-cyan-200 shadow-sm">
+            <div class="flex justify-between items-center mb-2">
+                <label class="block text-sm font-extrabold text-cyan-800">🧭 주변 상권 자동 탐색</label>
+                <span id="autoAreaCount" class="text-[10px] bg-white border border-cyan-200 text-cyan-700 px-2 py-0.5 rounded-full font-black">0개</span>
+            </div>
+            <button id="btnDiscoverAreas" onclick="discoverTradeAreas()" class="w-full bg-cyan-600 hover:bg-cyan-700 text-white px-3 py-2 rounded-lg text-sm font-extrabold transition shadow-sm mb-2">이 지역 상권 자동 탐색</button>
+            <div class="grid grid-cols-3 gap-1 text-[10px] font-bold mb-2">
+                <label class="flex items-center gap-1 bg-white rounded px-1.5 py-1 border border-blue-100 cursor-pointer"><input id="f_area_official" type="checkbox" checked onchange="refreshTradeAreaVisibility()" class="chk-blue">🔷공식</label>
+                <label class="flex items-center gap-1 bg-white rounded px-1.5 py-1 border border-orange-100 cursor-pointer"><input id="f_area_estimated" type="checkbox" checked onchange="refreshTradeAreaVisibility()" class="chk-orange">🟠추정</label>
+                <label class="flex items-center gap-1 bg-white rounded px-1.5 py-1 border border-pink-100 cursor-pointer"><input id="f_area_user" type="checkbox" checked onchange="refreshTradeAreaVisibility()" class="chk-pink">🩷직접</label>
+            </div>
+            <div class="text-[10px] leading-snug text-slate-500 mb-2">
+                🔷 공식 Polygon은 그대로 사용 · 🔵 공식 거리명은 실제 상가/도로로 경계 추정 · 🟠 데이터가 없으면 POI 밀집도로 자동 추정
+            </div>
+            <div id="autoAreaList" class="space-y-1.5 max-h-44 overflow-y-auto"></div>
         </div>
 
         <div class="mb-4 bg-rose-50 p-4 rounded-xl border border-rose-200 flex-grow flex flex-col min-h-[200px]">
@@ -101,7 +118,7 @@
 
         <div id="tab-map" class="flex-grow w-full h-full relative">
             <div id="statusMessage" class="absolute top-4 left-1/2 transform -translate-x-1/2 z-10 bg-white/95 backdrop-blur-sm px-6 py-2 rounded-full shadow-md text-sm font-bold text-slate-700 border border-slate-200 text-center transition-all">
-                🎯 펜스를 치면 실제 보행경로를 도로 Segment로 쪼개 최우수 출점 구간을 분석합니다!
+                🧭 지역 검색 → 상권 자동 탐색 → 상권 클릭. 또는 직접 펜스를 그려 분석할 수 있습니다!
             </div>
 
             <div class="absolute top-16 left-4 z-10 bg-white/95 backdrop-blur-sm p-4 rounded-xl shadow-lg border border-slate-200 w-64 max-h-[80vh] overflow-y-auto hidden md:block">
@@ -142,13 +159,16 @@
     </div>
 
     <!-- 카카오맵 API -->
+    <script src="https://cdn.jsdelivr.net/npm/@turf/turf@7/turf.min.js"></script>
+
     <script type="text/javascript" src="//dapi.kakao.com/v2/maps/sdk.js?appkey=c045609510f8b75252389123f086be48&libraries=services,drawing"></script>
 
     <script>
         // =========================================================
-        // 렌즈미 상권 분석 대시보드 V45.0
-        // FINAL ARCHITECTURE
-        // 1) 펜스 주변 유입구/목적지 수집
+        // 렌즈미 상권 분석 대시보드 V46.0
+        // AUTO TRADE AREA + FINAL SITE ENGINE
+        // 0) 공식/자동추정 상권 탐색 → Polygon 선택
+        // 1) 선택 Polygon 주변 유입구/목적지 수집
         // 2) TMAP 실제 보행 OD 경로 생성
         // 3) 보행경로를 8~14m Micro Segment로 분할
         // 4) 같은 도로 방향/위치의 Segment를 하나의 Corridor로 병합
@@ -182,7 +202,15 @@
             COMPETITION_RADIUS: 160,
             ACCESS_NEAR_GATE_MIN: 18,
             ACCESS_NEAR_GATE_MAX: 220,
-            HEATMAP_MAX_SEGMENTS: 500
+            HEATMAP_MAX_SEGMENTS: 500,
+            AUTO_AREA_RADIUS: 1800,
+            AUTO_AREA_MAX_NAMED: 6,
+            AUTO_AREA_MAX_CLUSTERS: 3,
+            AUTO_AREA_POI_PAGES: 2,
+            AUTO_AREA_CLUSTER_EPS: 85,
+            AUTO_AREA_CLUSTER_MIN_POINTS: 7,
+            AUTO_AREA_HULL_BUFFER: 24,
+            AUTO_AREA_MIN_POIS: 6
         };
 
         let currentMode = 'new';
@@ -207,6 +235,15 @@
         let tempDrawnPath = null;
         let isScanningAPI = false;
         let scanSequence = 0;
+
+        // V46 자동 상권 탐색 상태
+        let autoTradeAreas = [];
+        let tradeAreaOverlays = {};
+        let tradeAreaLabels = {};
+        let activeAutoAreaId = null;
+        let optionalOfficialPolygons = [];
+        let optionalOfficialStreets = [];
+        let optionalAreaDataLoaded = false;
 
         const delay = ms => new Promise(res => setTimeout(res, ms));
 
@@ -350,6 +387,532 @@
                 seen.add(key);
                 return true;
             });
+        }
+
+        // =========================================================
+        // V46 AUTO TRADE AREA ENGINE
+        // =========================================================
+
+        // 전국지역특화거리 표준데이터 중 즉시 테스트할 대표 Seed.
+        // '공식 거리명/좌표/길이'는 공식 데이터이고, Polygon 경계는 아래 로직이 자동 추정한다.
+        // 전국 전체 데이터는 나중에 data/official_streets.json으로 추가하면 자동 병합된다.
+        const BUILTIN_OFFICIAL_STREET_SEEDS = [
+            {
+                id: 'std_uijeongbu_happyroad',
+                name: '행복로 문화의거리', city: '의정부시',
+                lat: 37.73924561, lng: 127.0475838,
+                length: 607, stores: 300,
+                source: '전국지역특화거리 표준데이터', sourceDate: '2026-07-15'
+            },
+            {
+                id: 'std_bupyeong_culture',
+                name: '부평문화의거리', city: '부평구',
+                lat: 37.49384712, lng: 126.724759,
+                length: 270, stores: 218,
+                source: '전국지역특화거리 표준데이터', sourceDate: '공공데이터 등록값'
+            }
+        ];
+
+        const NAMED_AREA_KEYWORDS = ['문화의거리', '테마의거리', '로데오거리', '먹자골목', '상점가', '전통시장'];
+        const COMMERCIAL_KEYWORDS = ['올리브영', '다이소', '옷가게', '미용실', '렌즈', '사진관'];
+        const COMMERCIAL_CATEGORY_CODES = ['CE7', 'FD6', 'CT1', 'CS2'];
+
+        function clamp(v, min, max) { return Math.max(min, Math.min(max, v)); }
+
+        async function loadOptionalAreaData() {
+            if (optionalAreaDataLoaded) return;
+            optionalAreaDataLoaded = true;
+
+            // 1) 정확한 공식 Polygon을 가지고 있다면 이 파일만 GitHub /data 폴더에 넣으면 된다.
+            try {
+                const res = await fetch('./data/official_polygons.geojson', { cache: 'no-store' });
+                if (res.ok) {
+                    const gj = await res.json();
+                    optionalOfficialPolygons = parseGeoJsonTradeAreas(gj);
+                }
+            } catch (e) {
+                console.info('official_polygons.geojson 없음: 자동추정 모드로 계속합니다.');
+            }
+
+            // 2) 전국지역특화거리 데이터를 JSON으로 넣으면 Built-in Seed와 자동 병합한다.
+            try {
+                const res = await fetch('./data/official_streets.json', { cache: 'no-store' });
+                if (res.ok) {
+                    const data = await res.json();
+                    const arr = Array.isArray(data) ? data : (data.items || data.data || []);
+                    optionalOfficialStreets = arr.map((r, i) => ({
+                        id: r.id || `ext_street_${i}`,
+                        name: r.name || r.stretNm || r.거리명,
+                        city: r.city || r.institutionNm || r.관리기관명 || '',
+                        lat: parseFloat(r.lat ?? r.latitude ?? r.위도),
+                        lng: parseFloat(r.lng ?? r.longitude ?? r.경도),
+                        length: parseFloat(r.length ?? r.stretLt ?? r.총길이) || 0,
+                        stores: parseInt(r.stores ?? r.storNumber ?? r.점포수) || 0,
+                        source: r.source || '추가 공식 거리 데이터',
+                        sourceDate: r.sourceDate || r.referenceDate || r.데이터기준일자 || ''
+                    })).filter(r => r.name && Number.isFinite(r.lat) && Number.isFinite(r.lng));
+                }
+            } catch (e) {
+                console.info('official_streets.json 없음: 내장 Seed + Kakao 탐색으로 계속합니다.');
+            }
+        }
+
+        function parseGeoJsonTradeAreas(gj) {
+            const out = [];
+            if (!gj || !Array.isArray(gj.features)) return out;
+            gj.features.forEach((f, idx) => {
+                if (!f.geometry) return;
+                let rings = [];
+                if (f.geometry.type === 'Polygon') rings = f.geometry.coordinates;
+                else if (f.geometry.type === 'MultiPolygon' && f.geometry.coordinates.length) rings = f.geometry.coordinates[0];
+                if (!rings || !rings[0] || rings[0].length < 4) return;
+                const path = rings[0].map(c => ({ lng: Number(c[0]), lat: Number(c[1]) }))
+                    .filter(p => Number.isFinite(p.lat) && Number.isFinite(p.lng));
+                if (path.length < 4) return;
+                const center = polygonAverageCenter(path);
+                out.push({
+                    id: f.properties?.id || `official_polygon_${idx}`,
+                    name: f.properties?.name || f.properties?.상권명 || `공식 상권 ${idx + 1}`,
+                    type: 'official_polygon',
+                    path,
+                    centerLat: center.lat, centerLng: center.lng,
+                    source: f.properties?.source || '공식 Polygon GeoJSON',
+                    confidence: 1.0,
+                    meta: f.properties || {}
+                });
+            });
+            return out;
+        }
+
+        function polygonAverageCenter(path) {
+            let lat = 0, lng = 0;
+            path.forEach(p => { lat += p.lat; lng += p.lng; });
+            return { lat: lat / path.length, lng: lng / path.length };
+        }
+
+        function normalizeAreaName(name) {
+            return String(name || '').replace(/\s+/g, '').replace(/[()\[\]·ㆍ-]/g, '').toLowerCase();
+        }
+
+        function localXY(lat, lng, cLat, cLng) {
+            const x = (lng - cLng) * 111320 * Math.cos(cLat * Math.PI / 180);
+            const y = (lat - cLat) * 110540;
+            return { x, y };
+        }
+
+        function xyToLatLng(x, y, cLat, cLng) {
+            return {
+                lat: cLat + y / 110540,
+                lng: cLng + x / (111320 * Math.cos(cLat * Math.PI / 180))
+            };
+        }
+
+        function dominantAxis(points, cLat, cLng) {
+            if (!points || points.length < 2) return { vx: 1, vy: 0 };
+            const xy = points.map(p => localXY(p.lat, p.lng, cLat, cLng));
+            const mx = xy.reduce((a, p) => a + p.x, 0) / xy.length;
+            const my = xy.reduce((a, p) => a + p.y, 0) / xy.length;
+            let xx = 0, yy = 0, xyv = 0;
+            xy.forEach(p => {
+                const dx = p.x - mx, dy = p.y - my;
+                xx += dx * dx; yy += dy * dy; xyv += dx * dy;
+            });
+            const angle = 0.5 * Math.atan2(2 * xyv, xx - yy);
+            return { vx: Math.cos(angle), vy: Math.sin(angle) };
+        }
+
+        function pointsToFeatureCollection(points) {
+            return turf.featureCollection(points.map(p => turf.point([p.lng, p.lat])));
+        }
+
+        function turfPolygonToPath(feature) {
+            if (!feature || !feature.geometry) return [];
+            let coords = [];
+            if (feature.geometry.type === 'Polygon') coords = feature.geometry.coordinates[0] || [];
+            else if (feature.geometry.type === 'MultiPolygon') coords = feature.geometry.coordinates?.[0]?.[0] || [];
+            return coords.map(c => ({ lng: Number(c[0]), lat: Number(c[1]) }))
+                .filter(p => Number.isFinite(p.lat) && Number.isFinite(p.lng));
+        }
+
+        function makeHullPath(points, bufferMeters = CONFIG.AUTO_AREA_HULL_BUFFER) {
+            if (!window.turf || points.length < 3) return [];
+            const fc = pointsToFeatureCollection(points);
+            let hull = null;
+            try {
+                hull = turf.concave(fc, { maxEdge: 0.14, units: 'kilometers' });
+            } catch (e) {}
+            if (!hull) {
+                try { hull = turf.convex(fc); } catch (e) {}
+            }
+            if (!hull) return [];
+            try {
+                const buff = turf.buffer(hull, bufferMeters / 1000, { units: 'kilometers', steps: 8 });
+                if (buff) hull = buff;
+            } catch (e) {}
+            return turfPolygonToPath(hull);
+        }
+
+        function regionNameAsync(lat, lng) {
+            return new Promise(resolve => {
+                geocoder.coord2RegionCode(lng, lat, (result, status) => {
+                    if (status === kakao.maps.services.Status.OK && result?.length) {
+                        const r = result.find(x => x.region_type === 'B') || result[0];
+                        resolve({ si: r.region_1depth_name || '', gu: r.region_2depth_name || '', dong: r.region_3depth_name || '' });
+                    } else resolve({ si: '', gu: '', dong: '' });
+                });
+            });
+        }
+
+        async function collectCommercialPois(lat, lng, radius, maxPages = CONFIG.AUTO_AREA_POI_PAGES) {
+            const center = new kakao.maps.LatLng(lat, lng);
+            const jobs = [];
+            COMMERCIAL_CATEGORY_CODES.forEach(code => jobs.push(kakaoCategoryAll(code, { location: center, radius }, maxPages)));
+            COMMERCIAL_KEYWORDS.forEach(kw => jobs.push(kakaoKeywordAll(kw, { location: center, radius, sort: kakao.maps.services.SortBy.DISTANCE }, maxPages)));
+            const chunks = await Promise.all(jobs);
+            return uniquePlaces(chunks.flat()).map(p => ({
+                id: p.id || `${p.place_name}|${p.x}|${p.y}`,
+                name: p.place_name,
+                lat: parseFloat(p.y), lng: parseFloat(p.x),
+                category: p.category_name || '',
+                distance: parseFloat(p.distance || '0')
+            })).filter(p => Number.isFinite(p.lat) && Number.isFinite(p.lng));
+        }
+
+        function uniqueAutoPois(points) {
+            const seen = new Set();
+            return points.filter(p => {
+                const key = p.id || `${p.name}|${p.lat.toFixed(6)}|${p.lng.toFixed(6)}`;
+                if (seen.has(key)) return false;
+                seen.add(key);
+                return true;
+            });
+        }
+
+        function dbscanPoints(points, epsMeters = CONFIG.AUTO_AREA_CLUSTER_EPS, minPts = CONFIG.AUTO_AREA_CLUSTER_MIN_POINTS) {
+            const n = points.length;
+            const labels = new Array(n).fill(undefined);
+            let clusterId = 0;
+
+            const neighbors = i => {
+                const out = [];
+                for (let j = 0; j < n; j++) {
+                    if (getDistanceMeters(points[i].lat, points[i].lng, points[j].lat, points[j].lng) <= epsMeters) out.push(j);
+                }
+                return out;
+            };
+
+            for (let i = 0; i < n; i++) {
+                if (labels[i] !== undefined) continue;
+                const ns = neighbors(i);
+                if (ns.length < minPts) { labels[i] = -1; continue; }
+                labels[i] = clusterId;
+                const queue = [...ns];
+                const queued = new Set(queue);
+                while (queue.length) {
+                    const j = queue.shift();
+                    if (labels[j] === -1) labels[j] = clusterId;
+                    if (labels[j] !== undefined) continue;
+                    labels[j] = clusterId;
+                    const ns2 = neighbors(j);
+                    if (ns2.length >= minPts) {
+                        ns2.forEach(k => { if (!queued.has(k)) { queued.add(k); queue.push(k); } });
+                    }
+                }
+                clusterId++;
+            }
+            const groups = new Map();
+            labels.forEach((lab, i) => {
+                if (lab === -1 || lab === undefined) return;
+                if (!groups.has(lab)) groups.set(lab, []);
+                groups.get(lab).push(points[i]);
+            });
+            return [...groups.values()].sort((a, b) => b.length - a.length);
+        }
+
+        function selectClusterNearSeed(clusters, seed) {
+            if (!clusters.length) return [];
+            let best = null, bestScore = -Infinity;
+            clusters.forEach(c => {
+                const minD = Math.min(...c.map(p => getDistanceMeters(seed.lat, seed.lng, p.lat, p.lng)));
+                const score = c.length * 6 - minD * 0.12;
+                if (score > bestScore) { bestScore = score; best = c; }
+            });
+            return best || clusters[0];
+        }
+
+        async function buildBoundaryForNamedSeed(seed, sharedPois = []) {
+            const radius = clamp(seed.length ? seed.length * 0.62 : 280, 190, 460);
+            let pois = sharedPois.filter(p => getDistanceMeters(seed.lat, seed.lng, p.lat, p.lng) <= radius);
+            // 공유 Pool이 드문 외곽 지역만 1회 로컬 보강 검색
+            if (pois.length < CONFIG.AUTO_AREA_MIN_POIS) {
+                const extra = await collectCommercialPois(seed.lat, seed.lng, radius, 1);
+                pois = uniqueAutoPois([...pois, ...extra]);
+            }
+            if (pois.length < CONFIG.AUTO_AREA_MIN_POIS) return null;
+
+            const clusters = dbscanPoints(pois, 92, 5);
+            let cluster = selectClusterNearSeed(clusters, seed);
+            if (cluster.length < 5) cluster = pois;
+
+            // 공식 총길이가 있으면 주변 상점의 주축 방향으로 거리의 양 끝점을 강제로 포함해
+            // '둥근 원'이 아니라 실제 거리처럼 길쭉한 경계를 만든다.
+            const synthetic = [];
+            if (seed.length) {
+                const axis = dominantAxis(cluster, seed.lat, seed.lng);
+                const half = clamp(seed.length / 2, 100, 420);
+                const perp = { vx: -axis.vy, vy: axis.vx };
+                [1, -1].forEach(sign => {
+                    [-32, 0, 32].forEach(off => {
+                        const x = axis.vx * half * sign + perp.vx * off;
+                        const y = axis.vy * half * sign + perp.vy * off;
+                        synthetic.push(xyToLatLng(x, y, seed.lat, seed.lng));
+                    });
+                });
+            }
+            const hullPoints = [...cluster, ...synthetic];
+            let path = makeHullPath(hullPoints, 20);
+            if (path.length < 4) return null;
+            const center = polygonAverageCenter(path);
+            return {
+                ...seed,
+                id: `auto_${seed.id || Date.now()}`,
+                type: seed.official ? 'official_street_inferred' : 'estimated_named',
+                path,
+                centerLat: center.lat, centerLng: center.lng,
+                poiCount: cluster.length,
+                confidence: seed.official ? clamp(0.68 + Math.min(cluster.length, 35) / 200, 0.68, 0.86) : clamp(0.52 + Math.min(cluster.length, 40) / 160, 0.52, 0.78)
+            };
+        }
+
+        async function discoverNamedAreaSeeds(centerLat, centerLng) {
+            const seeds = [];
+            const allOfficial = [...BUILTIN_OFFICIAL_STREET_SEEDS, ...optionalOfficialStreets];
+            allOfficial.forEach(s => {
+                const d = getDistanceMeters(centerLat, centerLng, s.lat, s.lng);
+                if (d <= CONFIG.AUTO_AREA_RADIUS + 1400) seeds.push({ ...s, official: true, distance: d });
+            });
+
+            const center = new kakao.maps.LatLng(centerLat, centerLng);
+            for (const kw of NAMED_AREA_KEYWORDS) {
+                const places = await kakaoKeywordAll(kw, { location: center, radius: CONFIG.AUTO_AREA_RADIUS, sort: kakao.maps.services.SortBy.DISTANCE }, 2);
+                places.forEach(p => {
+                    const name = p.place_name || '';
+                    if (!name) return;
+                    const lat = parseFloat(p.y), lng = parseFloat(p.x);
+                    if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
+                    seeds.push({
+                        id: `kakao_${p.id || normalizeAreaName(name)}`,
+                        name, lat, lng, length: 0, stores: 0,
+                        source: 'Kakao 장소명 + 자동 경계',
+                        official: false,
+                        distance: getDistanceMeters(centerLat, centerLng, lat, lng)
+                    });
+                });
+                await delay(35);
+            }
+
+            const dedup = [];
+            seeds.sort((a, b) => (b.official - a.official) || a.distance - b.distance);
+            for (const s of seeds) {
+                const same = dedup.find(x => {
+                    const nameSimilar = normalizeAreaName(x.name).includes(normalizeAreaName(s.name)) || normalizeAreaName(s.name).includes(normalizeAreaName(x.name));
+                    const near = getDistanceMeters(x.lat, x.lng, s.lat, s.lng) < 140;
+                    return nameSimilar || near;
+                });
+                if (!same) dedup.push(s);
+                else if (s.official && !same.official) Object.assign(same, s);
+            }
+            return dedup.slice(0, CONFIG.AUTO_AREA_MAX_NAMED);
+        }
+
+        async function buildUnnamedEstimatedAreas(centerLat, centerLng, existingAreas = [], sharedPois = []) {
+            const pois = sharedPois.filter(p => getDistanceMeters(centerLat, centerLng, p.lat, p.lng) <= 1050);
+            const clusters = dbscanPoints(pois, CONFIG.AUTO_AREA_CLUSTER_EPS, CONFIG.AUTO_AREA_CLUSTER_MIN_POINTS);
+            const out = [];
+            let seq = 0;
+            for (const cluster of clusters.slice(0, 8)) {
+                if (cluster.length < CONFIG.AUTO_AREA_CLUSTER_MIN_POINTS) continue;
+                const cLat = cluster.reduce((a, p) => a + p.lat, 0) / cluster.length;
+                const cLng = cluster.reduce((a, p) => a + p.lng, 0) / cluster.length;
+                const tooNear = existingAreas.some(a => getDistanceMeters(cLat, cLng, a.centerLat || a.lat, a.centerLng || a.lng) < 230);
+                if (tooNear) continue;
+                const path = makeHullPath(cluster, 26);
+                if (path.length < 4) continue;
+                const reg = await regionNameAsync(cLat, cLng);
+                seq++;
+                out.push({
+                    id: `cluster_${Date.now()}_${seq}`,
+                    name: `${reg.dong || reg.gu || '주변'} 자동상권 ${String.fromCharCode(64 + seq)}`,
+                    type: 'estimated_cluster',
+                    path, centerLat: cLat, centerLng: cLng,
+                    poiCount: cluster.length,
+                    source: '상업 POI 밀집도 자동 추정',
+                    confidence: clamp(0.42 + Math.min(cluster.length, 45) / 150, 0.42, 0.72)
+                });
+                if (out.length >= CONFIG.AUTO_AREA_MAX_CLUSTERS) break;
+            }
+            return out;
+        }
+
+        function areaTypeInfo(area) {
+            if (area.type === 'official_polygon') return { icon: '🔷', label: '공식 경계', color: '#2563eb', fill: '#60a5fa' };
+            if (area.type === 'official_street_inferred') return { icon: '🔵', label: '공식 거리명 · 자동 경계', color: '#0284c7', fill: '#38bdf8' };
+            return { icon: '🟠', label: '자동 추정 상권', color: '#ea580c', fill: '#fb923c' };
+        }
+
+        function isAreaVisible(area) {
+            if (area.type === 'official_polygon' || area.type === 'official_street_inferred') return document.getElementById('f_area_official')?.checked !== false;
+            return document.getElementById('f_area_estimated')?.checked !== false;
+        }
+
+        function clearAutoTradeAreaOverlays() {
+            Object.values(tradeAreaOverlays).forEach(o => o.setMap(null));
+            Object.values(tradeAreaLabels).forEach(o => o.setMap(null));
+            tradeAreaOverlays = {};
+            tradeAreaLabels = {};
+            autoTradeAreas = [];
+            activeAutoAreaId = null;
+            const list = document.getElementById('autoAreaList');
+            if (list) list.innerHTML = '';
+            const cnt = document.getElementById('autoAreaCount');
+            if (cnt) cnt.innerText = '0개';
+        }
+
+        function renderAutoTradeAreas() {
+            Object.values(tradeAreaOverlays).forEach(o => o.setMap(null));
+            Object.values(tradeAreaLabels).forEach(o => o.setMap(null));
+            tradeAreaOverlays = {};
+            tradeAreaLabels = {};
+            const list = document.getElementById('autoAreaList');
+            if (list) list.innerHTML = '';
+
+            autoTradeAreas.forEach(area => {
+                const info = areaTypeInfo(area);
+                const poly = new kakao.maps.Polygon({
+                    path: area.path.map(p => new kakao.maps.LatLng(p.lat, p.lng)),
+                    strokeWeight: activeAutoAreaId === area.id ? 4 : 2,
+                    strokeColor: info.color,
+                    strokeOpacity: 0.92,
+                    fillColor: info.fill,
+                    fillOpacity: activeAutoAreaId === area.id ? 0.24 : 0.11
+                });
+                if (isAreaVisible(area)) poly.setMap(map);
+                kakao.maps.event.addListener(poly, 'click', () => selectAutoTradeArea(area.id));
+                tradeAreaOverlays[area.id] = poly;
+
+                const labelHtml = `<div style="background:rgba(255,255,255,.96);border:2px solid ${info.color};color:${info.color};font-weight:900;font-size:11px;padding:3px 7px;border-radius:7px;box-shadow:0 2px 8px rgba(0,0,0,.18);white-space:nowrap;">${info.icon} ${escapeHtml(area.name)}</div>`;
+                const label = new kakao.maps.CustomOverlay({
+                    position: new kakao.maps.LatLng(area.centerLat, area.centerLng),
+                    content: labelHtml, xAnchor: 0.5, yAnchor: 0.5, zIndex: 70
+                });
+                if (isAreaVisible(area)) label.setMap(map);
+                tradeAreaLabels[area.id] = label;
+
+                if (list) {
+                    const conf = Math.round((area.confidence || 0.5) * 100);
+                    const item = document.createElement('button');
+                    item.className = 'w-full text-left bg-white border border-slate-200 hover:border-cyan-400 rounded-lg px-2.5 py-2 transition shadow-sm';
+                    item.onclick = () => selectAutoTradeArea(area.id);
+                    item.innerHTML = `
+                        <div class="flex justify-between gap-2 items-start">
+                            <span class="text-[11px] font-black text-slate-800">${info.icon} ${escapeHtml(area.name)}</span>
+                            <span class="text-[9px] whitespace-nowrap text-slate-400 font-bold">신뢰 ${conf}%</span>
+                        </div>
+                        <div class="text-[9px] mt-0.5 text-slate-500">${info.label}${area.poiCount ? ` · POI ${area.poiCount}개` : ''}</div>`;
+                    list.appendChild(item);
+                }
+            });
+            const cnt = document.getElementById('autoAreaCount');
+            if (cnt) cnt.innerText = `${autoTradeAreas.length}개`;
+        }
+
+        function refreshTradeAreaVisibility() {
+            autoTradeAreas.forEach(area => {
+                const show = isAreaVisible(area);
+                if (tradeAreaOverlays[area.id]) tradeAreaOverlays[area.id].setMap(show ? map : null);
+                if (tradeAreaLabels[area.id]) tradeAreaLabels[area.id].setMap(show ? map : null);
+            });
+            const showUser = document.getElementById('f_area_user')?.checked !== false;
+            Object.values(renderedPolygons).forEach(p => p.setMap(showUser ? map : null));
+            Object.values(renderedNametags).forEach(p => p.setMap(showUser ? map : null));
+        }
+
+        async function discoverTradeAreas() {
+            if (isScanningAPI) return alert('현재 다른 분석이 진행 중입니다. 잠시 후 다시 눌러주세요.');
+            isScanningAPI = true;
+            const btn = document.getElementById('btnDiscoverAreas');
+            const statusEl = document.getElementById('statusMessage');
+            if (btn) { btn.disabled = true; btn.innerText = '상권 탐색 중...'; }
+            clearRankMarkers();
+            try {
+                await loadOptionalAreaData();
+                clearAutoTradeAreaOverlays();
+                const c = map.getCenter();
+                const centerLat = c.getLat(), centerLng = c.getLng();
+
+                statusEl.innerText = '🧭 1/3 공식 상권·특화거리 확인 중...';
+                const exactOfficial = optionalOfficialPolygons.filter(a => getDistanceMeters(centerLat, centerLng, a.centerLat, a.centerLng) <= CONFIG.AUTO_AREA_RADIUS + 800);
+
+                statusEl.innerText = '🧭 2/3 주변 거리명과 상업시설 밀집도 분석 중...';
+                // 주변 상업 POI는 한 번만 수집하고 모든 상권 후보가 재사용한다.
+                const sharedPois = await collectCommercialPois(centerLat, centerLng, CONFIG.AUTO_AREA_RADIUS, CONFIG.AUTO_AREA_POI_PAGES);
+                const seeds = await discoverNamedAreaSeeds(centerLat, centerLng);
+                const namedAreas = [];
+                for (const seed of seeds) {
+                    const alreadyExact = exactOfficial.some(a => getDistanceMeters(a.centerLat, a.centerLng, seed.lat, seed.lng) < 180);
+                    if (alreadyExact) continue;
+                    const area = await buildBoundaryForNamedSeed(seed, sharedPois);
+                    if (area) namedAreas.push(area);
+                    await delay(20);
+                }
+
+                statusEl.innerText = '🧭 3/3 이름 없는 상권 클러스터 탐색 중...';
+                const estimated = await buildUnnamedEstimatedAreas(centerLat, centerLng, [...exactOfficial, ...namedAreas], sharedPois);
+
+                autoTradeAreas = [...exactOfficial, ...namedAreas, ...estimated]
+                    .sort((a, b) => {
+                        const rank = t => t === 'official_polygon' ? 0 : t === 'official_street_inferred' ? 1 : 2;
+                        return rank(a.type) - rank(b.type) || (b.confidence || 0) - (a.confidence || 0);
+                    });
+                renderAutoTradeAreas();
+                statusEl.innerText = autoTradeAreas.length
+                    ? `✅ 주변 상권 ${autoTradeAreas.length}개를 찾았습니다. 상권 이름을 클릭하면 V46 보행 Segment 분석이 바로 실행됩니다.`
+                    : '⚠️ 이 지도 범위에서는 상권 경계를 안정적으로 만들 만큼 데이터가 부족합니다. 직접 펜스를 사용해주세요.';
+            } catch (e) {
+                console.error('자동 상권 탐색 오류:', e);
+                statusEl.innerText = '⚠️ 자동 상권 탐색 중 오류가 발생했습니다. 콘솔을 확인해주세요.';
+            } finally {
+                isScanningAPI = false;
+                if (btn) { btn.disabled = false; btn.innerText = '이 지역 상권 자동 탐색'; }
+            }
+        }
+
+        function selectAutoTradeArea(id) {
+            if (isScanningAPI) return alert('현재 분석이 진행 중입니다. 끝난 뒤 다시 눌러주세요.');
+            const area = autoTradeAreas.find(a => a.id === id);
+            if (!area) return;
+            activeAutoAreaId = id;
+            activePolygonId = null;
+            activePolygonPath = area.path;
+            tempDrawnPath = null;
+
+            const info = areaTypeInfo(area);
+            document.getElementById('targetLocationInput').innerText = `${info.icon} ${area.name}`;
+            document.getElementById('btnClearPolygon').classList.remove('hidden');
+
+            Object.values(renderedPolygons).forEach(p => p.setOptions({ fillColor: '#f43f5e', fillOpacity: 0.1, strokeWeight: 2 }));
+            autoTradeAreas.forEach(a => {
+                const ov = tradeAreaOverlays[a.id];
+                if (!ov) return;
+                const inf = areaTypeInfo(a);
+                ov.setOptions({ strokeWeight: a.id === id ? 5 : 2, fillColor: inf.fill, fillOpacity: a.id === id ? 0.28 : 0.11 });
+            });
+
+            const bounds = new kakao.maps.LatLngBounds();
+            area.path.forEach(p => bounds.extend(new kakao.maps.LatLng(p.lat, p.lng)));
+            map.setBounds(bounds);
+            searchCenter = bounds.getCenter();
+            runGridHotspotScan(activePolygonPath);
         }
 
         // ---------- Draw / saved polygon ----------
@@ -511,7 +1074,7 @@
                                 fillOpacity: 0.1,
                                 fillColor: '#f43f5e'
                             });
-                            polygon.setMap(map);
+                            if (document.getElementById('f_area_user')?.checked !== false) polygon.setMap(map);
                             kakao.maps.event.addListener(polygon, 'click', () => selectSavedPolygon(poly.id));
                             renderedPolygons[poly.id] = polygon;
 
@@ -522,7 +1085,7 @@
                                 xAnchor: 0.5,
                                 yAnchor: 0.5
                             });
-                            nametag.setMap(map);
+                            if (document.getElementById('f_area_user')?.checked !== false) nametag.setMap(map);
                             renderedNametags[poly.id] = nametag;
                         });
                         divGu.appendChild(detDong);
@@ -546,8 +1109,16 @@
             let poly = savedPolygons.find(p => p.id === id);
             if (!poly) return;
 
+            activeAutoAreaId = null;
             activePolygonId = id;
             activePolygonPath = poly.path;
+            autoTradeAreas.forEach(a => {
+                const ov = tradeAreaOverlays[a.id];
+                if (ov) {
+                    const inf = areaTypeInfo(a);
+                    ov.setOptions({ strokeWeight: 2, fillColor: inf.fill, fillOpacity: 0.11 });
+                }
+            });
             document.getElementById('targetLocationInput').innerText = `[${poly.dong}] ${poly.name}`;
             document.getElementById('btnClearPolygon').classList.remove('hidden');
 
@@ -563,6 +1134,7 @@
 
         function clearActivePolygon(silent = false) {
             activePolygonId = null;
+            activeAutoAreaId = null;
             activePolygonPath = null;
             tempDrawnPath = null;
             document.getElementById('targetLocationInput').innerText = '선택 없음 (자유 탐색)';
@@ -572,6 +1144,13 @@
             document.getElementById('rankingResultBox').classList.add('hidden');
             document.getElementById('rankingResultText').innerHTML = '';
             Object.values(renderedPolygons).forEach(p => p.setOptions({ fillColor: '#f43f5e', fillOpacity: 0.1, strokeWeight: 2 }));
+            autoTradeAreas.forEach(a => {
+                const ov = tradeAreaOverlays[a.id];
+                if (ov) {
+                    const inf = areaTypeInfo(a);
+                    ov.setOptions({ strokeWeight: 2, fillColor: inf.fill, fillOpacity: 0.11 });
+                }
+            });
             clearRankMarkers();
             if (!silent && !isDrawingMode) triggerScan();
         }
@@ -745,11 +1324,13 @@
             ps.keywordSearch(q, function(data, status) {
                 if (status === kakao.maps.services.Status.OK && data.length) {
                     clearActivePolygon(true);
+                    clearAutoTradeAreaOverlays();
                     let place = data[0];
                     searchCenter = new kakao.maps.LatLng(place.y, place.x);
                     map.setCenter(searchCenter);
                     map.setLevel(3);
                     triggerScan();
+                    document.getElementById('statusMessage').innerText = '📍 이동 완료. [이 지역 상권 자동 탐색]을 누르면 주변 상권을 자동으로 표시합니다.';
                 }
             });
         }
