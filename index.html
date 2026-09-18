@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>렌즈미 상권 분석 대시보드 (V47.1.0 보행 Graph 상권 분할 + Segment 입지 엔진)</title>
+    <title>렌즈미 상권 분석 대시보드 (V48.0 비겹침 상권 Polygon + Segment 입지 엔진)</title>
     <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
@@ -37,7 +37,7 @@
     <div class="w-full md:w-1/4 bg-white border-r border-gray-200 p-6 flex flex-col shadow-lg z-20 overflow-y-auto">
         <h1 class="text-xl font-extrabold text-slate-800 border-b-4 border-indigo-500 pb-3 mb-4 flex justify-between items-center">
             <span>🗺️ 전국 상권 관제탑</span>
-            <span class="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded-full font-bold">V47.1.0 🕸️</span>
+            <span class="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded-full font-bold">V48.0 🧩</span>
         </h1>
 
         <div class="mb-4">
@@ -58,17 +58,17 @@
 
         <div class="mb-4 bg-cyan-50 p-4 rounded-xl border border-cyan-200 shadow-sm">
             <div class="flex justify-between items-center mb-2">
-                <label class="block text-sm font-extrabold text-cyan-800">🕸️ 보행망 상권 자동 탐색</label>
+                <label class="block text-sm font-extrabold text-cyan-800">🧩 비겹침 상권 자동 탐색</label>
                 <span id="autoAreaCount" class="text-[10px] bg-white border border-cyan-200 text-cyan-700 px-2 py-0.5 rounded-full font-black">0개</span>
             </div>
-            <button id="btnDiscoverAreas" onclick="discoverTradeAreas()" class="w-full bg-cyan-600 hover:bg-cyan-700 text-white px-3 py-2 rounded-lg text-sm font-extrabold transition shadow-sm mb-2">이 지역 보행상권 자동 탐색</button>
+            <button id="btnDiscoverAreas" onclick="discoverTradeAreas()" class="w-full bg-cyan-600 hover:bg-cyan-700 text-white px-3 py-2 rounded-lg text-sm font-extrabold transition shadow-sm mb-2">이 지역 상권 자동 구분</button>
             <div class="grid grid-cols-3 gap-1 text-[10px] font-bold mb-2">
                 <label class="flex items-center gap-1 bg-white rounded px-1.5 py-1 border border-blue-100 cursor-pointer"><input id="f_area_official" type="checkbox" checked onchange="refreshTradeAreaVisibility()" class="chk-blue">🔷공식</label>
                 <label class="flex items-center gap-1 bg-white rounded px-1.5 py-1 border border-orange-100 cursor-pointer"><input id="f_area_estimated" type="checkbox" checked onchange="refreshTradeAreaVisibility()" class="chk-orange">🟠추정</label>
                 <label class="flex items-center gap-1 bg-white rounded px-1.5 py-1 border border-pink-100 cursor-pointer"><input id="f_area_user" type="checkbox" checked onchange="refreshTradeAreaVisibility()" class="chk-pink">🩷직접</label>
             </div>
             <div class="text-[10px] leading-snug text-slate-500 mb-2">
-                길을 먼저 분석합니다 · 실제 보행 OD + 상업밀도 + Graph 중심성으로 길 Segment를 서로 겹치지 않는 상권으로 분할합니다
+                상권을 면으로 명확하게 표시합니다 · 보행망 + 상업밀도로 구역을 나누고 겹치는 면은 한 상권에만 귀속합니다. 상권성이 약한 곳은 지도 그대로 둡니다.
             </div>
             <div id="autoAreaList" class="space-y-1.5 max-h-44 overflow-y-auto"></div>
         </div>
@@ -118,7 +118,7 @@
 
         <div id="tab-map" class="flex-grow w-full h-full relative">
             <div id="statusMessage" class="absolute top-4 left-1/2 transform -translate-x-1/2 z-10 bg-white/95 backdrop-blur-sm px-6 py-2 rounded-full shadow-md text-sm font-bold text-slate-700 border border-slate-200 text-center transition-all">
-                🕸️ 지역 검색 → 보행상권 자동 탐색 → 색으로 표시된 보행축 선택. 상권 면은 선택한 곳만 표시됩니다!
+                🧩 지역 검색 → 상권 자동 구분 → 서로 겹치지 않는 색상 Polygon을 클릭하세요. 상권이 아닌 곳은 색칠하지 않습니다.
             </div>
 
             <div class="absolute top-16 left-4 z-10 bg-white/95 backdrop-blur-sm p-4 rounded-xl shadow-lg border border-slate-200 w-64 max-h-[80vh] overflow-y-auto hidden md:block">
@@ -165,9 +165,9 @@
 
     <script>
         // =========================================================
-        // 렌즈미 상권 분석 대시보드 V47.1.0
+        // 렌즈미 상권 분석 대시보드 V48.0.0
         // PEDESTRIAN GRAPH TRADE AREA + FINAL SITE ENGINE
-        // 0) 실제 보행 OD 경로 → 보행 Graph → 비중첩 상권 Community 분할
+        // 0) 실제 보행 OD 경로 → 보행 Graph → 배타적 상권 Community 분할 → 비겹침 Polygon
         // 1) 선택 Polygon 주변 유입구/목적지 수집
         // 2) TMAP 실제 보행 OD 경로 생성
         // 3) 보행경로를 8~14m Micro Segment로 분할
@@ -221,7 +221,10 @@
             AUTO_GRAPH_CORE_SEPARATION: 210,
             AUTO_GRAPH_MAX_COMMUNITIES: 6,
             AUTO_GRAPH_MIN_COMMUNITY_LENGTH: 65,
-            AUTO_GRAPH_BUFFER_METERS: 22
+            AUTO_GRAPH_BUFFER_METERS: 24,
+            AUTO_AREA_MIN_EXCLUSIVE_M2: 650,
+            AUTO_AREA_FILL_OPACITY: 0.16,
+            AUTO_AREA_ACTIVE_FILL_OPACITY: 0.30
         };
 
         let currentMode = 'new';
@@ -407,8 +410,9 @@
         // - TMAP 실제 보행 OD 경로를 8~10m Segment로 쪼개 보행 Graph를 만든다.
         // - 각 Segment에 상업밀도 + OD 통과량 + Graph 중심성을 부여한다.
         // - 강한 상업 보행축의 Core를 찾고 Graph 비용으로 Segment를 1개 상권에만 귀속한다.
-        // - 지도에는 모든 상권의 면을 겹쳐 칠하지 않고, 상권별 보행축을 먼저 표시한다.
-        // - 상권 클릭 시에만 해당 Community의 보행축 Buffer를 Polygon으로 만들어 V45 입지 엔진에 전달한다.
+        // - 모든 상권을 명확한 Polygon으로 표시하되, 서로 겹치는 면은 우선순위/Graph 소속 기준으로 제거한다.
+        // - 상권성이 약한 구간은 어떤 Polygon에도 포함하지 않아 원래 지도를 그대로 남긴다.
+        // - 상권 클릭 시 해당 비겹침 Polygon을 그대로 V45 입지 엔진에 전달한다.
         // =========================================================
 
         const BUILTIN_OFFICIAL_STREET_SEEDS = [
@@ -945,6 +949,88 @@
             }
         }
 
+        function pathToTurfPolygon(path) {
+            if (!window.turf || !path || path.length < 3) return null;
+            const coords = path.map(p => [p.lng, p.lat]);
+            const first = coords[0], last = coords[coords.length - 1];
+            if (!last || first[0] !== last[0] || first[1] !== last[1]) coords.push([...first]);
+            try { return turf.polygon([coords]); } catch (e) { return null; }
+        }
+
+        function largestPolygonFeature(feature) {
+            if (!feature || !window.turf) return null;
+            try {
+                const fc = turf.flatten(feature);
+                if (!fc?.features?.length) return null;
+                return [...fc.features].sort((a, b) => turf.area(b) - turf.area(a))[0] || null;
+            } catch (e) {
+                return feature?.geometry?.type === 'Polygon' ? feature : null;
+            }
+        }
+
+        function turfFeatureToOuterPath(feature) {
+            const poly = largestPolygonFeature(feature);
+            const ring = poly?.geometry?.coordinates?.[0] || [];
+            return ring.slice(0, -1).map(c => ({ lat: c[1], lng: c[0] }));
+        }
+
+        function areaExclusivePriority(area) {
+            if (area.type === 'official_polygon_fallback') return 4;
+            if (area.type === 'network_official_named') return 3;
+            if (area.type === 'network_named') return 2;
+            return 1;
+        }
+
+        // V48 핵심: Buffered community 면끼리 겹치면 상권 우선순위가 높은 쪽에 먼저 귀속하고
+        // 낮은 쪽 Polygon에서는 실제 겹친 면을 잘라낸다. 결과적으로 지도 표시 Polygon끼리 겹치지 않는다.
+        function enforceExclusiveTradeAreaPolygons(areas) {
+            if (!window.turf || typeof turf.difference !== 'function') return areas;
+            const ordered = [...areas].sort((a, b) => {
+                const pd = areaExclusivePriority(b) - areaExclusivePriority(a);
+                if (pd) return pd;
+                return (b.confidence || 0) - (a.confidence || 0);
+            });
+            const accepted = [];
+            for (const area of ordered) {
+                let current = pathToTurfPolygon(area.path);
+                if (!current) continue;
+                for (const prev of accepted) {
+                    if (!current) break;
+                    try {
+                        const fc = turf.featureCollection([current, prev.feature]);
+                        current = turf.difference(fc);
+                    } catch (e) {
+                        console.warn('V48 상권 겹침 제거 일부 실패:', e);
+                    }
+                }
+                if (!current) continue;
+                current = largestPolygonFeature(current);
+                if (!current) continue;
+                let sqm = 0;
+                try { sqm = turf.area(current); } catch (e) {}
+                if (sqm < CONFIG.AUTO_AREA_MIN_EXCLUSIVE_M2) continue;
+                const clippedPath = turfFeatureToOuterPath(current);
+                if (clippedPath.length < 4) continue;
+                area.path = clippedPath;
+                area.areaM2 = Math.round(sqm);
+                area.exclusive = true;
+                try {
+                    const p = turf.pointOnFeature(current);
+                    area.centerLng = p.geometry.coordinates[0];
+                    area.centerLat = p.geometry.coordinates[1];
+                } catch (e) {
+                    const c = polygonAverageCenter(clippedPath);
+                    area.centerLat = c.lat; area.centerLng = c.lng;
+                }
+                accepted.push({ area, feature: current });
+            }
+            // 원래 탐색 순서에 가깝게: 공식/명칭 우선 후 신뢰도순
+            return accepted.map(x => x.area).sort((a, b) => {
+                const pd = areaExclusivePriority(b) - areaExclusivePriority(a);
+                return pd || (b.confidence || 0) - (a.confidence || 0);
+            });
+        }
+
         async function materializeCommunities(groups) {
             const out = [];
             let autoIndex = 1;
@@ -1006,15 +1092,23 @@
             let active = false;
             function apply() {
                 const visible = currentMap && isAreaVisible(area);
-                lines.forEach(pl => pl.setMap(visible ? currentMap : null));
-                if (polygon) polygon.setMap(visible && active ? currentMap : null);
+                // 평소에는 깔끔한 면만 보여주고, 선택했을 때만 내부 보행축을 살짝 보여준다.
+                lines.forEach(pl => pl.setMap(visible && active ? currentMap : null));
+                if (polygon) polygon.setMap(visible ? currentMap : null);
             }
             return {
                 setMap(m) { currentMap = m; apply(); },
                 setOptions(opts = {}) {
-                    active = (opts.strokeWeight || 0) >= 4 || (opts.fillOpacity || 0) >= 0.20;
-                    lines.forEach(pl => pl.setOptions({ strokeWeight: active ? 8 : 5, strokeOpacity: active ? 0.95 : 0.78 }));
-                    if (polygon) polygon.setOptions({ strokeWeight: active ? 3 : 1, fillOpacity: active ? 0.10 : 0.0 });
+                    active = (opts.strokeWeight || 0) >= 4 || (opts.fillOpacity || 0) >= 0.24;
+                    lines.forEach(pl => pl.setOptions({
+                        strokeWeight: active ? 6 : 3,
+                        strokeOpacity: active ? 0.72 : 0.0
+                    }));
+                    if (polygon) polygon.setOptions({
+                        strokeWeight: active ? 5 : 3,
+                        strokeOpacity: active ? 1.0 : 0.90,
+                        fillOpacity: active ? CONFIG.AUTO_AREA_ACTIVE_FILL_OPACITY : CONFIG.AUTO_AREA_FILL_OPACITY
+                    });
                     apply();
                 }
             };
@@ -1052,7 +1146,7 @@
                         path: [new kakao.maps.LatLng(seg.a.lat, seg.a.lng), new kakao.maps.LatLng(seg.b.lat, seg.b.lng)],
                         strokeWeight: width,
                         strokeColor: info.color,
-                        strokeOpacity: 0.78,
+                        strokeOpacity: 0.70,
                         strokeStyle: 'solid',
                         zIndex: 35
                     });
@@ -1060,11 +1154,11 @@
                 }
                 const polygon = area.path?.length >= 4 ? new kakao.maps.Polygon({
                     path: area.path.map(p => new kakao.maps.LatLng(p.lat, p.lng)),
-                    strokeWeight: 1,
+                    strokeWeight: 3,
                     strokeColor: info.color,
-                    strokeOpacity: 0.75,
+                    strokeOpacity: 0.90,
                     fillColor: info.fill,
-                    fillOpacity: 0.0,
+                    fillOpacity: CONFIG.AUTO_AREA_FILL_OPACITY,
                     zIndex: 25
                 }) : null;
                 const controller = makeTradeAreaController(area, lines, polygon);
@@ -1091,7 +1185,7 @@
                             <span class="text-[11px] font-black text-slate-800">${info.icon} ${escapeHtml(area.name)}</span>
                             <span class="text-[9px] whitespace-nowrap text-slate-400 font-bold">신뢰 ${conf}%</span>
                         </div>
-                        <div class="text-[9px] mt-0.5 text-slate-500">${info.label} · 보행축 ${area.networkLength || 0}m · OD ${area.routeCount || 0}개</div>`;
+                        <div class="text-[9px] mt-0.5 text-slate-500">${info.label} · 면적 ${area.areaM2 ? Math.round(area.areaM2/100)/10 + '천㎡' : '-'} · 보행축 ${area.networkLength || 0}m · OD ${area.routeCount || 0}개</div>`;
                     list.appendChild(item);
                 }
             });
@@ -1119,6 +1213,7 @@
                 centerLat: p.centerLat, centerLng: p.centerLng,
                 segments: [], networkLength: 0, routeCount: 0,
                 confidence: 0.95, color: AREA_PALETTE[idx % AREA_PALETTE.length],
+                areaM2: (() => { try { return Math.round(turf.area(pathToTurfPolygon(p.path))); } catch(e) { return 0; } })(),
                 source: p.source
             }));
             return out;
@@ -1129,7 +1224,7 @@
             isScanningAPI = true;
             const btn = document.getElementById('btnDiscoverAreas');
             const statusEl = document.getElementById('statusMessage');
-            if (btn) { btn.disabled = true; btn.innerText = '보행망 분석 중...'; }
+            if (btn) { btn.disabled = true; btn.innerText = '상권 경계 계산 중...'; }
             clearRankMarkers();
             try {
                 await loadOptionalAreaData();
@@ -1168,20 +1263,20 @@
                 const cores = chooseCommunityCores(active, namedSeeds);
                 const groups = partitionGraphByCores(active, cores);
 
-                statusEl.innerText = '🧩 5/5 겹치지 않는 보행상권 Community 분할 중...';
+                statusEl.innerText = '🧩 5/5 상권 면 겹침 제거 + 명확한 Polygon 생성 중...';
                 autoTradeAreas = await materializeCommunities(groups);
-                autoTradeAreas.sort((a, b) => (b.confidence || 0) - (a.confidence || 0));
+                autoTradeAreas = enforceExclusiveTradeAreaPolygons(autoTradeAreas);
                 renderAutoTradeAreas();
 
                 statusEl.innerText = autoTradeAreas.length
-                    ? `✅ V47.1 완료 · 실제 OD ${routes.length}개 · 보행 Segment ${active.length}개 · 비중첩 보행상권 ${autoTradeAreas.length}개` 
+                    ? `✅ V48 완료 · 실제 OD ${routes.length}개 · Segment ${active.length}개 · 서로 겹치지 않는 상권 ${autoTradeAreas.length}개` 
                     : '⚠️ 상권으로 묶을 만큼 연속적인 상업 보행축이 부족합니다. 직접 펜스를 사용해주세요.';
             } catch (e) {
-                console.error('V47.1 보행상권 탐색 오류:', e);
+                console.error('V48 비겹침 상권 탐색 오류:', e);
                 statusEl.innerText = `⚠️ 보행상권 생성 실패: ${e.message || '알 수 없는 오류'}`;
             } finally {
                 isScanningAPI = false;
-                if (btn) { btn.disabled = false; btn.innerText = '이 지역 보행상권 자동 탐색'; }
+                if (btn) { btn.disabled = false; btn.innerText = '이 지역 상권 자동 구분'; }
             }
         }
 
@@ -1202,7 +1297,7 @@
             autoTradeAreas.forEach(a => {
                 const ov = tradeAreaOverlays[a.id];
                 if (!ov) return;
-                ov.setOptions({ strokeWeight: a.id === id ? 5 : 2, fillOpacity: a.id === id ? 0.24 : 0.0 });
+                ov.setOptions({ strokeWeight: a.id === id ? 5 : 3, fillOpacity: a.id === id ? CONFIG.AUTO_AREA_ACTIVE_FILL_OPACITY : CONFIG.AUTO_AREA_FILL_OPACITY });
             });
 
             const bounds = new kakao.maps.LatLngBounds();
@@ -1413,7 +1508,7 @@
                 const ov = tradeAreaOverlays[a.id];
                 if (ov) {
                     const inf = areaTypeInfo(a);
-                    ov.setOptions({ strokeWeight: 2, fillColor: inf.fill, fillOpacity: 0.11 });
+                    ov.setOptions({ strokeWeight: 3, fillColor: inf.fill, fillOpacity: CONFIG.AUTO_AREA_FILL_OPACITY });
                 }
             });
             document.getElementById('targetLocationInput').innerText = `[${poly.dong}] ${poly.name}`;
@@ -1445,7 +1540,7 @@
                 const ov = tradeAreaOverlays[a.id];
                 if (ov) {
                     const inf = areaTypeInfo(a);
-                    ov.setOptions({ strokeWeight: 2, fillColor: inf.fill, fillOpacity: 0.11 });
+                    ov.setOptions({ strokeWeight: 3, fillColor: inf.fill, fillOpacity: CONFIG.AUTO_AREA_FILL_OPACITY });
                 }
             });
             clearRankMarkers();
@@ -1627,7 +1722,7 @@
                     map.setCenter(searchCenter);
                     map.setLevel(3);
                     triggerScan();
-                    document.getElementById('statusMessage').innerText = '📍 이동 완료. [이 지역 보행상권 자동 탐색]을 누르면 주변 상권을 자동으로 표시합니다.';
+                    document.getElementById('statusMessage').innerText = '📍 이동 완료. [이 지역 상권 자동 구분]을 누르면 주변 상권을 자동으로 표시합니다.';
                 }
             });
         }
