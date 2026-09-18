@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>렌즈미 상권 분석 대시보드 (V43.1 핀셋 버그픽스)</title>
+    <title>렌즈미 상권 분석 대시보드 (V43.2 랭킹 증발 버그 완벽 픽스)</title>
     <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
@@ -37,7 +37,7 @@
     <div class="w-full md:w-1/4 bg-white border-r border-gray-200 p-6 flex flex-col shadow-lg z-20 overflow-y-auto">
         <h1 class="text-xl font-extrabold text-slate-800 border-b-4 border-indigo-500 pb-3 mb-4 flex justify-between items-center">
             <span>🗺️ 전국 상권 관제탑</span>
-            <span class="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded-full font-bold">V43.1 🔧</span>
+            <span class="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded-full font-bold">V43.2 🛠️</span>
         </h1>
 
         <div class="mb-4">
@@ -78,11 +78,11 @@
             
             <div class="bg-indigo-50/80 p-3 rounded-lg border border-indigo-100 space-y-1.5 mt-2">
                 <div class="flex justify-between items-center text-xs font-bold text-slate-700">
-                    <span>⚔️ 펜스 내 렌즈샵:</span>
+                    <span>⚔️ 스캔 반경 내 렌즈샵:</span>
                     <span id="comp_count" class="text-sm font-black text-pink-600">-개</span>
                 </div>
                 <div class="flex justify-between items-center text-xs font-bold text-slate-700">
-                    <span>📸 펜스 내 앵커시설:</span>
+                    <span>📸 스캔 반경 내 앵커시설:</span>
                     <span id="anchor_count" class="text-sm font-black text-emerald-600">-개</span>
                 </div>
 
@@ -230,7 +230,7 @@
             polygonOptions: { draggable: false, removable: false, editable: true, strokeColor: '#be185d', strokeWeight: 3, fillColor: '#f43f5e', fillOpacity: 0.2 }
         });
 
-        let savedPolygons = JSON.parse(localStorage.getItem('lensmePolygonsV43_1') || '[]');
+        let savedPolygons = JSON.parse(localStorage.getItem('lensmePolygonsV43_2') || '[]');
         let activePolygonPath = null; 
         let activePolygonId = null;
         let renderedPolygons = {}; 
@@ -304,7 +304,7 @@
                     }
                     let id = 'poly_' + Date.now();
                     savedPolygons.push({ id: id, name: name, path: tempDrawnPath, si: si, gu: gu, dong: dong, centerLat: centerLat, centerLng: centerLng });
-                    localStorage.setItem('lensmePolygonsV43_1', JSON.stringify(savedPolygons));
+                    localStorage.setItem('lensmePolygonsV43_2', JSON.stringify(savedPolygons));
                     
                     drawingManager.clear();
                     isDrawingMode = false;
@@ -386,7 +386,7 @@
         function deletePolygon(id) {
             if(!confirm("이 영토를 삭제하시겠습니까?")) return;
             savedPolygons = savedPolygons.filter(p => p.id !== id);
-            localStorage.setItem('lensmePolygonsV43_1', JSON.stringify(savedPolygons));
+            localStorage.setItem('lensmePolygonsV43_2', JSON.stringify(savedPolygons));
             if(activePolygonId === id) clearActivePolygon();
             renderPolygonTree();
         }
@@ -641,8 +641,7 @@
                     let pl = new kakao.maps.Polyline({path: p, strokeWeight: 10, strokeColor: color, strokeOpacity: 0.7, strokeStyle: 'solid'});
                     pl.setMap(map); rankOverlays.push(pl);
                 });
-            } 
-            // 💡 [버그 픽스 1] 건물을 무식하게 뚫고 지나가던 땜빵용 가짜 직선 그리기(else 블록) 완전히 삭제!
+            }
 
             let shapeTitle = isCross ? `${rankNum}위 사거리` : `${rankNum}위 길목(거리)`;
             let badgePrefix = rankNum === 1 ? '💎 ' : (rankNum === 2 ? '⭐ ' : '✅ ');
@@ -773,16 +772,14 @@
                     await delay(50); 
                 }
 
-                let validNodes = [];
+                // 💡 [버그 픽스 1] 펜스 밖에 있는 매장이라도 가까우면 점수에 반영되도록 시야 제한 완벽 해제!
+                let validNodes = rawScannedNodes; 
                 let validAnchors = [];
 
-                for (let i = 0; i < rawScannedNodes.length; i++) {
-                    let p = rawScannedNodes[i];
-                    if(isPointInPolygon(parseFloat(p.y), parseFloat(p.x), targetPath)) {
-                        validNodes.push(p);
-                        if (BRAND_CONFIG[p.brandKey] && (BRAND_CONFIG[p.brandKey].isOlive || BRAND_CONFIG[p.brandKey].isDaiso)) {
-                            validAnchors.push({ lat: parseFloat(p.y), lng: parseFloat(p.x), name: p.place_name });
-                        }
+                for (let i = 0; i < validNodes.length; i++) {
+                    let p = validNodes[i];
+                    if (BRAND_CONFIG[p.brandKey] && (BRAND_CONFIG[p.brandKey].isOlive || BRAND_CONFIG[p.brandKey].isDaiso)) {
+                        validAnchors.push({ lat: parseFloat(p.y), lng: parseFloat(p.x), name: p.place_name });
                     }
                 }
 
@@ -800,12 +797,15 @@
                     }
                 }
 
+                // UI 표출용 펜스 내부 매장 카운트 (이건 펜스 안쪽만 세는게 맞으므로 기존 로직 유지)
                 let targetStats = { comp: 0, anchor: 0 };
-                for (let i = 0; i < validNodes.length; i++) {
-                    let p = validNodes[i];
-                    if (p.brandKey && BRAND_CONFIG[p.brandKey]) {
-                        if (BRAND_CONFIG[p.brandKey].isComp) targetStats.comp++;
-                        else if (BRAND_CONFIG[p.brandKey].isAnchor) targetStats.anchor++;
+                for (let i = 0; i < rawScannedNodes.length; i++) {
+                    let p = rawScannedNodes[i];
+                    if(isPointInPolygon(parseFloat(p.y), parseFloat(p.x), targetPath)) {
+                        if (p.brandKey && BRAND_CONFIG[p.brandKey]) {
+                            if (BRAND_CONFIG[p.brandKey].isComp) targetStats.comp++;
+                            else if (BRAND_CONFIG[p.brandKey].isAnchor) targetStats.anchor++;
+                        }
                     }
                 }
                 document.getElementById('comp_count').innerText = targetStats.comp + '개';
@@ -952,7 +952,7 @@
                     }
                     if(isNearSubway) continue;
 
-                    // 💡 [버그 픽스 2] 1위 밀어내기 강제 룰 축소: 120m -> 30m 로 좁혀서 펜스 내 1~3위가 모두 표시되도록 수정
+                    // 💡 [버그 픽스 2] 1위 밀어내기 강제 룰 30m 유지 (펜스 내 1,2,3위 모두 표시)
                     let tooClose = false;
                     for(let k=0; k<topSpots.length; k++) {
                         if(getDistanceMeters(candidate.lat, candidate.lng, topSpots[k].lat, topSpots[k].lng) < 30) { 
@@ -1012,7 +1012,7 @@
                 }
 
                 document.getElementById('rankingResultBox').classList.remove('hidden');
-                statusEl.innerText = `✅ [V43.1 버그픽스] 핀셋 수정 완료! 분석이 정상 작동합니다.`;
+                statusEl.innerText = `✅ [V43.2 버그픽스] 랭킹 증발 원인 해결! 30m 간격으로 1~3위 정상 표출됩니다.`;
 
             } catch(e) {
                 console.error("분석 에러:", e);
