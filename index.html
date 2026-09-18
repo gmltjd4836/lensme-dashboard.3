@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>렌즈미 상권 분석 대시보드 V54.1 길목정확스냅 TOP3</title>
+<title>렌즈미 상권 분석 대시보드 V55 수동상권 TOP3</title>
 <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css" rel="stylesheet">
 <script src="https://cdn.tailwindcss.com"></script>
 <style>
@@ -31,104 +31,63 @@ details[open]>summary::before{content:'📂 '}
 <div class="w-full md:w-1/4 bg-white border-r border-gray-200 p-6 flex flex-col shadow-lg z-20 overflow-y-auto">
 <h1 class="text-xl font-extrabold text-slate-800 border-b-4 border-indigo-500 pb-3 mb-4 flex justify-between items-center">
 <span>🗺️ 전국 상권 관제탑</span>
-<span class="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded-full font-bold">V54.1 길목스냅</span>
+<span class="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded-full font-bold">V55</span>
 </h1>
 
-<div class="mb-4">
-<p class="text-xs text-slate-400 font-bold mb-2">출점 검토 모드 · 기존 렌즈미 50m 확인</p>
+<div class="mb-3">
 <div class="flex gap-2 bg-slate-100 p-1 rounded-lg border border-slate-200">
-<button id="btnModeNew" onclick="setMode('new')" class="flex-1 bg-white text-indigo-700 shadow-sm px-3 py-1.5 rounded-md text-[13px] font-extrabold transition">🚀 신규 출점</button>
-<button id="btnModeReloc" onclick="setMode('reloc')" class="flex-1 text-slate-500 hover:text-slate-800 px-3 py-1.5 rounded-md text-[13px] font-bold transition">🚚 매장 이전</button>
+<button id="btnModeNew" onclick="setMode('new')" class="flex-1 bg-white text-indigo-700 shadow-sm px-3 py-2 rounded-md text-[13px] font-extrabold transition">🚀 신규 출점</button>
+<button id="btnModeReloc" onclick="setMode('reloc')" class="flex-1 text-slate-500 hover:text-slate-800 px-3 py-2 rounded-md text-[13px] font-bold transition">🚚 매장 이전</button>
 </div>
-</div>
-
-<div id="relocationPanel" class="hidden mb-4 bg-amber-50 border border-amber-200 p-3 rounded-xl">
-<label class="text-sm font-bold block mb-2" for="relocationStore">이전할 기존 렌즈미</label>
-<select id="relocationStore" onchange="changeRelocationStore()" class="w-full border rounded p-2 text-sm"><option value="">매장을 선택하세요</option></select>
-<button onclick="loadRelocationStores()" class="mt-2 text-xs underline">현재 지도 주변 렌즈미 다시 찾기</button>
-<p id="relocationNotice" class="text-xs text-slate-600 mt-2">선택한 매장만 50m 제외 대상에서 뺍니다. 다른 렌즈미는 유지합니다.</p>
+<p id="modeHint" class="text-[10px] text-slate-500 mt-1.5 px-1">신규 출점은 기존 렌즈미 50m 이내 후보를 제외합니다.</p>
 </div>
 
-<div class="mb-4 bg-slate-50 border p-3 rounded-xl text-xs">
-<b>현장조사 TOP3 기준</b>
-<p class="mt-1 text-slate-600">핵심동선 30 · 관련시설 20 · 상업활성 15 · 접근성 15 · 길목성 10 · 경쟁환경 10점.</p>
-<p class="mt-1 text-slate-600">신규 출점은 기존 렌즈미 50m 이내를 후보에서 제외하고, TOP 후보끼리는 원칙적으로 70m 이상 떨어뜨립니다.</p>
-<label class="mt-2 flex items-center gap-2 text-[11px] font-bold text-slate-600 cursor-pointer"><input id="showAnalysisLines" type="checkbox" onchange="toggleAnalysisLines()"> 세부 분석선 보기</label>
-<button onclick="reanalyzeActive()" class="mt-2 bg-indigo-600 text-white px-3 py-2 rounded">선택 상권 TOP3 다시 분석</button>
-<button id="cancelAnalysisBtn" onclick="cancelAnalysis()" class="hidden mt-2 border px-3 py-2 rounded">진행 중 분석 취소</button>
-</div>
-
-<div class="mb-4 bg-slate-50 p-4 rounded-xl border border-slate-200">
-<label class="block text-sm font-extrabold text-indigo-700 mb-2">🎯 상권 검색 이동</label>
+<div class="mb-3 bg-slate-50 p-3 rounded-xl border border-slate-200">
 <div class="flex gap-2">
-<input type="text" id="searchInput" placeholder="예: 의정부역, 부평역" class="w-full bg-white border border-indigo-300 px-3 py-2 rounded-lg text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500" onkeypress="if(event.key==='Enter') searchLocation()">
+<input type="text" id="searchInput" placeholder="예: 부평역, 의정부역" class="w-full bg-white border border-indigo-300 px-3 py-2 rounded-lg text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500" onkeypress="if(event.key==='Enter') searchLocation()">
 <button onclick="searchLocation()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-2 rounded-lg text-sm font-bold transition shadow-sm whitespace-nowrap">검색</button>
 </div>
 </div>
 
-<div class="hidden mb-4 bg-cyan-50 p-4 rounded-xl border border-cyan-200 shadow-sm" aria-hidden="true">
-<div class="flex justify-between items-center mb-2">
-<label class="block text-sm font-extrabold text-cyan-800">🗺️ 상권 전체영역 자동 탐색</label>
-<span id="autoAreaCount" class="text-[10px] bg-white border border-cyan-200 text-cyan-700 px-2 py-0.5 rounded-full font-black">0개</span>
+<div class="mb-3 bg-rose-50 p-3 rounded-xl border border-rose-200">
+<button onclick="startDrawing()" id="btnStartDraw" class="w-full bg-rose-500 hover:bg-rose-600 text-white px-3 py-2.5 rounded-lg text-sm font-extrabold transition shadow-sm">✍️ 상권 경계 직접 그리기</button>
+<div class="hidden flex gap-2 mt-2" id="activeDrawButtons">
+<button onclick="saveDrawing()" id="btnSaveDraw" class="flex-1 bg-emerald-500 hover:bg-emerald-600 text-white px-3 py-2 rounded-lg text-sm font-bold transition shadow-sm">💾 저장</button>
+<button onclick="cancelDrawing()" id="btnCancelDraw" class="flex-1 bg-slate-500 hover:bg-slate-600 text-white px-3 py-2 rounded-lg text-sm font-bold transition shadow-sm">취소</button>
 </div>
-<button id="btnDiscoverAreas" onclick="discoverTradeAreas()" class="w-full bg-cyan-600 hover:bg-cyan-700 text-white px-3 py-2 rounded-lg text-sm font-extrabold transition shadow-sm mb-2">이 지역 상권 전체영역 찾기</button>
-<div class="grid grid-cols-3 gap-1 text-[10px] font-bold mb-2">
-<label class="flex items-center gap-1 bg-white rounded px-1.5 py-1 border border-blue-100 cursor-pointer"><input id="f_area_official" type="checkbox" checked onchange="refreshTradeAreaVisibility()" class="chk-blue">🔷공식</label>
-<label class="flex items-center gap-1 bg-white rounded px-1.5 py-1 border border-orange-100 cursor-pointer"><input id="f_area_estimated" type="checkbox" checked onchange="refreshTradeAreaVisibility()" class="chk-orange">🟠추정</label>
-<label class="flex items-center gap-1 bg-white rounded px-1.5 py-1 border border-pink-100 cursor-pointer"><input id="f_area_user" type="checkbox" checked onchange="refreshTradeAreaVisibility()" class="chk-pink">🩷직접</label>
-</div>
-<div class="text-[10px] leading-snug text-slate-500 mb-2">
-보행축과 연결된 주변 상가·골목·상업 블록을 함께 묶어 상권 영역을 표시합니다. 공식 경계는 원형을 보존하며, 자동 추정 경계는 현장 검토가 필요합니다.
-</div>
-<p id="areaDataNotice" class="text-[10px] text-slate-500 mb-2"></p>
-<div id="autoAreaList" class="space-y-1.5 max-h-44 overflow-y-auto"></div>
+<p class="text-[10px] text-slate-500 mt-2">마지막 점을 더블클릭하면 바로 TOP3를 분석합니다.</p>
 </div>
 
-<div class="mb-4 bg-rose-50 p-4 rounded-xl border border-rose-200 flex-grow flex flex-col min-h-[260px]">
-<div class="flex items-center justify-between gap-2 mb-2">
-<label class="block text-sm font-extrabold text-rose-700">✍️ 상권 직접 등록</label>
-<span class="text-[10px] font-black bg-white border border-rose-200 text-rose-600 rounded-full px-2 py-0.5">수동 경계 = 분석 기준</span>
+<div class="mb-3 bg-white p-3 rounded-xl border border-slate-200">
+<div class="flex items-center justify-between mb-2">
+<label class="text-sm font-extrabold text-slate-700">📁 저장 상권</label>
+<div class="flex gap-2 text-[10px] font-bold text-slate-500">
+<button onclick="exportAreas()" class="underline">백업</button>
+<label class="underline cursor-pointer">복원<input type="file" accept=".json" class="hidden" onchange="importAreas(this)"></label>
 </div>
-<div class="rounded-lg bg-white/90 border border-rose-100 p-2.5 text-[10.5px] leading-relaxed text-slate-600 mb-3">
-<b class="text-slate-800">① 검색 이동 → ② 지도에서 경계 클릭 → ③ 마지막 점에서 더블클릭 → ④ 꼭짓점 수정 → ⑤ 저장</b><br>
-저장한 상권을 클릭하면 그 경계 안에서만 렌즈샵·앵커시설·보행 길목을 분석합니다. 자동 추정 상권은 사용하지 않습니다.
 </div>
-<div class="flex gap-2 mb-3" id="drawControls">
-<button onclick="startDrawing()" id="btnStartDraw" class="w-full bg-rose-500 hover:bg-rose-600 text-white px-3 py-2 rounded-lg text-sm font-extrabold transition shadow-sm">➕ 상권 경계 직접 그리기</button>
-<button onclick="saveDrawing()" id="btnSaveDraw" class="hidden flex-1 bg-emerald-500 hover:bg-emerald-600 text-white px-3 py-2 rounded-lg text-sm font-bold transition shadow-sm">✅ 이 경계 저장</button>
-<button onclick="cancelDrawing()" id="btnCancelDraw" class="hidden flex-1 bg-slate-500 hover:bg-slate-600 text-white px-3 py-2 rounded-lg text-sm font-bold transition shadow-sm">취소</button>
-</div>
-<div class="flex items-center justify-between gap-2 mb-2 px-1">
-<div class="flex gap-3">
-<button onclick="exportAreas()" class="text-xs underline font-bold text-slate-600">⬇ JSON 백업</button>
-<label class="text-xs underline cursor-pointer font-bold text-slate-600">⬆ 백업 복원<input type="file" accept=".json" class="hidden" onchange="importAreas(this)"></label>
-</div>
-<span class="text-[9px] text-slate-400">브라우저에도 자동 저장</span>
-</div>
-<div id="savedPolygonTree" class="flex-grow overflow-y-auto space-y-1 bg-white p-2 rounded border border-rose-100 shadow-inner text-sm"></div>
+<div id="savedPolygonTree" class="max-h-52 overflow-y-auto space-y-1 text-sm"></div>
 </div>
 
-<div class="mb-2 bg-white p-4 rounded-lg border border-slate-200 shadow-sm space-y-3">
-<div>
-<p class="text-xs text-slate-400 font-bold mb-1">현재 분석 타겟</p>
-<div class="flex justify-between items-center bg-slate-50 border border-indigo-300 rounded-md px-3 py-1.5">
-<span id="targetLocationInput" class="font-extrabold text-indigo-600 text-sm truncate">선택 없음 (자유 탐색)</span>
-<button onclick="clearActivePolygon()" id="btnClearPolygon" class="hidden text-xs bg-slate-200 text-slate-600 px-2 py-1 rounded font-bold hover:bg-slate-300 whitespace-nowrap ml-2">해제</button>
+<div class="mb-2 bg-white p-3 rounded-xl border border-indigo-200 shadow-sm">
+<div class="flex justify-between items-center gap-2 mb-2">
+<div class="min-w-0">
+<p class="text-[10px] text-slate-400 font-bold">현재 상권</p>
+<span id="targetLocationInput" class="font-extrabold text-indigo-700 text-sm truncate block">선택 없음</span>
+</div>
+<button onclick="clearActivePolygon()" id="btnClearPolygon" class="hidden text-[10px] bg-slate-100 text-slate-500 px-2 py-1 rounded font-bold">해제</button>
+</div>
+<div id="relocAutoNotice" class="hidden mb-2 rounded-md bg-amber-50 border border-amber-100 px-2 py-1.5 text-[10px] font-bold text-amber-700">🚚 펜스 안 렌즈미를 이전 대상점으로 자동 적용합니다.</div>
+<div class="grid grid-cols-2 gap-2 text-[10px] mb-2">
+<div class="rounded-md bg-pink-50 px-2 py-1.5"><span class="text-slate-500">렌즈샵</span><b id="comp_count" class="float-right text-pink-600">-</b></div>
+<div class="rounded-md bg-emerald-50 px-2 py-1.5"><span class="text-slate-500">앵커시설</span><b id="anchor_count" class="float-right text-emerald-600">-</b></div>
+</div>
+<div id="rankingResultBox" class="hidden border-t border-indigo-100 pt-2">
+<div id="rankingResultText" class="space-y-0"></div>
 </div>
 </div>
-<div class="bg-indigo-50/80 p-3 rounded-lg border border-indigo-100 space-y-1.5 mt-2">
-<div class="flex justify-between items-center text-xs font-bold text-slate-700">
-<span>⚔️ 펜스 내 렌즈샵:</span><span id="comp_count" class="text-sm font-black text-pink-600">-개</span>
-</div>
-<div class="flex justify-between items-center text-xs font-bold text-slate-700">
-<span>📸 펜스 내 앵커시설:</span><span id="anchor_count" class="text-sm font-black text-emerald-600">-개</span>
-</div>
-<div id="rankingResultBox" class="mt-3 pt-3 border-t border-indigo-200 hidden">
-<p class="text-xs text-indigo-800 font-extrabold mb-2">🔥 보행 구간 조사 우선순위</p>
-<div id="rankingResultText" class="space-y-0 mb-3 pb-2"></div>
-</div>
-</div>
-</div>
+
+<button id="cancelAnalysisBtn" onclick="cancelAnalysis()" class="hidden mb-2 text-[10px] border border-slate-300 bg-white px-2 py-1 rounded text-slate-500">분석 취소</button>
 </div>
 
 <div class="w-full md:w-3/4 flex flex-col bg-slate-50 overflow-hidden relative">
@@ -160,7 +119,7 @@ details[open]>summary::before{content:'📂 '}
 </div>
 </div>
 
-<div id="heatLegend" class="absolute bottom-5 right-5 z-10 bg-white/95 backdrop-blur-sm p-3 rounded-xl shadow-lg border border-slate-200 hidden md:block">
+<div id="heatLegend" class="hidden">
 <p class="text-[11px] font-extrabold text-slate-700 mb-2">세부 분석선 · 조사 참고</p>
 <div class="space-y-1 text-[10px] font-bold text-slate-600">
 <div><span class="inline-block w-5 h-2 rounded mr-2" style="background:#2563eb"></span>낮음</div>
@@ -196,26 +155,18 @@ level:3}),h=new kakao.maps.services.Places,p=new kakao.maps.services.Geocoder,y=
 }),w=null,b=null,k={},x={},I=!1,S=null,T=!1,O=0,v=[],L={},C={},R=null,P=[],N=[],analysisLines=[];
 
 function D(t){return String(t.id||`${t.place_name}|${t.x}|${t.y}`)}
+function isRelocationStore(t,ctx){return !!(ctx&&ctx.mode==="reloc"&&Array.isArray(ctx.relocationStoreIds)&&ctx.relocationStoreIds.includes(D(t)))}
 function U(t){if(t!==O||r?.signal.aborted)throw new DOMException("분석 취소","AbortError")}
-function $(t){T=t,document.getElementById("cancelAnalysisBtn").classList.toggle("hidden",!t)}
+function $(t){T=t;const b=document.getElementById("cancelAnalysisBtn");b&&b.classList.toggle("hidden",!t)}
 function cancelAnalysis(){O++,r?.abort(),Rt(),document.getElementById("rankingResultBox").classList.add("hidden"),
 document.getElementById("statusMessage").textContent="취소했습니다. 현재 요청 정리가 끝나면 다시 분석할 수 있습니다."}
 function refreshBrandVisibility(){A.forEach((({marker:t,brand:e})=>t.setMap("f_optical_gen"===e||document.getElementById(e)?.checked?f:null)))}
 function reanalyzeActive(){if(T)return alert("진행 중인 분석이 끝난 뒤 다시 실행해주세요.");w?ce(w):alert("먼저 지도나 목록에서 상권을 선택해주세요.")}
 function B(t){return!t.queryMeta||t.queryMeta.failed||t.queryMeta.truncated}
 
-async function loadRelocationStores(){
-if(T)return alert("진행 중인 작업이 끝난 뒤 매장을 찾아주세요.");$(!0);const t=++O;r=new AbortController;
-try{const n=await Z("렌즈미",{location:f.getCenter(),radius:e.SEARCH_RADIUS_MAX,sort:kakao.maps.services.SortBy.DISTANCE},3);U(t),G(n),
-document.getElementById("relocationNotice").textContent=B(n)?"일부 매장을 확보하지 못했습니다. 지도를 기존 매장 가까이 옮겨 다시 찾아주세요.":"이전할 매장을 선택하세요. 선택한 매장만 제외하며 다른 렌즈미의 50m 제한은 유지합니다."}
-catch(t){document.getElementById("relocationNotice").textContent="AbortError"===t.name?"매장 조회를 취소했습니다.":"매장을 찾지 못했습니다. 다시 시도해주세요."}
-finally{$(!1)}}
-
-function G(t){s=et([...s,...t]);const e=document.getElementById("relocationStore");e.replaceChildren(new Option("매장을 선택하세요",""));
-for(const t of s)e.add(new Option(`${t.place_name} · ${t.road_address_name||t.address_name||""}`,D(t)));e.value=a}
-function changeRelocationStore(){
-if(T)return document.getElementById("relocationStore").value=a,alert("분석 중에는 이전 대상을 변경할 수 없습니다.");
-a=document.getElementById("relocationStore").value,Rt(),document.getElementById("rankingResultBox").classList.add("hidden"),w&&a&&ce(w)}
+async function loadRelocationStores(){return []}
+function G(t){s=et([...s,...t])}
+function changeRelocationStore(){}
 
 function H(t){
 if("Feature"===t?.type)return t;
@@ -588,24 +539,32 @@ return t.filter((t=>t?.id&&t?.name&&j(H(t.geometry||t.path))))}
 catch(t){return setTimeout((()=>alert("저장된 상권을 읽지 못했습니다. 기존 저장값은 유지했습니다. 백업 파일을 가져오세요.")),0),[]}}();
 
 function setMode(t){
-if(T)return alert("진행 중인 작업을 마친 후 모드를 바꿔주세요.");n=t;
-for(const[e,n]of[["btnModeNew","new"],["btnModeReloc","reloc"]])
-document.getElementById(e).className="flex-1 px-3 py-1.5 rounded-md text-[13px] font-bold "+(n===t?"bg-white text-indigo-700 shadow-sm":"text-slate-500");
-document.getElementById("relocationPanel").classList.toggle("hidden","reloc"!==t),Rt(),
-document.getElementById("rankingResultBox").classList.add("hidden"),"reloc"!==t||a?w&&ce(w):loadRelocationStores().catch((()=>{}))}
+if(T)return alert("현재 분석이 끝난 뒤 모드를 바꿔주세요.");
+n=t;
+for(const[id,mode]of[["btnModeNew","new"],["btnModeReloc","reloc"]]){
+const el=document.getElementById(id);if(el)el.className="flex-1 px-3 py-2 rounded-md text-[13px] font-bold "+(mode===t?"bg-white text-indigo-700 shadow-sm":"text-slate-500 hover:text-slate-800")}
+const hint=document.getElementById("modeHint"),notice=document.getElementById("relocAutoNotice");
+if(t==="reloc"){
+hint&&(hint.textContent="매장 이전은 펜스 안 렌즈미를 자동으로 기존점 처리합니다.");notice&&notice.classList.remove("hidden")
+}else{
+hint&&(hint.textContent="신규 출점은 기존 렌즈미 50m 이내 후보를 제외합니다.");notice&&notice.classList.add("hidden")}
+Rt();document.getElementById("rankingResultBox")?.classList.add("hidden");if(w)setTimeout(()=>{T||ce(w)},30)
+}
 let redrawTarget=null;
+function setDrawUi(active){
+const start=document.getElementById("btnStartDraw"),box=document.getElementById("activeDrawButtons");
+start&&start.classList.toggle("hidden",active);box&&box.classList.toggle("hidden",!active)
+}
 
 function startDrawing(){
 if(T)return alert("현재 분석 중입니다. 분석이 끝난 뒤 다시 눌러주세요.");
 I=!0,S=null,clearActivePolygon(!0),
-document.getElementById("btnStartDraw").classList.add("hidden"),document.getElementById("btnSaveDraw").classList.remove("hidden"),
-document.getElementById("btnCancelDraw").classList.remove("hidden"),document.getElementById("statusMessage").innerText="🖍️ 상권 외곽을 순서대로 클릭하고 마지막 점에서 더블클릭하세요. 완료 후 꼭짓점을 조정할 수 있습니다.",
+setDrawUi(!0),document.getElementById("statusMessage").innerText="🖍️ 상권 외곽을 순서대로 클릭하고 마지막 점에서 더블클릭하세요. 완료 후 꼭짓점을 조정할 수 있습니다.",
 vt.select(kakao.maps.drawing.OverlayType.POLYGON)}
 function cancelDrawing(){
 if(T)return;
 I=!1,S=null,vt.clear(),Rt();
-document.getElementById("btnStartDraw").classList.remove("hidden"),
-document.getElementById("btnSaveDraw").classList.add("hidden"),document.getElementById("btnCancelDraw").classList.add("hidden");
+setDrawUi(!1);
 if(redrawTarget){
 const original=redrawTarget;redrawTarget=null;
 const restored=Lt.some(t=>t.id===original.id)?Lt:[...Lt,original];
@@ -624,8 +583,7 @@ const a=K(e),region=await dt(a.lng,a.lat),o=old?.id||("poly_"+Date.now()),r={...
 si:region.si||old?.si||"직접 등록",gu:region.gu||old?.gu||"전체",dong:region.dong||old?.dong||"거리 상권",centerLat:a.lat,centerLng:a.lng,
 reviewStatus:"사용자 직접 작성",savedAt:(new Date).toISOString()};
 const next=old?[...Lt.filter(t=>t.id!==old.id),r]:[...Lt,r];
-X(next)&&(redrawTarget=null,vt.clear(),I=!1,S=null,document.getElementById("btnStartDraw").classList.remove("hidden"),
-document.getElementById("btnSaveDraw").classList.add("hidden"),document.getElementById("btnCancelDraw").classList.add("hidden"),Ct(),selectSavedPolygon(o),
+X(next)&&(redrawTarget=null,vt.clear(),I=!1,S=null,setDrawUi(!1),Ct(),selectSavedPolygon(o),
 document.getElementById("statusMessage").innerText=`✅ ${n.trim()} 경계를 저장했습니다. 이 상권 안에서 분석합니다.`)
 }
 
@@ -646,29 +604,23 @@ document.getElementById("statusMessage").innerText=`✏️ ${area.name}: 새 경
 }
 
 function Ct(){
-let t=document.getElementById("savedPolygonTree");
-t.innerHTML="",Object.values(k).forEach((t=>t.setMap(null))),Object.values(x).forEach((t=>t.setMap(null))),k={},x={};
-let e={};Lt.forEach((t=>{e[t.si]||(e[t.si]={}),e[t.si][t.gu]||(e[t.si][t.gu]={}),e[t.si][t.gu][t.dong]||(e[t.si][t.gu][t.dong]=[]),e[t.si][t.gu][t.dong].push(t)}));
-for(let n in e){
-let a=document.createElement("details");a.open=!0,a.innerHTML=`<summary>${V(n)}</summary><div class="tree-indent"></div>`;
-let o=a.querySelector(".tree-indent");
-for(let t in e[n]){
-let a=document.createElement("details");a.open=!0,a.innerHTML=`<summary>${V(t)}</summary><div class="tree-indent"></div>`;
-let r=a.querySelector(".tree-indent");
-for(let a in e[n][t]){
-let o=e[n][t][a],s=document.createElement("details");s.open=!0,
-s.innerHTML=`<summary>${V(a)} <span class="text-rose-500 text-xs">(${o.length})</span></summary><div class="tree-indent"></div>`;
-let i=s.querySelector(".tree-indent");
-o.forEach((t=>{
-let e=document.createElement("div");e.className="flex justify-between items-center py-1 border-b border-gray-100 last:border-0",
-e.innerHTML=`<span class="font-bold text-rose-600 cursor-pointer hover:underline flex-grow" onclick="selectSavedPolygon('${t.id}')">📍 ${V(t.name)}</span><div class="flex gap-1 ml-2"><button onclick="renamePolygon('${t.id}')" class="text-[10px] bg-indigo-50 border border-indigo-100 px-1.5 py-0.5 rounded text-indigo-600 hover:bg-indigo-100">이름</button><button onclick="redrawPolygon('${t.id}')" class="text-[10px] bg-amber-50 border border-amber-100 px-1.5 py-0.5 rounded text-amber-700 hover:bg-amber-100">경계수정</button><button onclick="deletePolygon('${t.id}')" class="text-[10px] bg-slate-200 px-1.5 py-0.5 rounded text-slate-600 hover:bg-slate-300">삭제</button></div>`,
-i.appendChild(e);
-let n=W(t.geometry||t.path,{strokeWeight:2,strokeColor:"#be185d",strokeOpacity:.8,fillOpacity:.1,fillColor:"#f43f5e"},(()=>selectSavedPolygon(t.id)));
-!1!==document.getElementById("f_area_user")?.checked&&n.setMap(f),k[t.id]=n;
-let a=`<div style="position:relative;z-index:80"><div class="poly-nametag">${V(t.name)}</div></div>`,
-o=new kakao.maps.CustomOverlay({position:new kakao.maps.LatLng(t.centerLat,t.centerLng),content:a,xAnchor:.5,yAnchor:.5});
-!1!==document.getElementById("f_area_user")?.checked&&o.setMap(f),x[t.id]=o})),r.appendChild(s)}
-o.appendChild(a)}t.appendChild(a)}}
+let root=document.getElementById("savedPolygonTree");if(!root)return;
+root.innerHTML="";Object.values(k).forEach(t=>t.setMap(null));Object.values(x).forEach(t=>t.setMap(null));k={};x={};
+const grouped={};
+Lt.forEach(area=>{const city=area.si||"미분류",dong=area.dong||"미분류";(grouped[city]||(grouped[city]={}));(grouped[city][dong]||(grouped[city][dong]=[])).push(area)});
+const cities=Object.keys(grouped).sort((a,b)=>a.localeCompare(b,"ko"));
+if(!cities.length){root.innerHTML='<div class="text-[11px] text-slate-400 py-3 text-center">저장된 상권이 없습니다.</div>';return}
+for(const city of cities){
+const cityEl=document.createElement("details");cityEl.open=!0;cityEl.innerHTML=`<summary>${V(city)}</summary><div class="tree-indent"></div>`;const cityBody=cityEl.querySelector(".tree-indent");
+for(const dong of Object.keys(grouped[city]).sort((a,b)=>a.localeCompare(b,"ko"))){
+const dongEl=document.createElement("details");dongEl.open=!0;dongEl.innerHTML=`<summary>${V(dong)}</summary><div class="tree-indent"></div>`;const dongBody=dongEl.querySelector(".tree-indent");
+for(const area of grouped[city][dong].sort((a,b)=>String(a.name).localeCompare(String(b.name),"ko"))){
+const row=document.createElement("div");row.className="flex items-center gap-1 py-1.5 border-b border-slate-100 last:border-0";
+row.innerHTML=`<button class="min-w-0 flex-1 text-left font-extrabold text-rose-600 hover:underline truncate" onclick="selectSavedPolygon('${area.id}')">📍 ${V(area.name)}</button><button onclick="renamePolygon('${area.id}')" title="이름 변경" class="text-[10px] px-1.5 py-1 rounded bg-slate-50 text-slate-500">이름</button><button onclick="redrawPolygon('${area.id}')" title="경계 수정" class="text-[10px] px-1.5 py-1 rounded bg-slate-50 text-slate-500">수정</button><button onclick="deletePolygon('${area.id}')" title="삭제" class="text-[10px] px-1.5 py-1 rounded bg-slate-50 text-slate-400">×</button>`;dongBody.appendChild(row);
+const poly=W(area.geometry||area.path,{strokeWeight:2,strokeColor:"#be185d",strokeOpacity:.8,fillOpacity:.1,fillColor:"#f43f5e"},(()=>selectSavedPolygon(area.id)));poly.setMap(f);k[area.id]=poly;
+const tag=`<div style="position:relative;z-index:80"><div class="poly-nametag">${V(area.name)}</div></div>`;const ov=new kakao.maps.CustomOverlay({position:new kakao.maps.LatLng(area.centerLat,area.centerLng),content:tag,xAnchor:.5,yAnchor:.5});ov.setMap(f);x[area.id]=ov
+}cityBody.appendChild(dongEl)}root.appendChild(cityEl)}
+}
 
 function deletePolygon(t){if(confirm("이 상권 경계를 삭제하시겠습니까?"))return T?alert("분석 종료 후 삭제해주세요."):void(X(Lt.filter((e=>e.id!==t)))&&(b===t&&clearActivePolygon(),Ct()))}
 function selectSavedPolygon(t){
@@ -683,7 +635,7 @@ k[t]&&k[t].setOptions({fillColor:"#ec4899",fillOpacity:.25,strokeWeight:4}),ce(w
 function clearActivePolygon(t=!1){
 if(T)return alert("분석이 끝난 후 해제하거나 먼저 취소해주세요.");
 b=null,R=null,w=null,S=null,
-document.getElementById("targetLocationInput").innerText="선택 없음 (자유 탐색)",document.getElementById("btnClearPolygon").classList.add("hidden"),
+document.getElementById("targetLocationInput").innerText="선택 없음",document.getElementById("btnClearPolygon").classList.add("hidden"),
 document.getElementById("comp_count").innerText="-개",document.getElementById("anchor_count").innerText="-개",document.getElementById("rankingResultBox").classList.add("hidden"),
 document.getElementById("rankingResultText").innerHTML="",
 Object.values(k).forEach((t=>t.setOptions({fillColor:"#f43f5e",fillOpacity:.1,strokeWeight:2}))),
@@ -906,8 +858,7 @@ return e?`${t.routeHitIds.length>=5?"여러 핵심 시설 간 보행경로가 �
 
 async function ce(t){
 if(T||!t||t.length<3)return;
-if("reloc"===n&&!a)return void(document.getElementById("statusMessage").textContent="이전할 기존 렌즈미를 선택한 후 다시 분석해주세요.");
-o=Object.freeze({mode:n,relocationStoreId:a});const s=o,l=[];let d=!1;
+let s=Object.freeze({mode:n,relocationStoreIds:[]});o=s;const l=[];let d=!1;
 c=l,i=null,$(!0);const u=++O;r=new AbortController,Rt(),
 document.getElementById("rankingResultBox").classList.add("hidden"),document.getElementById("rankingResultText").innerHTML="";
 const m=document.getElementById("statusMessage");
@@ -945,14 +896,18 @@ U(u),B(e)&&l.push(`${t.kw}: 수집 불완전`),e.forEach((e=>{
 const n=e.id||`${e.place_name}|${e.x}|${e.y}`;I.has(n)||(I.add(n),e.isStealth=!0,e.stealthData=t,x.push(e))})),await z(20)}
 
 const T=x;
-if(U(u),A.clear(),y.forEach((t=>t.setMap(null))),y=[],
-T.filter((t=>t.brandKey)).forEach((t=>jt(t,t.brandKey))),G(T.filter((t=>"f_lensme"===t.brandKey))),
-function(t,n){for(const a of t){
-if("f_lensme"!==a.brandKey||"reloc"===n.mode&&D(a)===n.relocationStoreId)continue;
-const t=new kakao.maps.Circle({center:new kakao.maps.LatLng(+a.y,+a.x),radius:e.TEAM_KILL_METERS,
-strokeColor:"#64748b",strokeStyle:"shortdash",strokeWeight:2,fillColor:"#94a3b8",fillOpacity:.12});t.setMap(f),_.push(t)}}(T,s),
-!d)return document.getElementById("rankingResultText").textContent="판단 보류: 기존 렌즈미 조회가 실패하거나 수집 한도에 도달했습니다. 50m 제외 여부를 확인할 수 없어 추천하지 않습니다. 범위를 줄이거나 다시 분석해주세요.",
-document.getElementById("rankingResultBox").classList.remove("hidden"),void(m.textContent="판단 보류 · 기존 렌즈미 정보 불완전");
+U(u);A.clear();y.forEach(t=>t.setMap(null));y=[];T.filter(t=>t.brandKey).forEach(t=>jt(t,t.brandKey));
+const relocationStores=T.filter(q=>q.brandKey==="f_lensme"&&Nt(+q.y,+q.x,t));
+s=Object.freeze({mode:n,relocationStoreIds:n==="reloc"?relocationStores.map(D):[]});o=s;
+const autoNotice=document.getElementById("relocAutoNotice");
+if(n==="reloc"){
+if(autoNotice){autoNotice.classList.remove("hidden");autoNotice.textContent=relocationStores.length?`🚚 펜스 안 렌즈미 ${relocationStores.length}개 자동 이전대상 적용`:`⚠️ 펜스 안 렌즈미 없음`}
+if(!relocationStores.length){document.getElementById("rankingResultText").innerHTML='<div class="text-xs font-bold text-amber-700">매장 이전 모드는 펜스 안에 렌즈미 매장이 있어야 합니다. 기존점을 포함하도록 펜스를 그려주세요.</div>';document.getElementById("rankingResultBox").classList.remove("hidden");m.textContent="매장 이전 분석 보류 · 펜스 안 렌즈미 없음";return}
+}else if(autoNotice){autoNotice.classList.add("hidden")}
+for(const store of T){
+if(store.brandKey!=="f_lensme"||isRelocationStore(store,s))continue;
+const circle=new kakao.maps.Circle({center:new kakao.maps.LatLng(+store.y,+store.x),radius:e.TEAM_KILL_METERS,strokeColor:"#64748b",strokeStyle:"shortdash",strokeWeight:2,fillColor:"#94a3b8",fillOpacity:.12});circle.setMap(f);_.push(circle)}
+if(!d){document.getElementById("rankingResultText").textContent="판단 보류: 기존 렌즈미 조회가 실패하거나 수집 한도에 도달했습니다. 50m 제외 여부를 확인할 수 없어 추천하지 않습니다. 범위를 줄여 다시 시도해주세요.";document.getElementById("rankingResultBox").classList.remove("hidden");m.textContent="판단 보류 · 기존 렌즈미 정보 불완전";return}
 
 let v={comp:0,anchor:0};
 T.forEach((e=>{Nt(+e.y,+e.x,t)&&e.brandKey&&J[e.brandKey]&&(J[e.brandKey].isComp?v.comp++:J[e.brandKey].isAnchor&&v.anchor++)})),
@@ -1050,13 +1005,13 @@ return{raw:o+Math.min(.5,.12*Math.max(0,r.size-1)),nearest:a,typeCount:r.size}}(
 h=function(t,e,n){
 const a=new Set(e.map((t=>t.route.id))).size;
 return{raw:.62*(n.armCount>=4?1:3===n.armCount?.86:.58)+.38*Math.min(1,a/5),uniqueRoutes:a}}(0,d,m),
-p=function(t,r,s=o||{mode:n,relocationStoreId:a}){
+p=function(t,r,s=o||{mode:n,relocationStoreIds:[]}){
 let i=1/0,l=0,c=0,d=1/0;
 for(const n of r){
 if(!n.brandKey||!J[n.brandKey]?.isComp)continue;
 const a=Pt(t.mid.lat,t.mid.lng,+n.y,+n.x);
 if("f_lensme"===n.brandKey){
-if("reloc"===s.mode&&D(n)===s.relocationStoreId)continue;i=Math.min(i,a)}
+if(isRelocationStore(n,s))continue;i=Math.min(i,a)}
 else d=Math.min(d,a),a<=80&&l++,a<=e.COMPETITION_RADIUS&&c++}
 const u=i<=e.TEAM_KILL_METERS;let m=1;
 return l>=1&&(m-=.04),l>=2&&(m-=.06*(l-1)),c>=4&&(m-=.04*Math.min(3,c-3)),
@@ -1078,7 +1033,7 @@ return t.forEach((t=>{const e=ae(m,t.score);t.percentile=Math.round(100*e),t.top
 N=N.filter((t=>!L.some((e=>("subway_exit"===e.type||"subway"===e.type)&&Pt(t.mid.lat,t.mid.lng,e.lat,e.lng)<12)))),
 N.forEach((t=>{
 t.excluded=function(t,n,a){
-return n.some((n=>"f_lensme"===n.brandKey&&!("reloc"===a.mode&&D(n)===a.relocationStoreId)&&Dt(+n.x,+n.y,t.a.lng,t.a.lat,t.b.lng,t.b.lat)<=e.TEAM_KILL_METERS))}(t,T,s),
+return n.some((n=>"f_lensme"===n.brandKey&&!isRelocationStore(n,a)&&Dt(+n.x,+n.y,t.a.lng,t.a.lat,t.b.lng,t.b.lat)<=e.TEAM_KILL_METERS))}(t,T,s),
 t.excluded&&(t.score=0)}));
 const $=N.filter((t=>!t.excluded)).map((t=>t.score)).sort(((t,e)=>t-e));
 N.forEach((t=>{t.topPercent=Math.max(1,101-Math.round(100*ae($,t.score)))})),
@@ -1160,10 +1115,8 @@ let e=vt.getData()[kakao.maps.drawing.OverlayType.POLYGON],n=e[e.length-1];
 S=n.points.map((t=>({lat:t.y,lng:t.x})));const a=H(S);
 if(!j(a)){document.getElementById("statusMessage").textContent="⚠️ 유효한 상권 경계가 아닙니다. 다시 그려주세요.";return}
 w=F(a),b=null,R=null;
-document.getElementById("btnStartDraw").classList.add("hidden"),
-document.getElementById("btnSaveDraw").classList.remove("hidden"),
-document.getElementById("btnCancelDraw").classList.remove("hidden"),
-document.getElementById("targetLocationInput").innerText="임시 상권 · 자동 TOP3 분석",
+setDrawUi(!0),
+document.getElementById("targetLocationInput").innerText="임시 상권",
 document.getElementById("btnClearPolygon").classList.remove("hidden"),
 document.getElementById("statusMessage").textContent="✅ 펜스 완성 · 상권 내부 TOP3를 바로 분석합니다...";
 setTimeout((()=>{T||ce(w)}),60)}));
