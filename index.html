@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>렌즈미 상권 분석 대시보드 (V43.0 100점 만점 & 무결점 픽스)</title>
+    <title>렌즈미 상권 분석 대시보드 (V43.1 핀셋 버그픽스)</title>
     <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
@@ -37,7 +37,7 @@
     <div class="w-full md:w-1/4 bg-white border-r border-gray-200 p-6 flex flex-col shadow-lg z-20 overflow-y-auto">
         <h1 class="text-xl font-extrabold text-slate-800 border-b-4 border-indigo-500 pb-3 mb-4 flex justify-between items-center">
             <span>🗺️ 전국 상권 관제탑</span>
-            <span class="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded-full font-bold">V43.0 💯</span>
+            <span class="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded-full font-bold">V43.1 🔧</span>
         </h1>
 
         <div class="mb-4">
@@ -155,7 +155,6 @@
         let ps = new kakao.maps.services.Places(); 
         let geocoder = new kakao.maps.services.Geocoder();
         
-        // 💡 [V42.2 하이브리드 카운터]
         const STATIC_COUNTS = {
             'lensme': 242, 
             'olens': 372, 
@@ -231,7 +230,7 @@
             polygonOptions: { draggable: false, removable: false, editable: true, strokeColor: '#be185d', strokeWeight: 3, fillColor: '#f43f5e', fillOpacity: 0.2 }
         });
 
-        let savedPolygons = JSON.parse(localStorage.getItem('lensmePolygonsV43_0') || '[]');
+        let savedPolygons = JSON.parse(localStorage.getItem('lensmePolygonsV43_1') || '[]');
         let activePolygonPath = null; 
         let activePolygonId = null;
         let renderedPolygons = {}; 
@@ -305,7 +304,7 @@
                     }
                     let id = 'poly_' + Date.now();
                     savedPolygons.push({ id: id, name: name, path: tempDrawnPath, si: si, gu: gu, dong: dong, centerLat: centerLat, centerLng: centerLng });
-                    localStorage.setItem('lensmePolygonsV43_0', JSON.stringify(savedPolygons));
+                    localStorage.setItem('lensmePolygonsV43_1', JSON.stringify(savedPolygons));
                     
                     drawingManager.clear();
                     isDrawingMode = false;
@@ -387,7 +386,7 @@
         function deletePolygon(id) {
             if(!confirm("이 영토를 삭제하시겠습니까?")) return;
             savedPolygons = savedPolygons.filter(p => p.id !== id);
-            localStorage.setItem('lensmePolygonsV43_0', JSON.stringify(savedPolygons));
+            localStorage.setItem('lensmePolygonsV43_1', JSON.stringify(savedPolygons));
             if(activePolygonId === id) clearActivePolygon();
             renderPolygonTree();
         }
@@ -642,17 +641,8 @@
                     let pl = new kakao.maps.Polyline({path: p, strokeWeight: 10, strokeColor: color, strokeOpacity: 0.7, strokeStyle: 'solid'});
                     pl.setMap(map); rankOverlays.push(pl);
                 });
-            } else {
-                let dLat = 0.0002; let dLng = 0.00025;
-                if(isCross) {
-                    let p1 = [new kakao.maps.LatLng(spot.lat - dLat, spot.lng), new kakao.maps.LatLng(spot.lat + dLat, spot.lng)];
-                    let p2 = [new kakao.maps.LatLng(spot.lat, spot.lng - dLng), new kakao.maps.LatLng(spot.lat, spot.lng + dLng)];
-                    [p1, p2].forEach(p => { let pl = new kakao.maps.Polyline({path: p, strokeWeight: 10, strokeColor: color, strokeOpacity: 0.5}); pl.setMap(map); rankOverlays.push(pl); });
-                } else {
-                    let p1 = [new kakao.maps.LatLng(spot.lat - dLat, spot.lng - dLng), new kakao.maps.LatLng(spot.lat + dLat, spot.lng + dLng)];
-                    let pl = new kakao.maps.Polyline({path: p1, strokeWeight: 10, strokeColor: color, strokeOpacity: 0.5}); pl.setMap(map); rankOverlays.push(pl);
-                }
-            }
+            } 
+            // 💡 [버그 픽스 1] 건물을 무식하게 뚫고 지나가던 땜빵용 가짜 직선 그리기(else 블록) 완전히 삭제!
 
             let shapeTitle = isCross ? `${rankNum}위 사거리` : `${rankNum}위 길목(거리)`;
             let badgePrefix = rankNum === 1 ? '💎 ' : (rankNum === 2 ? '⭐ ' : '✅ ');
@@ -692,7 +682,6 @@
                 cLat /= targetPath.length; cLng /= targetPath.length;
                 let centerPos = new kakao.maps.LatLng(cLat, cLng);
 
-                // 💡 [버그 픽스] 비상용 바둑판 그리드용 변수 선언 누락 문제 해결!
                 let latDiff = maxLat - minLat;
                 let lngDiff = maxLng - minLng;
 
@@ -867,9 +856,6 @@
                     }
                 }
 
-                // ========================================================
-                // 💡 [V43.0] 100점 만점제 완벽 압축 평가 (40m 초밀착 룰)
-                // ========================================================
                 for(let i=0; i<gridPoints.length; i++) {
                     let pt = gridPoints[i];
                     
@@ -881,12 +867,10 @@
                         let node = validNodes[j];
                         let dist = getDistanceMeters(pt.lat, pt.lng, parseFloat(node.y), parseFloat(node.x));
                         
-                        // 100m 이내 팀킬 쉴드 검사 (신규출점 모드 시)
                         if (node.brandKey === 'f_lensme' && currentMode === 'new' && dist <= 100) {
                             isTeamKill = true;
                         }
 
-                        // 💡 핵심: 40m 초과 시 점수 아예 없음 (0점)
                         if(dist <= 40) {
                             if(node.isStealth) {
                                 let sData = node.stealthData;
@@ -905,7 +889,6 @@
                         }
                     }
 
-                    // 카테고리별 만점 상한선(Cap) 적용
                     sOlive = Math.min(sOlive, 18);
                     sLens = Math.min(sLens, 12);
                     sDaiso = Math.min(sDaiso, 10);
@@ -918,7 +901,7 @@
                         let f = flowPaths[pIdx];
                         let distToFlow = distToSegment(pt.lng, pt.lat, f.x1, f.y1, f.x2, f.y2);
                         if(distToFlow <= 30) {
-                            sFlow += ((30 - distToFlow) / 30) * 10.0; // 물길 최대 10점
+                            sFlow += ((30 - distToFlow) / 30) * 10.0;
                             closeFlowEnds.add(`${f.x1},${f.y1}`);
                             closeFlowEnds.add(`${f.x2},${f.y2}`);
                         }
@@ -927,26 +910,24 @@
 
                     let sCorner = 0;
                     if(closeFlowEnds.size >= 3) {
-                        sCorner = 20; // 코너 자리 최대 20점
+                        sCorner = 20; 
                     }
 
                     let sSynergy = 0;
                     if (localOliveCount >= 1 && localDaisoCount >= 1 && localLensCount >= 1) {
-                        sSynergy = 20; // 3대장 생태계 조건 충족 20점
+                        sSynergy = 20; 
                     }
 
-                    // 총점 산출 (Max 100점)
                     let totalScore = sOlive + sLens + sDaiso + sStealth + sCoffee + sFlow + sCorner + sSynergy;
                     
                     if(isTeamKill) totalScore *= 0.01; 
 
                     pt.score = totalScore; 
                     
-                    // 영수증 표출용 데이터 바인딩
-                    pt.catAnchor = sOlive + sLens + sDaiso; // Max 40
-                    pt.catFlow = sFlow + sCorner;           // Max 30
-                    pt.catSynergy = sSynergy;               // Max 20
-                    pt.catInfra = sStealth + sCoffee;       // Max 10
+                    pt.catAnchor = sOlive + sLens + sDaiso; 
+                    pt.catFlow = sFlow + sCorner;           
+                    pt.catSynergy = sSynergy;               
+                    pt.catInfra = sStealth + sCoffee;       
                     
                     pt.detailOlive = sOlive; pt.detailLens = sLens; pt.detailDaiso = sDaiso;
                     pt.detailCorner = sCorner; pt.detailFlow = sFlow; pt.detailSynergy = sSynergy; pt.detailInfra = sStealth + sCoffee;
@@ -961,7 +942,6 @@
                     let candidate = gridPoints[i];
                     if(candidate.score < 1) continue; 
 
-                    // 지하철역(25m) 필터
                     let isNearSubway = false;
                     for(let g=0; g<rawGates.length; g++) {
                         if(rawGates[g].type === 'subway') {
@@ -972,10 +952,10 @@
                     }
                     if(isNearSubway) continue;
 
-                    // 1~3위 강제 분산 (120m)
+                    // 💡 [버그 픽스 2] 1위 밀어내기 강제 룰 축소: 120m -> 30m 로 좁혀서 펜스 내 1~3위가 모두 표시되도록 수정
                     let tooClose = false;
                     for(let k=0; k<topSpots.length; k++) {
-                        if(getDistanceMeters(candidate.lat, candidate.lng, topSpots[k].lat, topSpots[k].lng) < 120) { 
+                        if(getDistanceMeters(candidate.lat, candidate.lng, topSpots[k].lat, topSpots[k].lng) < 30) { 
                             tooClose = true; break; 
                         }
                     }
@@ -996,7 +976,6 @@
                         let expertComment = generateExpertComment(spot.score, spot);
                         let finalScore = Math.round(spot.score);
 
-                        // 100점 만점 기준 영수증 HTML
                         let receiptHtml = `
                             <div class="flex justify-between items-center text-teal-700"><span>🌿 핵심 앵커 파워 (Max 40)</span><span class="font-black">${Math.round(spot.catAnchor)}점</span></div>
                             <div class="flex justify-between items-center text-indigo-700"><span>🔀 길목 동선 파워 (Max 30)</span><span class="font-black">${Math.round(spot.catFlow)}점</span></div>
@@ -1033,7 +1012,7 @@
                 }
 
                 document.getElementById('rankingResultBox').classList.remove('hidden');
-                statusEl.innerText = `✅ [V43.0 무결점 픽스] 100점 만점제 & 40m 룰 완벽 작동 중!`;
+                statusEl.innerText = `✅ [V43.1 버그픽스] 핀셋 수정 완료! 분석이 정상 작동합니다.`;
 
             } catch(e) {
                 console.error("분석 에러:", e);
