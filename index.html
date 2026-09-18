@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>렌즈미 상권 분석 대시보드 (V46.0 자동 상권 탐색 + 보행 Segment 입지 엔진)</title>
+    <title>렌즈미 상권 분석 대시보드 (V47.0 보행 Graph 상권 분할 + Segment 입지 엔진)</title>
     <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
@@ -37,7 +37,7 @@
     <div class="w-full md:w-1/4 bg-white border-r border-gray-200 p-6 flex flex-col shadow-lg z-20 overflow-y-auto">
         <h1 class="text-xl font-extrabold text-slate-800 border-b-4 border-indigo-500 pb-3 mb-4 flex justify-between items-center">
             <span>🗺️ 전국 상권 관제탑</span>
-            <span class="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded-full font-bold">V46.0 🧭</span>
+            <span class="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded-full font-bold">V47.0 🕸️</span>
         </h1>
 
         <div class="mb-4">
@@ -58,17 +58,17 @@
 
         <div class="mb-4 bg-cyan-50 p-4 rounded-xl border border-cyan-200 shadow-sm">
             <div class="flex justify-between items-center mb-2">
-                <label class="block text-sm font-extrabold text-cyan-800">🧭 주변 상권 자동 탐색</label>
+                <label class="block text-sm font-extrabold text-cyan-800">🕸️ 보행망 상권 자동 탐색</label>
                 <span id="autoAreaCount" class="text-[10px] bg-white border border-cyan-200 text-cyan-700 px-2 py-0.5 rounded-full font-black">0개</span>
             </div>
-            <button id="btnDiscoverAreas" onclick="discoverTradeAreas()" class="w-full bg-cyan-600 hover:bg-cyan-700 text-white px-3 py-2 rounded-lg text-sm font-extrabold transition shadow-sm mb-2">이 지역 상권 자동 탐색</button>
+            <button id="btnDiscoverAreas" onclick="discoverTradeAreas()" class="w-full bg-cyan-600 hover:bg-cyan-700 text-white px-3 py-2 rounded-lg text-sm font-extrabold transition shadow-sm mb-2">이 지역 보행상권 자동 탐색</button>
             <div class="grid grid-cols-3 gap-1 text-[10px] font-bold mb-2">
                 <label class="flex items-center gap-1 bg-white rounded px-1.5 py-1 border border-blue-100 cursor-pointer"><input id="f_area_official" type="checkbox" checked onchange="refreshTradeAreaVisibility()" class="chk-blue">🔷공식</label>
                 <label class="flex items-center gap-1 bg-white rounded px-1.5 py-1 border border-orange-100 cursor-pointer"><input id="f_area_estimated" type="checkbox" checked onchange="refreshTradeAreaVisibility()" class="chk-orange">🟠추정</label>
                 <label class="flex items-center gap-1 bg-white rounded px-1.5 py-1 border border-pink-100 cursor-pointer"><input id="f_area_user" type="checkbox" checked onchange="refreshTradeAreaVisibility()" class="chk-pink">🩷직접</label>
             </div>
             <div class="text-[10px] leading-snug text-slate-500 mb-2">
-                🔷 공식 Polygon은 그대로 사용 · 🔵 공식 거리명은 실제 상가/도로로 경계 추정 · 🟠 데이터가 없으면 POI 밀집도로 자동 추정
+                길을 먼저 분석합니다 · 실제 보행 OD + 상업밀도 + Graph 중심성으로 길 Segment를 서로 겹치지 않는 상권으로 분할합니다
             </div>
             <div id="autoAreaList" class="space-y-1.5 max-h-44 overflow-y-auto"></div>
         </div>
@@ -118,7 +118,7 @@
 
         <div id="tab-map" class="flex-grow w-full h-full relative">
             <div id="statusMessage" class="absolute top-4 left-1/2 transform -translate-x-1/2 z-10 bg-white/95 backdrop-blur-sm px-6 py-2 rounded-full shadow-md text-sm font-bold text-slate-700 border border-slate-200 text-center transition-all">
-                🧭 지역 검색 → 상권 자동 탐색 → 상권 클릭. 또는 직접 펜스를 그려 분석할 수 있습니다!
+                🕸️ 지역 검색 → 보행상권 자동 탐색 → 색으로 표시된 보행축 선택. 상권 면은 선택한 곳만 표시됩니다!
             </div>
 
             <div class="absolute top-16 left-4 z-10 bg-white/95 backdrop-blur-sm p-4 rounded-xl shadow-lg border border-slate-200 w-64 max-h-[80vh] overflow-y-auto hidden md:block">
@@ -165,9 +165,9 @@
 
     <script>
         // =========================================================
-        // 렌즈미 상권 분석 대시보드 V46.0
-        // AUTO TRADE AREA + FINAL SITE ENGINE
-        // 0) 공식/자동추정 상권 탐색 → Polygon 선택
+        // 렌즈미 상권 분석 대시보드 V47.0
+        // PEDESTRIAN GRAPH TRADE AREA + FINAL SITE ENGINE
+        // 0) 실제 보행 OD 경로 → 보행 Graph → 비중첩 상권 Community 분할
         // 1) 선택 Polygon 주변 유입구/목적지 수집
         // 2) TMAP 실제 보행 OD 경로 생성
         // 3) 보행경로를 8~14m Micro Segment로 분할
@@ -210,7 +210,18 @@
             AUTO_AREA_CLUSTER_EPS: 85,
             AUTO_AREA_CLUSTER_MIN_POINTS: 7,
             AUTO_AREA_HULL_BUFFER: 24,
-            AUTO_AREA_MIN_POIS: 6
+            AUTO_AREA_MIN_POIS: 6,
+            AUTO_GRAPH_RADIUS: 1500,
+            AUTO_GRAPH_MAX_ROUTES: 18,
+            AUTO_GRAPH_ROUTE_DELAY_MS: 90,
+            AUTO_GRAPH_ACTIVE_MIN: 0.30,
+            AUTO_GRAPH_CONNECT_ENDPOINT: 20,
+            AUTO_GRAPH_CONNECT_PARALLEL: 15,
+            AUTO_GRAPH_MAX_CORE_DISTANCE: 720,
+            AUTO_GRAPH_CORE_SEPARATION: 210,
+            AUTO_GRAPH_MAX_COMMUNITIES: 6,
+            AUTO_GRAPH_MIN_COMMUNITY_LENGTH: 65,
+            AUTO_GRAPH_BUFFER_METERS: 22
         };
 
         let currentMode = 'new';
@@ -390,12 +401,16 @@
         }
 
         // =========================================================
-        // V46 AUTO TRADE AREA ENGINE
+        // V47 PEDESTRIAN GRAPH TRADE AREA ENGINE
+        // 핵심 원칙
+        // - Polygon부터 만들지 않는다.
+        // - TMAP 실제 보행 OD 경로를 8~10m Segment로 쪼개 보행 Graph를 만든다.
+        // - 각 Segment에 상업밀도 + OD 통과량 + Graph 중심성을 부여한다.
+        // - 강한 상업 보행축의 Core를 찾고 Graph 비용으로 Segment를 1개 상권에만 귀속한다.
+        // - 지도에는 모든 상권의 면을 겹쳐 칠하지 않고, 상권별 보행축을 먼저 표시한다.
+        // - 상권 클릭 시에만 해당 Community의 보행축 Buffer를 Polygon으로 만들어 V45 입지 엔진에 전달한다.
         // =========================================================
 
-        // 전국지역특화거리 표준데이터 중 즉시 테스트할 대표 Seed.
-        // '공식 거리명/좌표/길이'는 공식 데이터이고, Polygon 경계는 아래 로직이 자동 추정한다.
-        // 전국 전체 데이터는 나중에 data/official_streets.json으로 추가하면 자동 병합된다.
         const BUILTIN_OFFICIAL_STREET_SEEDS = [
             {
                 id: 'std_uijeongbu_happyroad',
@@ -414,16 +429,15 @@
         ];
 
         const NAMED_AREA_KEYWORDS = ['문화의거리', '테마의거리', '로데오거리', '먹자골목', '상점가', '전통시장'];
-        const COMMERCIAL_KEYWORDS = ['올리브영', '다이소', '옷가게', '미용실', '렌즈', '사진관'];
+        const COMMERCIAL_KEYWORDS = ['올리브영', '다이소', '화장품', '옷가게', '미용실', '안경', '렌즈', '사진관', '쇼핑', '카페'];
         const COMMERCIAL_CATEGORY_CODES = ['CE7', 'FD6', 'CT1', 'CS2'];
+        const AREA_PALETTE = ['#2563eb', '#ea580c', '#16a34a', '#7c3aed', '#db2777', '#0891b2'];
 
         function clamp(v, min, max) { return Math.max(min, Math.min(max, v)); }
 
         async function loadOptionalAreaData() {
             if (optionalAreaDataLoaded) return;
             optionalAreaDataLoaded = true;
-
-            // 1) 정확한 공식 Polygon을 가지고 있다면 이 파일만 GitHub /data 폴더에 넣으면 된다.
             try {
                 const res = await fetch('./data/official_polygons.geojson', { cache: 'no-store' });
                 if (res.ok) {
@@ -431,10 +445,8 @@
                     optionalOfficialPolygons = parseGeoJsonTradeAreas(gj);
                 }
             } catch (e) {
-                console.info('official_polygons.geojson 없음: 자동추정 모드로 계속합니다.');
+                console.info('official_polygons.geojson 없음: 공식 Polygon은 Seed 정보로만 생략합니다.');
             }
-
-            // 2) 전국지역특화거리 데이터를 JSON으로 넣으면 Built-in Seed와 자동 병합한다.
             try {
                 const res = await fetch('./data/official_streets.json', { cache: 'no-store' });
                 if (res.ok) {
@@ -453,7 +465,7 @@
                     })).filter(r => r.name && Number.isFinite(r.lat) && Number.isFinite(r.lng));
                 }
             } catch (e) {
-                console.info('official_streets.json 없음: 내장 Seed + Kakao 탐색으로 계속합니다.');
+                console.info('official_streets.json 없음: 내장 Seed + Kakao 이름 탐색으로 계속합니다.');
             }
         }
 
@@ -465,7 +477,7 @@
                 let rings = [];
                 if (f.geometry.type === 'Polygon') rings = f.geometry.coordinates;
                 else if (f.geometry.type === 'MultiPolygon' && f.geometry.coordinates.length) rings = f.geometry.coordinates[0];
-                if (!rings || !rings[0] || rings[0].length < 4) return;
+                if (!rings?.[0]?.length) return;
                 const path = rings[0].map(c => ({ lng: Number(c[0]), lat: Number(c[1]) }))
                     .filter(p => Number.isFinite(p.lat) && Number.isFinite(p.lng));
                 if (path.length < 4) return;
@@ -473,11 +485,10 @@
                 out.push({
                     id: f.properties?.id || `official_polygon_${idx}`,
                     name: f.properties?.name || f.properties?.상권명 || `공식 상권 ${idx + 1}`,
-                    type: 'official_polygon',
+                    type: 'official_polygon_seed',
                     path,
                     centerLat: center.lat, centerLng: center.lng,
                     source: f.properties?.source || '공식 Polygon GeoJSON',
-                    confidence: 1.0,
                     meta: f.properties || {}
                 });
             });
@@ -487,69 +498,41 @@
         function polygonAverageCenter(path) {
             let lat = 0, lng = 0;
             path.forEach(p => { lat += p.lat; lng += p.lng; });
-            return { lat: lat / path.length, lng: lng / path.length };
+            return path.length ? { lat: lat / path.length, lng: lng / path.length } : { lat: 0, lng: 0 };
         }
 
         function normalizeAreaName(name) {
-            return String(name || '').replace(/\s+/g, '').replace(/[()\[\]·ㆍ-]/g, '').toLowerCase();
-        }
-
-        function localXY(lat, lng, cLat, cLng) {
-            const x = (lng - cLng) * 111320 * Math.cos(cLat * Math.PI / 180);
-            const y = (lat - cLat) * 110540;
-            return { x, y };
-        }
-
-        function xyToLatLng(x, y, cLat, cLng) {
-            return {
-                lat: cLat + y / 110540,
-                lng: cLng + x / (111320 * Math.cos(cLat * Math.PI / 180))
-            };
-        }
-
-        function dominantAxis(points, cLat, cLng) {
-            if (!points || points.length < 2) return { vx: 1, vy: 0 };
-            const xy = points.map(p => localXY(p.lat, p.lng, cLat, cLng));
-            const mx = xy.reduce((a, p) => a + p.x, 0) / xy.length;
-            const my = xy.reduce((a, p) => a + p.y, 0) / xy.length;
-            let xx = 0, yy = 0, xyv = 0;
-            xy.forEach(p => {
-                const dx = p.x - mx, dy = p.y - my;
-                xx += dx * dx; yy += dy * dy; xyv += dx * dy;
-            });
-            const angle = 0.5 * Math.atan2(2 * xyv, xx - yy);
-            return { vx: Math.cos(angle), vy: Math.sin(angle) };
-        }
-
-        function pointsToFeatureCollection(points) {
-            return turf.featureCollection(points.map(p => turf.point([p.lng, p.lat])));
+            return String(name || '').replace(/\s+/g, '').replace(/[()\[\]{}]/g, '').toLowerCase();
         }
 
         function turfPolygonToPath(feature) {
-            if (!feature || !feature.geometry) return [];
+            if (!feature?.geometry) return [];
             let coords = [];
-            if (feature.geometry.type === 'Polygon') coords = feature.geometry.coordinates[0] || [];
-            else if (feature.geometry.type === 'MultiPolygon') coords = feature.geometry.coordinates?.[0]?.[0] || [];
+            if (feature.geometry.type === 'Polygon') coords = feature.geometry.coordinates?.[0] || [];
+            else if (feature.geometry.type === 'MultiPolygon') {
+                let best = [];
+                for (const poly of feature.geometry.coordinates || []) {
+                    const ring = poly?.[0] || [];
+                    if (ring.length > best.length) best = ring;
+                }
+                coords = best;
+            }
             return coords.map(c => ({ lng: Number(c[0]), lat: Number(c[1]) }))
                 .filter(p => Number.isFinite(p.lat) && Number.isFinite(p.lng));
         }
 
-        function makeHullPath(points, bufferMeters = CONFIG.AUTO_AREA_HULL_BUFFER) {
-            if (!window.turf || points.length < 3) return [];
-            const fc = pointsToFeatureCollection(points);
-            let hull = null;
-            try {
-                hull = turf.concave(fc, { maxEdge: 0.14, units: 'kilometers' });
-            } catch (e) {}
-            if (!hull) {
-                try { hull = turf.convex(fc); } catch (e) {}
+        function makeCirclePath(lat, lng, radiusMeters, steps = 48) {
+            const out = [];
+            for (let i = 0; i < steps; i++) {
+                const a = 2 * Math.PI * i / steps;
+                const dy = Math.sin(a) * radiusMeters;
+                const dx = Math.cos(a) * radiusMeters;
+                out.push({
+                    lat: lat + dy / 110540,
+                    lng: lng + dx / (111320 * Math.cos(lat * Math.PI / 180))
+                });
             }
-            if (!hull) return [];
-            try {
-                const buff = turf.buffer(hull, bufferMeters / 1000, { units: 'kilometers', steps: 8 });
-                if (buff) hull = buff;
-            } catch (e) {}
-            return turfPolygonToPath(hull);
+            return out;
         }
 
         function regionNameAsync(lat, lng) {
@@ -569,119 +552,44 @@
             COMMERCIAL_CATEGORY_CODES.forEach(code => jobs.push(kakaoCategoryAll(code, { location: center, radius }, maxPages)));
             COMMERCIAL_KEYWORDS.forEach(kw => jobs.push(kakaoKeywordAll(kw, { location: center, radius, sort: kakao.maps.services.SortBy.DISTANCE }, maxPages)));
             const chunks = await Promise.all(jobs);
-            return uniquePlaces(chunks.flat()).map(p => ({
-                id: p.id || `${p.place_name}|${p.x}|${p.y}`,
-                name: p.place_name,
-                lat: parseFloat(p.y), lng: parseFloat(p.x),
-                category: p.category_name || '',
-                distance: parseFloat(p.distance || '0')
-            })).filter(p => Number.isFinite(p.lat) && Number.isFinite(p.lng));
-        }
-
-        function uniqueAutoPois(points) {
             const seen = new Set();
-            return points.filter(p => {
-                const key = p.id || `${p.name}|${p.lat.toFixed(6)}|${p.lng.toFixed(6)}`;
-                if (seen.has(key)) return false;
-                seen.add(key);
-                return true;
-            });
-        }
-
-        function dbscanPoints(points, epsMeters = CONFIG.AUTO_AREA_CLUSTER_EPS, minPts = CONFIG.AUTO_AREA_CLUSTER_MIN_POINTS) {
-            const n = points.length;
-            const labels = new Array(n).fill(undefined);
-            let clusterId = 0;
-
-            const neighbors = i => {
-                const out = [];
-                for (let j = 0; j < n; j++) {
-                    if (getDistanceMeters(points[i].lat, points[i].lng, points[j].lat, points[j].lng) <= epsMeters) out.push(j);
-                }
-                return out;
-            };
-
-            for (let i = 0; i < n; i++) {
-                if (labels[i] !== undefined) continue;
-                const ns = neighbors(i);
-                if (ns.length < minPts) { labels[i] = -1; continue; }
-                labels[i] = clusterId;
-                const queue = [...ns];
-                const queued = new Set(queue);
-                while (queue.length) {
-                    const j = queue.shift();
-                    if (labels[j] === -1) labels[j] = clusterId;
-                    if (labels[j] !== undefined) continue;
-                    labels[j] = clusterId;
-                    const ns2 = neighbors(j);
-                    if (ns2.length >= minPts) {
-                        ns2.forEach(k => { if (!queued.has(k)) { queued.add(k); queue.push(k); } });
-                    }
-                }
-                clusterId++;
-            }
-            const groups = new Map();
-            labels.forEach((lab, i) => {
-                if (lab === -1 || lab === undefined) return;
-                if (!groups.has(lab)) groups.set(lab, []);
-                groups.get(lab).push(points[i]);
-            });
-            return [...groups.values()].sort((a, b) => b.length - a.length);
-        }
-
-        function selectClusterNearSeed(clusters, seed) {
-            if (!clusters.length) return [];
-            let best = null, bestScore = -Infinity;
-            clusters.forEach(c => {
-                const minD = Math.min(...c.map(p => getDistanceMeters(seed.lat, seed.lng, p.lat, p.lng)));
-                const score = c.length * 6 - minD * 0.12;
-                if (score > bestScore) { bestScore = score; best = c; }
-            });
-            return best || clusters[0];
-        }
-
-        async function buildBoundaryForNamedSeed(seed, sharedPois = []) {
-            const radius = clamp(seed.length ? seed.length * 0.62 : 280, 190, 460);
-            let pois = sharedPois.filter(p => getDistanceMeters(seed.lat, seed.lng, p.lat, p.lng) <= radius);
-            // 공유 Pool이 드문 외곽 지역만 1회 로컬 보강 검색
-            if (pois.length < CONFIG.AUTO_AREA_MIN_POIS) {
-                const extra = await collectCommercialPois(seed.lat, seed.lng, radius, 1);
-                pois = uniqueAutoPois([...pois, ...extra]);
-            }
-            if (pois.length < CONFIG.AUTO_AREA_MIN_POIS) return null;
-
-            const clusters = dbscanPoints(pois, 92, 5);
-            let cluster = selectClusterNearSeed(clusters, seed);
-            if (cluster.length < 5) cluster = pois;
-
-            // 공식 총길이가 있으면 주변 상점의 주축 방향으로 거리의 양 끝점을 강제로 포함해
-            // '둥근 원'이 아니라 실제 거리처럼 길쭉한 경계를 만든다.
-            const synthetic = [];
-            if (seed.length) {
-                const axis = dominantAxis(cluster, seed.lat, seed.lng);
-                const half = clamp(seed.length / 2, 100, 420);
-                const perp = { vx: -axis.vy, vy: axis.vx };
-                [1, -1].forEach(sign => {
-                    [-32, 0, 32].forEach(off => {
-                        const x = axis.vx * half * sign + perp.vx * off;
-                        const y = axis.vy * half * sign + perp.vy * off;
-                        synthetic.push(xyToLatLng(x, y, seed.lat, seed.lng));
-                    });
+            const out = [];
+            for (const p of chunks.flat()) {
+                const id = p.id || `${p.place_name}|${p.x}|${p.y}`;
+                if (seen.has(id)) continue;
+                seen.add(id);
+                const lat2 = parseFloat(p.y), lng2 = parseFloat(p.x);
+                if (!Number.isFinite(lat2) || !Number.isFinite(lng2)) continue;
+                out.push({
+                    id, name: p.place_name || '', lat: lat2, lng: lng2,
+                    category: p.category_name || '',
+                    distance: parseFloat(p.distance || '0') || 0
                 });
             }
-            const hullPoints = [...cluster, ...synthetic];
-            let path = makeHullPath(hullPoints, 20);
-            if (path.length < 4) return null;
-            const center = polygonAverageCenter(path);
-            return {
-                ...seed,
-                id: `auto_${seed.id || Date.now()}`,
-                type: seed.official ? 'official_street_inferred' : 'estimated_named',
-                path,
-                centerLat: center.lat, centerLng: center.lng,
-                poiCount: cluster.length,
-                confidence: seed.official ? clamp(0.68 + Math.min(cluster.length, 35) / 200, 0.68, 0.86) : clamp(0.52 + Math.min(cluster.length, 40) / 160, 0.52, 0.78)
-            };
+            return out;
+        }
+
+        function simplePoiClusters(points, epsMeters = 95, minPts = 5) {
+            const unused = new Set(points.map((_, i) => i));
+            const clusters = [];
+            while (unused.size) {
+                const first = unused.values().next().value;
+                unused.delete(first);
+                const q = [first];
+                const group = [points[first]];
+                while (q.length) {
+                    const i = q.shift();
+                    const pi = points[i];
+                    for (const j of [...unused]) {
+                        const pj = points[j];
+                        if (getDistanceMeters(pi.lat, pi.lng, pj.lat, pj.lng) <= epsMeters) {
+                            unused.delete(j); q.push(j); group.push(pj);
+                        }
+                    }
+                }
+                if (group.length >= minPts) clusters.push(group);
+            }
+            return clusters.sort((a, b) => b.length - a.length);
         }
 
         async function discoverNamedAreaSeeds(centerLat, centerLng) {
@@ -689,80 +597,427 @@
             const allOfficial = [...BUILTIN_OFFICIAL_STREET_SEEDS, ...optionalOfficialStreets];
             allOfficial.forEach(s => {
                 const d = getDistanceMeters(centerLat, centerLng, s.lat, s.lng);
-                if (d <= CONFIG.AUTO_AREA_RADIUS + 1400) seeds.push({ ...s, official: true, distance: d });
+                if (d <= CONFIG.AUTO_GRAPH_RADIUS + 1200) seeds.push({ ...s, official: true, distance: d });
+            });
+            optionalOfficialPolygons.forEach(p => {
+                const d = getDistanceMeters(centerLat, centerLng, p.centerLat, p.centerLng);
+                if (d <= CONFIG.AUTO_GRAPH_RADIUS + 800) seeds.push({
+                    id: `polyseed_${p.id}`, name: p.name,
+                    lat: p.centerLat, lng: p.centerLng,
+                    source: p.source, official: true, distance: d, polygonPath: p.path
+                });
             });
 
             const center = new kakao.maps.LatLng(centerLat, centerLng);
             for (const kw of NAMED_AREA_KEYWORDS) {
-                const places = await kakaoKeywordAll(kw, { location: center, radius: CONFIG.AUTO_AREA_RADIUS, sort: kakao.maps.services.SortBy.DISTANCE }, 2);
-                places.forEach(p => {
-                    const name = p.place_name || '';
-                    if (!name) return;
-                    const lat = parseFloat(p.y), lng = parseFloat(p.x);
-                    if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
+                const places = await kakaoKeywordAll(kw, { location: center, radius: CONFIG.AUTO_GRAPH_RADIUS, sort: kakao.maps.services.SortBy.DISTANCE }, 2);
+                for (const p of places) {
+                    const lat = +p.y, lng = +p.x;
+                    if (!Number.isFinite(lat) || !Number.isFinite(lng)) continue;
                     seeds.push({
-                        id: `kakao_${p.id || normalizeAreaName(name)}`,
-                        name, lat, lng, length: 0, stores: 0,
-                        source: 'Kakao 장소명 + 자동 경계',
-                        official: false,
+                        id: `kakao_${p.id || normalizeAreaName(p.place_name)}`,
+                        name: p.place_name || kw,
+                        lat, lng, source: 'Kakao 장소명', official: false,
                         distance: getDistanceMeters(centerLat, centerLng, lat, lng)
                     });
-                });
-                await delay(35);
+                }
+                await delay(25);
             }
 
-            const dedup = [];
             seeds.sort((a, b) => (b.official - a.official) || a.distance - b.distance);
+            const dedup = [];
             for (const s of seeds) {
-                const same = dedup.find(x => {
-                    const nameSimilar = normalizeAreaName(x.name).includes(normalizeAreaName(s.name)) || normalizeAreaName(s.name).includes(normalizeAreaName(x.name));
-                    const near = getDistanceMeters(x.lat, x.lng, s.lat, s.lng) < 140;
-                    return nameSimilar || near;
-                });
+                const norm = normalizeAreaName(s.name);
+                const same = dedup.find(x => normalizeAreaName(x.name) === norm || getDistanceMeters(x.lat, x.lng, s.lat, s.lng) < 90);
                 if (!same) dedup.push(s);
                 else if (s.official && !same.official) Object.assign(same, s);
             }
-            return dedup.slice(0, CONFIG.AUTO_AREA_MAX_NAMED);
+            return dedup.slice(0, 10);
         }
 
-        async function buildUnnamedEstimatedAreas(centerLat, centerLng, existingAreas = [], sharedPois = []) {
-            const pois = sharedPois.filter(p => getDistanceMeters(centerLat, centerLng, p.lat, p.lng) <= 1050);
-            const clusters = dbscanPoints(pois, CONFIG.AUTO_AREA_CLUSTER_EPS, CONFIG.AUTO_AREA_CLUSTER_MIN_POINTS);
+        async function collectAutoGraphEndpoints(centerLat, centerLng, pois, namedSeeds) {
+            const center = new kakao.maps.LatLng(centerLat, centerLng);
+            const stations = await kakaoCategoryAll('SW8', { location: center, radius: CONFIG.AUTO_GRAPH_RADIUS, sort: kakao.maps.services.SortBy.DISTANCE }, 2);
+            const subwayGates = await expandSubwayExits(uniquePlaces(stations));
+            const buses = await kakaoKeywordAll('버스정류장', { location: center, radius: CONFIG.AUTO_GRAPH_RADIUS, sort: kakao.maps.services.SortBy.DISTANCE }, 2);
+            const parkings = await kakaoKeywordAll('공영주차장', { location: center, radius: CONFIG.AUTO_GRAPH_RADIUS, sort: kakao.maps.services.SortBy.DISTANCE }, 1);
+            const universities = await kakaoKeywordAll('대학교', { location: center, radius: CONFIG.AUTO_GRAPH_RADIUS, sort: kakao.maps.services.SortBy.DISTANCE }, 1);
+
+            let gates = [
+                ...subwayGates,
+                ...buses.slice(0, 16).map(p => ({ lat: +p.y, lng: +p.x, type: 'bus', name: p.place_name })),
+                ...parkings.slice(0, 6).map(p => ({ lat: +p.y, lng: +p.x, type: 'parking', name: p.place_name })),
+                ...universities.slice(0, 6).map(p => ({ lat: +p.y, lng: +p.x, type: 'university', name: p.place_name }))
+            ];
+            gates = dedupeNearbyPoints(gates, 15);
+
+            const clusters = simplePoiClusters(pois, 95, 5).slice(0, 7);
+            let destinations = [];
+            clusters.forEach((cluster, idx) => {
+                const lat = cluster.reduce((a, p) => a + p.lat, 0) / cluster.length;
+                const lng = cluster.reduce((a, p) => a + p.lng, 0) / cluster.length;
+                destinations.push({ lat, lng, kind: 'mall', name: `상업밀집 ${idx + 1}`, poiCount: cluster.length });
+            });
+            namedSeeds.slice(0, 6).forEach(s => destinations.push({ lat: s.lat, lng: s.lng, kind: 'mall', name: s.name, namedSeed: s }));
+
+            // 목적지의 다양성을 위해 대표 POI도 조금 추가
+            const keyPois = pois.filter(p => /올리브영|다이소|백화점|쇼핑|영화|사진|렌즈|안경/.test(`${p.name} ${p.category}`));
+            keyPois.slice(0, 10).forEach(p => destinations.push({ lat: p.lat, lng: p.lng, kind: /올리브영/.test(p.name) ? 'olive' : /다이소/.test(p.name) ? 'daiso' : 'mall', name: p.name }));
+            destinations.push({ lat: centerLat, lng: centerLng, kind: 'center', name: '검색 중심' });
+            destinations = selectDiverseDestinations(destinations, centerLat, centerLng);
+            return { gates, destinations };
+        }
+
+        function buildAutoRoutePairs(gates, destinations, centerLat, centerLng) {
+            const gs = selectDiverseGates(gates, centerLat, centerLng).slice(0, 8);
+            const ds = [...destinations].sort((a, b) => destinationWeight(b.kind) - destinationWeight(a.kind)).slice(0, 10);
+            const candidates = [];
+            for (const gate of gs) {
+                for (const dest of ds) {
+                    const d = getDistanceMeters(gate.lat, gate.lng, dest.lat, dest.lng);
+                    if (d < 70 || d > 2800) continue;
+                    const w = gateWeight(gate.type) * destinationWeight(dest.kind);
+                    candidates.push({ gate, dest, distance: d, pairWeight: w, rankValue: w * 2.4 + 450 / Math.max(d, 120) });
+                }
+            }
+            candidates.sort((a, b) => b.rankValue - a.rankValue);
             const out = [];
-            let seq = 0;
-            for (const cluster of clusters.slice(0, 8)) {
-                if (cluster.length < CONFIG.AUTO_AREA_CLUSTER_MIN_POINTS) continue;
-                const cLat = cluster.reduce((a, p) => a + p.lat, 0) / cluster.length;
-                const cLng = cluster.reduce((a, p) => a + p.lng, 0) / cluster.length;
-                const tooNear = existingAreas.some(a => getDistanceMeters(cLat, cLng, a.centerLat || a.lat, a.centerLng || a.lng) < 230);
-                if (tooNear) continue;
-                const path = makeHullPath(cluster, 26);
+            const gc = new Map(), dc = new Map();
+            for (const c of candidates) {
+                const g = gc.get(c.gate.name) || 0, d = dc.get(c.dest.name) || 0;
+                if (g >= 4 || d >= 4) continue;
+                out.push(c); gc.set(c.gate.name, g + 1); dc.set(c.dest.name, d + 1);
+                if (out.length >= CONFIG.AUTO_GRAPH_MAX_ROUTES) break;
+            }
+            return out;
+        }
+
+        async function buildAutoPedestrianRoutes(gates, destinations, centerLat, centerLng, statusEl) {
+            const pairs = buildAutoRoutePairs(gates, destinations, centerLat, centerLng);
+            const routes = [];
+            let n = 1;
+            for (let i = 0; i < pairs.length; i++) {
+                const pair = pairs[i];
+                statusEl.innerText = `🕸️ 실제 보행 Network 수집 중... (${i + 1}/${pairs.length})`;
+                const features = await fetchTmapPedestrianRoute(pair.gate.lng, pair.gate.lat, pair.dest.lng, pair.dest.lat);
+                const coords = extractLineCoords(features);
+                if (coords.length >= 2) {
+                    routes.push({
+                        id: `AR${n++}`, gate: pair.gate, dest: pair.dest,
+                        coords, samples: samplePolylineCoords(coords, CONFIG.SEGMENT_NODE_SPACING),
+                        weight: pair.pairWeight,
+                        name: `${pair.gate.name} → ${pair.dest.name}`
+                    });
+                }
+                await delay(CONFIG.AUTO_GRAPH_ROUTE_DELAY_MS);
+            }
+            return routes;
+        }
+
+        function quantile(arr, q) {
+            const a = arr.filter(Number.isFinite).sort((x, y) => x - y);
+            if (!a.length) return 0;
+            const pos = (a.length - 1) * q;
+            const lo = Math.floor(pos), hi = Math.ceil(pos);
+            if (lo === hi) return a[lo];
+            return a[lo] * (hi - pos) + a[hi] * (pos - lo);
+        }
+
+        function robustNormalize(value, values) {
+            const lo = quantile(values, 0.12), hi = quantile(values, 0.88);
+            if (hi <= lo + 1e-9) return value > lo ? 1 : 0;
+            return clamp((value - lo) / (hi - lo), 0, 1);
+        }
+
+        function commercialRawAtPoint(pt, pois) {
+            let raw = 0, count = 0, typeBonus = 0;
+            for (const p of pois) {
+                const d = getDistanceMeters(pt.lat, pt.lng, p.lat, p.lng);
+                if (d > 70) continue;
+                const decay = Math.max(0, 1 - d / 70);
+                let w = 1;
+                const text = `${p.name} ${p.category}`;
+                if (/올리브영|화장품|미용|패션|의류|사진|렌즈|안경/.test(text)) w = 1.35;
+                else if (/카페|음식|편의점/.test(text)) w = 0.75;
+                raw += decay * w;
+                count++;
+                if (/올리브영|다이소|사진|패션|화장품/.test(text)) typeBonus += 0.15 * decay;
+            }
+            return { raw: raw + Math.min(typeBonus, 1.5), count };
+        }
+
+        function endpointDistance(a, b) {
+            return Math.min(
+                getDistanceMeters(a.a.lat, a.a.lng, b.a.lat, b.a.lng),
+                getDistanceMeters(a.a.lat, a.a.lng, b.b.lat, b.b.lng),
+                getDistanceMeters(a.b.lat, a.b.lng, b.a.lat, b.a.lng),
+                getDistanceMeters(a.b.lat, a.b.lng, b.b.lat, b.b.lng)
+            );
+        }
+
+        function buildSegmentAdjacency(segments) {
+            segments.forEach(s => s.neighbors = new Set());
+            for (let i = 0; i < segments.length; i++) {
+                const a = segments[i];
+                for (let j = i + 1; j < segments.length; j++) {
+                    const b = segments[j];
+                    const md = getDistanceMeters(a.mid.lat, a.mid.lng, b.mid.lat, b.mid.lng);
+                    if (md > 42) continue;
+                    const ed = endpointDistance(a, b);
+                    const parallel = md <= CONFIG.AUTO_GRAPH_CONNECT_PARALLEL && orientationDiff(a.bearing, b.bearing) <= 32;
+                    const linked = ed <= CONFIG.AUTO_GRAPH_CONNECT_ENDPOINT || parallel;
+                    if (!linked) continue;
+                    a.neighbors.add(b.id); b.neighbors.add(a.id);
+                }
+            }
+        }
+
+        function scoreAutoGraphSegments(segments, routes, pois) {
+            segments.forEach(s => {
+                const com = commercialRawAtPoint(s.mid, pois);
+                s.commerceRaw = com.raw;
+                s.poiCount = com.count;
+                s.flowRaw = [...s.routeMap.values()].reduce((a, r) => a + (r.weight || 1), 0);
+                s.routeCount = s.routeMap.size;
+            });
+            buildSegmentAdjacency(segments);
+            segments.forEach(s => {
+                s.centralRaw = s.routeCount * 1.3 + s.neighbors.size * 0.55 + Math.min(s.flowRaw, 8) * 0.25;
+            });
+            const commerce = segments.map(s => s.commerceRaw);
+            const flow = segments.map(s => s.flowRaw);
+            const central = segments.map(s => s.centralRaw);
+            segments.forEach(s => {
+                s.commerceN = robustNormalize(s.commerceRaw, commerce);
+                s.flowN = robustNormalize(s.flowRaw, flow);
+                s.centralN = robustNormalize(s.centralRaw, central);
+                s.strength = clamp(s.commerceN * 0.50 + s.flowN * 0.32 + s.centralN * 0.18, 0, 1);
+                s.length = getDistanceMeters(s.a.lat, s.a.lng, s.b.lat, s.b.lng);
+            });
+            return segments;
+        }
+
+        function buildActiveGraph(segments) {
+            const active = segments.filter(s =>
+                s.strength >= CONFIG.AUTO_GRAPH_ACTIVE_MIN ||
+                (s.commerceN >= 0.52 && s.flowN >= 0.18) ||
+                (s.flowN >= 0.64 && s.commerceN >= 0.14)
+            );
+            const ids = new Set(active.map(s => s.id));
+            active.forEach(s => {
+                s.neighbors = new Set([...s.neighbors].filter(id => ids.has(id)));
+            });
+            return active;
+        }
+
+        function nearestSegmentToPoint(segments, lat, lng, maxMeters = Infinity) {
+            let best = null, bestD = Infinity;
+            for (const s of segments) {
+                const d = getDistanceMeters(lat, lng, s.mid.lat, s.mid.lng);
+                if (d < bestD) { best = s; bestD = d; }
+            }
+            return bestD <= maxMeters ? { segment: best, distance: bestD } : null;
+        }
+
+        function chooseCommunityCores(activeSegments, namedSeeds) {
+            const cores = [];
+            const usedSeg = new Set();
+            for (const seed of namedSeeds) {
+                const hit = nearestSegmentToPoint(activeSegments, seed.lat, seed.lng, seed.official ? 230 : 170);
+                if (!hit?.segment || usedSeg.has(hit.segment.id)) continue;
+                const tooClose = cores.some(c => getDistanceMeters(c.segment.mid.lat, c.segment.mid.lng, hit.segment.mid.lat, hit.segment.mid.lng) < 130);
+                if (tooClose) continue;
+                cores.push({ segment: hit.segment, seed, auto: false });
+                usedSeg.add(hit.segment.id);
+                if (cores.length >= CONFIG.AUTO_GRAPH_MAX_COMMUNITIES) break;
+            }
+
+            const ranked = [...activeSegments].sort((a, b) => b.strength - a.strength);
+            for (const seg of ranked) {
+                if (usedSeg.has(seg.id) || seg.strength < 0.42) continue;
+                const far = cores.every(c => getDistanceMeters(c.segment.mid.lat, c.segment.mid.lng, seg.mid.lat, seg.mid.lng) >= CONFIG.AUTO_GRAPH_CORE_SEPARATION);
+                if (!far) continue;
+                cores.push({ segment: seg, seed: null, auto: true });
+                usedSeg.add(seg.id);
+                if (cores.length >= CONFIG.AUTO_GRAPH_MAX_COMMUNITIES) break;
+            }
+            if (!cores.length && ranked.length) cores.push({ segment: ranked[0], seed: null, auto: true });
+            return cores;
+        }
+
+        class TinyMinHeap {
+            constructor() { this.a = []; }
+            push(item) {
+                this.a.push(item);
+                let i = this.a.length - 1;
+                while (i > 0) {
+                    const p = Math.floor((i - 1) / 2);
+                    if (this.a[p].cost <= this.a[i].cost) break;
+                    [this.a[p], this.a[i]] = [this.a[i], this.a[p]]; i = p;
+                }
+            }
+            pop() {
+                if (!this.a.length) return null;
+                const root = this.a[0], last = this.a.pop();
+                if (this.a.length && last) {
+                    this.a[0] = last;
+                    let i = 0;
+                    while (true) {
+                        let l = i * 2 + 1, r = l + 1, m = i;
+                        if (l < this.a.length && this.a[l].cost < this.a[m].cost) m = l;
+                        if (r < this.a.length && this.a[r].cost < this.a[m].cost) m = r;
+                        if (m === i) break;
+                        [this.a[i], this.a[m]] = [this.a[m], this.a[i]]; i = m;
+                    }
+                }
+                return root;
+            }
+            get size() { return this.a.length; }
+        }
+
+        function partitionGraphByCores(activeSegments, cores) {
+            const byId = new Map(activeSegments.map(s => [s.id, s]));
+            const best = new Map();
+            const heap = new TinyMinHeap();
+            cores.forEach((core, ci) => {
+                best.set(core.segment.id, { community: ci, cost: 0 });
+                heap.push({ id: core.segment.id, community: ci, cost: 0 });
+            });
+
+            while (heap.size) {
+                const cur = heap.pop();
+                const currentBest = best.get(cur.id);
+                if (!currentBest || currentBest.community !== cur.community || Math.abs(currentBest.cost - cur.cost) > 1e-6) continue;
+                if (cur.cost > CONFIG.AUTO_GRAPH_MAX_CORE_DISTANCE) continue;
+                const s = byId.get(cur.id);
+                if (!s) continue;
+                const core = cores[cur.community].segment;
+                for (const nid of s.neighbors) {
+                    const n = byId.get(nid);
+                    if (!n) continue;
+                    const stepMeters = Math.max(7, getDistanceMeters(s.mid.lat, s.mid.lng, n.mid.lat, n.mid.lng));
+                    const corridorStrength = Math.max(0.14, (s.strength + n.strength) / 2);
+                    const anglePenalty = orientationDiff(s.bearing, n.bearing) > 55 ? 1.12 : 1.0;
+                    const weakPenalty = 1 + Math.max(0, 0.42 - corridorStrength) * 2.0;
+                    const step = stepMeters / corridorStrength * anglePenalty * weakPenalty;
+                    const newCost = cur.cost + step;
+                    const euclidFromCore = getDistanceMeters(core.mid.lat, core.mid.lng, n.mid.lat, n.mid.lng);
+                    if (newCost > CONFIG.AUTO_GRAPH_MAX_CORE_DISTANCE || euclidFromCore > 780) continue;
+                    const prev = best.get(nid);
+                    if (!prev || newCost < prev.cost) {
+                        best.set(nid, { community: cur.community, cost: newCost });
+                        heap.push({ id: nid, community: cur.community, cost: newCost });
+                    }
+                }
+            }
+
+            const groups = cores.map((core, i) => ({ core, index: i, segments: [] }));
+            activeSegments.forEach(s => {
+                const b = best.get(s.id);
+                if (b) groups[b.community].segments.push(s);
+            });
+            return groups;
+        }
+
+        function communityCenter(segments) {
+            let sw = 0, lat = 0, lng = 0;
+            segments.forEach(s => {
+                const w = 0.35 + s.strength;
+                sw += w; lat += s.mid.lat * w; lng += s.mid.lng * w;
+            });
+            return sw ? { lat: lat / sw, lng: lng / sw } : { lat: 0, lng: 0 };
+        }
+
+        function communityLength(segments) {
+            return segments.reduce((a, s) => a + (s.length || 0), 0);
+        }
+
+        function communityPolygonFromSegments(segments, bufferMeters = CONFIG.AUTO_GRAPH_BUFFER_METERS) {
+            if (!window.turf || !segments.length) return [];
+            const lines = segments.map(s => [[s.a.lng, s.a.lat], [s.b.lng, s.b.lat]]);
+            try {
+                const ml = turf.multiLineString(lines);
+                const buff = turf.buffer(ml, bufferMeters / 1000, { units: 'kilometers', steps: 6 });
+                return turfPolygonToPath(buff);
+            } catch (e) {
+                console.warn('community buffer 실패', e);
+                return [];
+            }
+        }
+
+        async function materializeCommunities(groups) {
+            const out = [];
+            let autoIndex = 1;
+            const usedNames = new Set();
+            for (const g of groups) {
+                if (g.segments.length < 4 || communityLength(g.segments) < CONFIG.AUTO_GRAPH_MIN_COMMUNITY_LENGTH) continue;
+                const center = communityCenter(g.segments);
+                let name = '';
+                let type = 'network_estimated';
+                let source = 'TMAP 실제 보행 OD + 상업 POI + Graph 분할';
+                if (g.core.seed) {
+                    name = g.core.seed.name;
+                    type = g.core.seed.official ? 'network_official_named' : 'network_named';
+                    source = `${g.core.seed.source || '거리명'} + 보행 Graph 경계`;
+                } else {
+                    const reg = await regionNameAsync(center.lat, center.lng);
+                    name = `${reg.dong || reg.gu || '주변'} 보행상권 ${String.fromCharCode(64 + autoIndex++)}`;
+                }
+                let base = name, n = 2;
+                while (usedNames.has(name)) name = `${base} ${n++}`;
+                usedNames.add(name);
+
+                const path = communityPolygonFromSegments(g.segments);
                 if (path.length < 4) continue;
-                const reg = await regionNameAsync(cLat, cLng);
-                seq++;
+                const meanStrength = g.segments.reduce((a, s) => a + s.strength, 0) / g.segments.length;
+                const routeIds = new Set();
+                g.segments.forEach(s => s.routeMap.forEach((_, id) => routeIds.add(id)));
+                const confidence = clamp(0.48 + meanStrength * 0.32 + Math.min(routeIds.size, 8) * 0.025, 0.48, 0.93);
                 out.push({
-                    id: `cluster_${Date.now()}_${seq}`,
-                    name: `${reg.dong || reg.gu || '주변'} 자동상권 ${String.fromCharCode(64 + seq)}`,
-                    type: 'estimated_cluster',
-                    path, centerLat: cLat, centerLng: cLng,
-                    poiCount: cluster.length,
-                    source: '상업 POI 밀집도 자동 추정',
-                    confidence: clamp(0.42 + Math.min(cluster.length, 45) / 150, 0.42, 0.72)
+                    id: `net_${Date.now()}_${out.length + 1}`,
+                    name, type, source,
+                    centerLat: center.lat, centerLng: center.lng,
+                    path, segments: g.segments,
+                    segmentCount: g.segments.length,
+                    networkLength: Math.round(communityLength(g.segments)),
+                    routeCount: routeIds.size,
+                    confidence,
+                    color: AREA_PALETTE[out.length % AREA_PALETTE.length]
                 });
-                if (out.length >= CONFIG.AUTO_AREA_MAX_CLUSTERS) break;
             }
             return out;
         }
 
         function areaTypeInfo(area) {
-            if (area.type === 'official_polygon') return { icon: '🔷', label: '공식 경계', color: '#2563eb', fill: '#60a5fa' };
-            if (area.type === 'official_street_inferred') return { icon: '🔵', label: '공식 거리명 · 자동 경계', color: '#0284c7', fill: '#38bdf8' };
-            return { icon: '🟠', label: '자동 추정 상권', color: '#ea580c', fill: '#fb923c' };
+            const color = area.color || '#2563eb';
+            if (area.type === 'network_official_named') return { icon: '🔵', label: '공식 거리명 · 보행망 경계', color, fill: color };
+            if (area.type === 'network_named') return { icon: '🟣', label: '거리명 · 보행망 경계', color, fill: color };
+            if (area.type === 'official_polygon_fallback') return { icon: '🔷', label: '공식 Polygon (보행망 실패시)', color, fill: color };
+            return { icon: '🟠', label: '자동 보행상권', color, fill: color };
         }
 
         function isAreaVisible(area) {
-            if (area.type === 'official_polygon' || area.type === 'official_street_inferred') return document.getElementById('f_area_official')?.checked !== false;
+            if (area.type === 'network_official_named' || area.type === 'official_polygon_fallback') return document.getElementById('f_area_official')?.checked !== false;
             return document.getElementById('f_area_estimated')?.checked !== false;
+        }
+
+        function makeTradeAreaController(area, lines, polygon) {
+            let currentMap = map;
+            let active = false;
+            function apply() {
+                const visible = currentMap && isAreaVisible(area);
+                lines.forEach(pl => pl.setMap(visible ? currentMap : null));
+                if (polygon) polygon.setMap(visible && active ? currentMap : null);
+            }
+            return {
+                setMap(m) { currentMap = m; apply(); },
+                setOptions(opts = {}) {
+                    active = (opts.strokeWeight || 0) >= 4 || (opts.fillOpacity || 0) >= 0.20;
+                    lines.forEach(pl => pl.setOptions({ strokeWeight: active ? 8 : 5, strokeOpacity: active ? 0.95 : 0.78 }));
+                    if (polygon) polygon.setOptions({ strokeWeight: active ? 3 : 1, fillOpacity: active ? 0.10 : 0.0 });
+                    apply();
+                }
+            };
         }
 
         function clearAutoTradeAreaOverlays() {
@@ -786,21 +1041,38 @@
             const list = document.getElementById('autoAreaList');
             if (list) list.innerHTML = '';
 
-            autoTradeAreas.forEach(area => {
+            autoTradeAreas.forEach((area, areaIndex) => {
                 const info = areaTypeInfo(area);
-                const poly = new kakao.maps.Polygon({
+                const lines = [];
+                const strengths = area.segments?.map(s => s.strength) || [];
+                const sMax = Math.max(...strengths, 1);
+                for (const seg of area.segments || []) {
+                    const width = 4 + 2 * (seg.strength / sMax);
+                    const pl = new kakao.maps.Polyline({
+                        path: [new kakao.maps.LatLng(seg.a.lat, seg.a.lng), new kakao.maps.LatLng(seg.b.lat, seg.b.lng)],
+                        strokeWeight: width,
+                        strokeColor: info.color,
+                        strokeOpacity: 0.78,
+                        strokeStyle: 'solid',
+                        zIndex: 35
+                    });
+                    lines.push(pl);
+                }
+                const polygon = area.path?.length >= 4 ? new kakao.maps.Polygon({
                     path: area.path.map(p => new kakao.maps.LatLng(p.lat, p.lng)),
-                    strokeWeight: activeAutoAreaId === area.id ? 4 : 2,
+                    strokeWeight: 1,
                     strokeColor: info.color,
-                    strokeOpacity: 0.92,
+                    strokeOpacity: 0.75,
                     fillColor: info.fill,
-                    fillOpacity: activeAutoAreaId === area.id ? 0.24 : 0.11
-                });
-                if (isAreaVisible(area)) poly.setMap(map);
-                kakao.maps.event.addListener(poly, 'click', () => selectAutoTradeArea(area.id));
-                tradeAreaOverlays[area.id] = poly;
+                    fillOpacity: 0.0,
+                    zIndex: 25
+                }) : null;
+                const controller = makeTradeAreaController(area, lines, polygon);
+                controller.setMap(isAreaVisible(area) ? map : null);
+                if (activeAutoAreaId === area.id) controller.setOptions({ strokeWeight: 5, fillOpacity: 0.24 });
+                tradeAreaOverlays[area.id] = controller;
 
-                const labelHtml = `<div style="background:rgba(255,255,255,.96);border:2px solid ${info.color};color:${info.color};font-weight:900;font-size:11px;padding:3px 7px;border-radius:7px;box-shadow:0 2px 8px rgba(0,0,0,.18);white-space:nowrap;">${info.icon} ${escapeHtml(area.name)}</div>`;
+                const labelHtml = `<div style="background:rgba(255,255,255,.97);border:2px solid ${info.color};color:${info.color};font-weight:900;font-size:11px;padding:3px 7px;border-radius:7px;box-shadow:0 2px 8px rgba(0,0,0,.18);white-space:nowrap;">${info.icon} ${escapeHtml(area.name)}</div>`;
                 const label = new kakao.maps.CustomOverlay({
                     position: new kakao.maps.LatLng(area.centerLat, area.centerLng),
                     content: labelHtml, xAnchor: 0.5, yAnchor: 0.5, zIndex: 70
@@ -808,6 +1080,7 @@
                 if (isAreaVisible(area)) label.setMap(map);
                 tradeAreaLabels[area.id] = label;
 
+                // 도로를 클릭하기 어렵기 때문에 중심 라벨과 목록에서 선택한다.
                 if (list) {
                     const conf = Math.round((area.confidence || 0.5) * 100);
                     const item = document.createElement('button');
@@ -818,7 +1091,7 @@
                             <span class="text-[11px] font-black text-slate-800">${info.icon} ${escapeHtml(area.name)}</span>
                             <span class="text-[9px] whitespace-nowrap text-slate-400 font-bold">신뢰 ${conf}%</span>
                         </div>
-                        <div class="text-[9px] mt-0.5 text-slate-500">${info.label}${area.poiCount ? ` · POI ${area.poiCount}개` : ''}</div>`;
+                        <div class="text-[9px] mt-0.5 text-slate-500">${info.label} · 보행축 ${area.networkLength || 0}m · OD ${area.routeCount || 0}개</div>`;
                     list.appendChild(item);
                 }
             });
@@ -837,53 +1110,78 @@
             Object.values(renderedNametags).forEach(p => p.setMap(showUser ? map : null));
         }
 
+        async function buildFallbackOfficialAreas(centerLat, centerLng) {
+            const out = [];
+            const nearby = optionalOfficialPolygons.filter(a => getDistanceMeters(centerLat, centerLng, a.centerLat, a.centerLng) <= CONFIG.AUTO_GRAPH_RADIUS + 500);
+            nearby.forEach((p, idx) => out.push({
+                id: `fallback_${p.id}`, name: p.name,
+                type: 'official_polygon_fallback', path: p.path,
+                centerLat: p.centerLat, centerLng: p.centerLng,
+                segments: [], networkLength: 0, routeCount: 0,
+                confidence: 0.95, color: AREA_PALETTE[idx % AREA_PALETTE.length],
+                source: p.source
+            }));
+            return out;
+        }
+
         async function discoverTradeAreas() {
             if (isScanningAPI) return alert('현재 다른 분석이 진행 중입니다. 잠시 후 다시 눌러주세요.');
             isScanningAPI = true;
             const btn = document.getElementById('btnDiscoverAreas');
             const statusEl = document.getElementById('statusMessage');
-            if (btn) { btn.disabled = true; btn.innerText = '상권 탐색 중...'; }
+            if (btn) { btn.disabled = true; btn.innerText = '보행망 분석 중...'; }
             clearRankMarkers();
             try {
                 await loadOptionalAreaData();
                 clearAutoTradeAreaOverlays();
                 const c = map.getCenter();
                 const centerLat = c.getLat(), centerLng = c.getLng();
+                const broadPath = makeCirclePath(centerLat, centerLng, CONFIG.AUTO_GRAPH_RADIUS, 56);
 
-                statusEl.innerText = '🧭 1/3 공식 상권·특화거리 확인 중...';
-                const exactOfficial = optionalOfficialPolygons.filter(a => getDistanceMeters(centerLat, centerLng, a.centerLat, a.centerLng) <= CONFIG.AUTO_AREA_RADIUS + 800);
+                statusEl.innerText = '🧭 1/5 공식 거리명·주변 상업시설 수집 중...';
+                const [namedSeeds, pois] = await Promise.all([
+                    discoverNamedAreaSeeds(centerLat, centerLng),
+                    collectCommercialPois(centerLat, centerLng, CONFIG.AUTO_GRAPH_RADIUS, CONFIG.AUTO_AREA_POI_PAGES)
+                ]);
 
-                statusEl.innerText = '🧭 2/3 주변 거리명과 상업시설 밀집도 분석 중...';
-                // 주변 상업 POI는 한 번만 수집하고 모든 상권 후보가 재사용한다.
-                const sharedPois = await collectCommercialPois(centerLat, centerLng, CONFIG.AUTO_AREA_RADIUS, CONFIG.AUTO_AREA_POI_PAGES);
-                const seeds = await discoverNamedAreaSeeds(centerLat, centerLng);
-                const namedAreas = [];
-                for (const seed of seeds) {
-                    const alreadyExact = exactOfficial.some(a => getDistanceMeters(a.centerLat, a.centerLng, seed.lat, seed.lng) < 180);
-                    if (alreadyExact) continue;
-                    const area = await buildBoundaryForNamedSeed(seed, sharedPois);
-                    if (area) namedAreas.push(area);
-                    await delay(20);
+                statusEl.innerText = '🚇 2/5 지하철 출구·정류장·상업 목적지 구성 중...';
+                const { gates, destinations } = await collectAutoGraphEndpoints(centerLat, centerLng, pois, namedSeeds);
+
+                statusEl.innerText = '🕸️ 3/5 실제 TMAP 보행 Network 생성 중...';
+                const routes = await buildAutoPedestrianRoutes(gates, destinations, centerLat, centerLng, statusEl);
+                if (!routes.length) {
+                    autoTradeAreas = await buildFallbackOfficialAreas(centerLat, centerLng);
+                    renderAutoTradeAreas();
+                    statusEl.innerText = autoTradeAreas.length
+                        ? '⚠️ TMAP 보행경로를 확보하지 못해 공식 Polygon만 표시했습니다.'
+                        : '⚠️ TMAP 보행경로를 확보하지 못했습니다. API 호출상태를 확인하거나 직접 펜스를 사용해주세요.';
+                    return;
                 }
 
-                statusEl.innerText = '🧭 3/3 이름 없는 상권 클러스터 탐색 중...';
-                const estimated = await buildUnnamedEstimatedAreas(centerLat, centerLng, [...exactOfficial, ...namedAreas], sharedPois);
+                statusEl.innerText = '🧠 4/5 길 Segment 상업성·OD 통과량·Graph 중심성 계산 중...';
+                let micros = buildMicroSegments(routes, broadPath);
+                let segments = clusterMicroSegments(micros);
+                segments = scoreAutoGraphSegments(segments, routes, pois);
+                const active = buildActiveGraph(segments);
+                if (active.length < 6) throw new Error('상업 보행축 Segment 부족');
 
-                autoTradeAreas = [...exactOfficial, ...namedAreas, ...estimated]
-                    .sort((a, b) => {
-                        const rank = t => t === 'official_polygon' ? 0 : t === 'official_street_inferred' ? 1 : 2;
-                        return rank(a.type) - rank(b.type) || (b.confidence || 0) - (a.confidence || 0);
-                    });
+                const cores = chooseCommunityCores(active, namedSeeds);
+                const groups = partitionGraphByCores(active, cores);
+
+                statusEl.innerText = '🧩 5/5 겹치지 않는 보행상권 Community 분할 중...';
+                autoTradeAreas = await materializeCommunities(groups);
+                autoTradeAreas.sort((a, b) => (b.confidence || 0) - (a.confidence || 0));
                 renderAutoTradeAreas();
+
                 statusEl.innerText = autoTradeAreas.length
-                    ? `✅ 주변 상권 ${autoTradeAreas.length}개를 찾았습니다. 상권 이름을 클릭하면 V46 보행 Segment 분석이 바로 실행됩니다.`
-                    : '⚠️ 이 지도 범위에서는 상권 경계를 안정적으로 만들 만큼 데이터가 부족합니다. 직접 펜스를 사용해주세요.';
+                    ? `✅ V47 완료 · 실제 OD ${routes.length}개 · 보행 Segment ${active.length}개 · 비중첩 보행상권 ${autoTradeAreas.length}개` 
+                    : '⚠️ 상권으로 묶을 만큼 연속적인 상업 보행축이 부족합니다. 직접 펜스를 사용해주세요.';
             } catch (e) {
-                console.error('자동 상권 탐색 오류:', e);
-                statusEl.innerText = '⚠️ 자동 상권 탐색 중 오류가 발생했습니다. 콘솔을 확인해주세요.';
+                console.error('V47 보행상권 탐색 오류:', e);
+                statusEl.innerText = `⚠️ 보행상권 생성 실패: ${e.message || '알 수 없는 오류'}`;
             } finally {
                 isScanningAPI = false;
-                if (btn) { btn.disabled = false; btn.innerText = '이 지역 상권 자동 탐색'; }
+                if (btn) { btn.disabled = false; btn.innerText = '이 지역 보행상권 자동 탐색'; }
             }
         }
 
@@ -904,8 +1202,7 @@
             autoTradeAreas.forEach(a => {
                 const ov = tradeAreaOverlays[a.id];
                 if (!ov) return;
-                const inf = areaTypeInfo(a);
-                ov.setOptions({ strokeWeight: a.id === id ? 5 : 2, fillColor: inf.fill, fillOpacity: a.id === id ? 0.28 : 0.11 });
+                ov.setOptions({ strokeWeight: a.id === id ? 5 : 2, fillOpacity: a.id === id ? 0.24 : 0.0 });
             });
 
             const bounds = new kakao.maps.LatLngBounds();
@@ -1330,7 +1627,7 @@
                     map.setCenter(searchCenter);
                     map.setLevel(3);
                     triggerScan();
-                    document.getElementById('statusMessage').innerText = '📍 이동 완료. [이 지역 상권 자동 탐색]을 누르면 주변 상권을 자동으로 표시합니다.';
+                    document.getElementById('statusMessage').innerText = '📍 이동 완료. [이 지역 보행상권 자동 탐색]을 누르면 주변 상권을 자동으로 표시합니다.';
                 }
             });
         }
@@ -2243,7 +2540,7 @@
 
                 rBox.innerHTML = html;
                 document.getElementById('rankingResultBox').classList.remove('hidden');
-                statusEl.innerText = `✅ V45 완료 · 실제 OD 경로 ${actualRoutes.length}개 · 도로 Segment ${segments.length}개 · 추천구간 ${topSegments.length}개`;
+                statusEl.innerText = `✅ 입지분석 완료 · 실제 OD 경로 ${actualRoutes.length}개 · 도로 Segment ${segments.length}개 · 추천구간 ${topSegments.length}개`;
 
             } catch (e) {
                 console.error('V45 분석 에러:', e);
