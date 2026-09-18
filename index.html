@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>렌즈미 상권 분석 대시보드 V51.1 FINAL</title>
+<title>렌즈미 상권 분석 대시보드 V51.2</title>
 <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css" rel="stylesheet">
 <script src="https://cdn.tailwindcss.com"></script>
 <style>
@@ -31,7 +31,7 @@ details[open]>summary::before{content:'📂 '}
 <div class="w-full md:w-1/4 bg-white border-r border-gray-200 p-6 flex flex-col shadow-lg z-20 overflow-y-auto">
 <h1 class="text-xl font-extrabold text-slate-800 border-b-4 border-indigo-500 pb-3 mb-4 flex justify-between items-center">
 <span>🗺️ 전국 상권 관제탑</span>
-<span class="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded-full font-bold">V51.1 FINAL</span>
+<span class="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded-full font-bold">V51.2</span>
 </h1>
 
 <div class="mb-4">
@@ -67,7 +67,7 @@ details[open]>summary::before{content:'📂 '}
 
 <div class="mb-4 bg-cyan-50 p-4 rounded-xl border border-cyan-200 shadow-sm">
 <div class="flex justify-between items-center mb-2">
-<label class="block text-sm font-extrabold text-cyan-800">🗺️ 비겹침 상권 자동 탐색</label>
+<label class="block text-sm font-extrabold text-cyan-800">🗺️ 상권 전체영역 자동 탐색</label>
 <span id="autoAreaCount" class="text-[10px] bg-white border border-cyan-200 text-cyan-700 px-2 py-0.5 rounded-full font-black">0개</span>
 </div>
 <button id="btnDiscoverAreas" onclick="discoverTradeAreas()" class="w-full bg-cyan-600 hover:bg-cyan-700 text-white px-3 py-2 rounded-lg text-sm font-extrabold transition shadow-sm mb-2">이 지역 상권 자동 나누기</button>
@@ -77,7 +77,7 @@ details[open]>summary::before{content:'📂 '}
 <label class="flex items-center gap-1 bg-white rounded px-1.5 py-1 border border-pink-100 cursor-pointer"><input id="f_area_user" type="checkbox" checked onchange="refreshTradeAreaVisibility()" class="chk-pink">🩷직접</label>
 </div>
 <div class="text-[10px] leading-snug text-slate-500 mb-2">
-공식 경계가 있으면 그대로 사용합니다. 없으면 40m 공간 셀에 상업성·보행경로를 계산하고, 각 셀을 하나의 상권에만 귀속해 서로 겹치지 않는 상권 전체영역을 만듭니다.
+30m 적응형 셀에서 상업밀도·타깃업종·보행흐름을 상대평가해 상권 전체영역을 만듭니다. 한 셀은 한 상권에만 속하며 저상업지역은 색칠하지 않습니다.
 </div>
 <p id="areaDataNotice" class="text-[10px] text-slate-500 mb-2"></p>
 <div id="autoAreaList" class="space-y-1.5 max-h-44 overflow-y-auto"></div>
@@ -126,7 +126,7 @@ details[open]>summary::before{content:'📂 '}
 </div>
 <div id="tab-map" class="flex-grow w-full h-full relative">
 <div id="statusMessage" class="absolute top-4 left-1/2 transform -translate-x-1/2 z-10 bg-white/95 backdrop-blur-sm px-6 py-2 rounded-full shadow-md text-sm font-bold text-slate-700 border border-slate-200 text-center transition-all">
-지역 검색 → 상권 자동 나누기 → 상권 선택 → 내부 길목 분석. 상권 경계는 서로 겹치지 않게 생성합니다.
+지역 검색 → 상권 찾기 → 지도에서 상권 선택. 색칠되지 않은 길은 미분석입니다.
 </div>
 
 <div class="absolute top-16 left-4 z-10 bg-white/95 backdrop-blur-sm p-4 rounded-xl shadow-lg border border-slate-200 w-64 max-h-[80vh] overflow-y-auto hidden md:block">
@@ -175,9 +175,8 @@ ANALYSIS_MAX_PAGES:3,MAP_MAX_PAGES:2,DEMAND_RADIUS:140,COMPETITION_RADIUS:160,AC
 AUTO_AREA_MAX_NAMED:6,AUTO_AREA_MAX_CLUSTERS:3,AUTO_AREA_POI_PAGES:2,AUTO_AREA_CLUSTER_EPS:85,AUTO_AREA_CLUSTER_MIN_POINTS:7,AUTO_AREA_HULL_BUFFER:24,AUTO_AREA_MIN_POIS:6,
 AUTO_GRAPH_RADIUS:1500,AUTO_GRAPH_MAX_ROUTES:18,AUTO_GRAPH_ROUTE_DELAY_MS:90,AUTO_GRAPH_ACTIVE_MIN:.3,AUTO_GRAPH_CONNECT_ENDPOINT:20,AUTO_GRAPH_CONNECT_PARALLEL:15,
 AUTO_GRAPH_MAX_CORE_DISTANCE:720,AUTO_GRAPH_CORE_SEPARATION:210,AUTO_GRAPH_MAX_COMMUNITIES:6,AUTO_GRAPH_MIN_COMMUNITY_LENGTH:65,AUTO_GRAPH_BUFFER_METERS:24,
-AUTO_AREA_POI_ASSIGN_MAX:125,AUTO_AREA_HULL_MAX_EDGE_METERS:155,AUTO_AREA_FULL_BUFFER_METERS:26,AUTO_AREA_MIN_EXCLUSIVE_M2:1200,AUTO_AREA_FILL_OPACITY:.2,
-AUTO_AREA_ACTIVE_FILL_OPACITY:.34,
-GRID_CELL_METERS:40,GRID_RADIUS:1250,GRID_POI_RADIUS:90,GRID_FLOW_RADIUS:30,GRID_SEGMENT_RADIUS:45,GRID_MIN_SCORE:.25,GRID_MIN_POIS:2,GRID_MIN_AREA_CELLS:6,GRID_MIN_NAMED_AREA_CELLS:4,GRID_FILL_NEIGHBORS:5,GRID_PRUNE_NEIGHBORS:1,GRID_SEED_SNAP_METERS:210,GRID_AUTO_CORE_SEPARATION:330,GRID_MAX_AUTO_CORES:3,GRID_MAX_AREAS:8};
+AUTO_AREA_POI_ASSIGN_MAX:125,AUTO_AREA_HULL_MAX_EDGE_METERS:155,AUTO_AREA_FULL_BUFFER_METERS:26,AUTO_AREA_MIN_EXCLUSIVE_M2:900,AUTO_AREA_FILL_OPACITY:.2,
+AUTO_AREA_ACTIVE_FILL_OPACITY:.34,GRID_CELL_METERS:30,GRID_POI_RADIUS:78,GRID_FLOW_RADIUS:48,GRID_CORE_QUANTILE:.68,GRID_EXPAND_QUANTILE:.42,GRID_GAP_QUANTILE:.25,GRID_MIN_COMPONENT_CELLS:3,GRID_MIN_SEEDED_CELLS:2,GRID_SEED_ATTACH_METERS:300,GRID_MAX_AREAS:10,GRID_MAX_CELLS:12000};
 if(!window.kakao?.maps?.services||!window.kakao?.maps?.drawing)throw document.getElementById("statusMessage").textContent="지도를 불러오지 못했습니다. 기존 등록 도메인에서 index.html을 교체하고 카카오 지도 키·네트워크 설정을 확인해주세요.",
 new Error("Kakao SDK unavailable");
 let n="new",a="",o=null,r=null,s=[],i=null,l="",c=null,d=0,u=document.getElementById("map"),m=new kakao.maps.LatLng(37.498095,127.02761),g=m,f=new kakao.maps.Map(u,{center:m,
@@ -317,7 +316,7 @@ for(const r of at){const s=await Z(r,{location:o,radius:e.AUTO_GRAPH_RADIUS,sort
 for(const e of s){const o=+e.y,s=+e.x;Number.isFinite(o)&&Number.isFinite(s)&&a.push({
 id:`kakao_${e.id||lt(e.place_name)}`,name:e.place_name||r,lat:o,lng:s,source:"Kakao 장소명",official:!1,distance:Pt(t,n,o,s)})}await z(25)}
 a.sort(((t,e)=>e.official-t.official||t.distance-e.distance));const r=[];
-for(const t of a){const e=lt(t.name),n=r.find((n=>lt(n.name)===e||(Pt(n.lat,n.lng,t.lat,t.lng)<35&&(lt(n.name).includes(e)||e.includes(lt(n.name))))));
+for(const t of a){const e=lt(t.name),n=r.find((n=>lt(n.name)===e||Pt(n.lat,n.lng,t.lat,t.lng)<90));
 n?t.official&&!n.official&&Object.assign(n,t):r.push(t)}return r.slice(0,10)}
 
 function gt(t,e){const n=t.filter(Number.isFinite).sort(((t,e)=>t-e));if(!n.length)return 0;
@@ -352,71 +351,7 @@ else{const n=t.map((t=>[[t.a.lng,t.a.lat],[t.b.lng,t.b.lat]])),a=turf.multiLineS
 try{o=turf.simplify(o,{tolerance:35e-6,highQuality:!0})}catch(t){}return ct(o)}
 catch(e){console.warn("상권 전체영역 Polygon 생성 실패:",e);const n=t.map((t=>[[t.a.lng,t.a.lat],[t.b.lng,t.b.lat]]));
 try{const t=turf.multiLineString(n);return ct(turf.buffer(t,.04,{units:"kilometers",steps:8}))}catch(t){return[]}}}
-
-
-function gridPoiWeightV51(t){
-const e=`${t.name||""} ${t.category||""}`;
-return /올리브영|화장품|뷰티|미용|패션|의류|렌즈|안경|사진/.test(e)?1.65:/다이소|백화점|쇼핑|영화/.test(e)?1.35:/카페|커피|음식|편의점/.test(e)?.72:.58}
-function gridCellKeyV51(t,e){return`${t},${e}`}
-function gridFourNeighborsV51(t){return[[t.row+1,t.col],[t.row-1,t.col],[t.row,t.col+1],[t.row,t.col-1]]}
-function gridEightNeighborsV51(t){return[[t.row+1,t.col],[t.row-1,t.col],[t.row,t.col+1],[t.row,t.col-1],[t.row+1,t.col+1],[t.row+1,t.col-1],[t.row-1,t.col+1],[t.row-1,t.col-1]]}
-function gridLargestComponentV51(t){
-if(!t.length)return[];const e=new Map(t.map((t=>[t.key,t]))),n=new Set,a=[];
-for(const t of e.values()){if(n.has(t.key))continue;const o=[t],r=[];n.add(t.key);
-for(;o.length;){const t=o.pop();r.push(t);for(const[a,s]of gridFourNeighborsV51(t)){const t=e.get(gridCellKeyV51(a,s));t&&!n.has(t.key)&&(n.add(t.key),o.push(t))}}
-a.push(r)}return a.sort(((t,e)=>e.length-t.length))[0]||[]}
-function gridFeatureFromCellsV51(t,n,a,o){
-if(!t.length)return null;const r=new Set(t.map((t=>t.key))),s=[],i=(t,e)=>`${t},${e}`,
-l=(t,e)=>({x:t,y:e}),c=(t=>[a+t.x/(111320*Math.cos(n*Math.PI/180)),n+t.y/110540]);
-for(const t of r){const[e,n]=t.split(",").map(Number),a=e*o,u=(e+1)*o,m=n*o,g=(n+1)*o,
-f=l(m,u),h=l(g,u),p=l(g,a),y=l(m,a);
-r.has(i(e+1,n))||s.push([f,h]),r.has(i(e,n+1))||s.push([h,p]),r.has(i(e-1,n))||s.push([p,y]),r.has(i(e,n-1))||s.push([y,f])}
-if(!s.length)return null;const d=new Map;
-s.forEach(((t,e)=>{const n=`${t[0].x},${t[0].y}`;d.has(n)||d.set(n,[]),d.get(n).push({idx:e,start:t[0],end:t[1]})}));
-const u=new Set,m=[];
-for(let t=0;t<s.length;t++){if(u.has(t))continue;let e={idx:t,start:s[t][0],end:s[t][1]},n=[e.start],a=0;u.add(e.idx);
-for(;a++<s.length+5;){n.push(e.end);const t=`${e.end.x},${e.end.y}`;if(e.end.x===n[0].x&&e.end.y===n[0].y)break;const o=(d.get(t)||[]).find((t=>!u.has(t.idx)));if(!o)break;u.add(o.idx),e=o}
-if(n.length>=5&&n.at(-1).x===n[0].x&&n.at(-1).y===n[0].y)m.push(n)}
-if(!m.length)return null;function f(t){let e=0;for(let n=0,a=t.length-1;n<t.length;a=n++)e+=t[a].x*t[n].y-t[n].x*t[a].y;return Math.abs(e/2)}
-const h=m.sort(((t,e)=>f(e)-f(t)))[0],p=h.map(c);p[0][0]===p.at(-1)[0]&&p[0][1]===p.at(-1)[1]||p.push([...p[0]]);
-return turf.polygon([p])}
-function gridRegionCentroidV51(t){let e=0,n=0,a=0;for(const o of t){const r=.25+o.strength;e+=r,n+=o.lat*r,a+=o.lng*r}return e?{lat:n/e,lng:a/e}:{lat:0,lng:0}}
-async function buildGridTradeAreasV51(t,n,a,o,r,s,i=[]){
-if(!window.turf)return[];const l=e.GRID_CELL_METERS,c=e.GRID_RADIUS,d=Math.ceil(c/l),u=111320*Math.cos(t*Math.PI/180),m=new Map,
-g=(e,n)=>({x:(n-a)*u,y:(e-t)*110540}),f=(e,n)=>({lat:t+n/110540,lng:a+e/u});
-const h=[];for(let t=-d;t<d;t++)for(let e=-d;e<d;e++){const n=(e+.5)*l,a=(t+.5)*l;if(Math.hypot(n,a)>c)continue;const o=f(n,a),r=gridCellKeyV51(t,e),s={row:t,col:e,key:r,x:n,y:a,lat:o.lat,lng:o.lng,poiRaw:0,poiCount:0,poiIds:new Set,routeMap:new Map,segRaw:0,strength:0,active:!1,blocked:!1};
-if(i.length&&window.turf.booleanPointInPolygon){const t=turf.point([s.lng,s.lat]);for(const e of i)try{if(turf.booleanPointInPolygon(t,H(e.geometry||e.path))){s.blocked=!0;break}}catch(t){}}
-m.set(r,s),h.push(s)}
-const p=(t,e,n)=>{const a=Math.ceil(n/l),o=Math.floor((t-n)/l),r=Math.floor((t+n)/l),s=Math.floor((e-n)/l),i=Math.floor((e+n)/l),c=[];for(let t=o;t<=r;t++)for(let e=s;e<=i;e++){const n=m.get(gridCellKeyV51(e,t));n&&c.push(n)}return c};
-for(const t of o){const xy=g(t.lat,t.lng),n=gridPoiWeightV51(t);for(const a of p(xy.x,xy.y,e.GRID_POI_RADIUS)){const dist=Math.hypot(a.x-xy.x,a.y-xy.y);if(dist>e.GRID_POI_RADIUS)continue;const decay=Math.max(0,1-dist/e.GRID_POI_RADIUS);a.poiRaw+=n*decay,a.poiCount++,a.poiIds.add(t.id||`${t.name}|${t.lat}|${t.lng}`)}}
-for(const t of r){const n=t.samples?.length?t.samples:t.coords||[];for(let a=0;a<n.length;a+=2){const o=n[a],r=g(o.lat,o.lng);for(const n of p(r.x,r.y,e.GRID_FLOW_RADIUS)){const a=Math.hypot(n.x-r.x,n.y-r.y);a<=e.GRID_FLOW_RADIUS&&n.routeMap.set(t.id,Math.max(n.routeMap.get(t.id)||0,(t.weight||1)*(1-a/e.GRID_FLOW_RADIUS)))}}}
-for(const t of s){const n=g(t.mid.lat,t.mid.lng);for(const a of p(n.x,n.y,e.GRID_SEGMENT_RADIUS)){const o=Math.hypot(a.x-n.x,a.y-n.y);o<=e.GRID_SEGMENT_RADIUS&&(a.segRaw=Math.max(a.segRaw,(t.strength||0)*(1-o/e.GRID_SEGMENT_RADIUS)))}}
-for(const t of h)t.flowRaw=[...t.routeMap.values()].reduce(((t,e)=>t+e),0);
-const y=h.filter((t=>t.poiRaw>0||t.flowRaw>0||t.segRaw>0)),_=y.map((t=>t.poiRaw)).filter((t=>t>0)),A=y.map((t=>t.flowRaw)).filter((t=>t>0)),E=y.map((t=>t.segRaw)).filter((t=>t>0));
-for(const t of y){t.commerceN=t.poiRaw>0?ft(t.poiRaw,_):0,t.flowN=t.flowRaw>0?ft(t.flowRaw,A):0,t.segmentN=t.segRaw>0?ft(t.segRaw,E):0,t.strength=.6*t.commerceN+.28*t.flowN+.12*t.segmentN;
-t.active=!t.blocked&&t.strength>=e.GRID_MIN_SCORE&&(t.poiCount>=e.GRID_MIN_POIS||t.poiCount>=1&&t.flowN>=.42||t.commerceN>=.62)}
-for(let t=0;t<2;t++){const e=[];for(const t of h)if(!t.blocked){const n=gridEightNeighborsV51(t).map((([t,e])=>m.get(gridCellKeyV51(t,e)))).filter(Boolean),a=n.filter((t=>t.active)).length;
-!t.active&&a>=5&&(t.poiRaw>.2||t.flowN>.18)?e.push([t,!0]):t.active&&a<=1&&t.strength<.42&&e.push([t,!1])}e.forEach((([t,e])=>t.active=e))}
-const M=new Set(h.filter((t=>t.active)).map((t=>t.key))),w=[],b=new Set;
-for(const t of h){if(!t.active||b.has(t.key))continue;const e=[t],n=[];b.add(t.key);for(;e.length;){const t=e.pop();n.push(t);for(const[a,o]of gridFourNeighborsV51(t)){const t=m.get(gridCellKeyV51(a,o));t?.active&&!b.has(t.key)&&(b.add(t.key),e.push(t))}}n.length>=e.GRID_MIN_AREA_CELLS&&w.push(n)}
-const k=a.filter((t=>!t.geometry&&Number.isFinite(t.lat)&&Number.isFinite(t.lng))),x=[],I=new Set;let S=0;
-for(const a of w){const o=new Map(a.map((t=>[t.key,t]))),r=[];
-for(const t of k){const e=g(t.lat,t.lng);let n=null,s=1/0;for(const t of a){const a=Math.hypot(t.x-e.x,t.y-e.y);a<s&&(s=a,n=t)}s<=e.GRID_SEED_SNAP_METERS&&r.push({seed:t,cell:n,official:!!t.official,costBias:t.official?.92:1})}
-const s2=[];if(r.length)s2.push(...r);else{const t=[...a].sort(((t,e)=>e.strength-t.strength));for(const n of t){if(n.strength<.48&&s2.length)break;if(s2.every((t=>Math.hypot(t.cell.x-n.x,t.cell.y-n.y)>=e.GRID_AUTO_CORE_SEPARATION))){s2.push({seed:null,cell:n,official:!1,costBias:1});if(s2.length>=Math.min(e.GRID_MAX_AUTO_CORES,Math.max(1,Math.ceil(a.length/120))))break}}s2.length||s2.push({seed:null,cell:t[0],official:!1,costBias:1})}
-const i2=new Map,q=[];s2.forEach(((t,e)=>{i2.set(t.cell.key,{owner:e,cost:0}),q.push({key:t.cell.key,owner:e,cost:0})}));
-for(;q.length;){q.sort(((t,e)=>e.cost-t.cost));const t=q.pop(),e0=i2.get(t.key);if(!e0||e0.owner!==t.owner||Math.abs(e0.cost-t.cost)>1e-6)continue;const n0=o.get(t.key);if(!n0)continue;for(const[a0,r0]of gridFourNeighborsV51(n0)){const n1=o.get(gridCellKeyV51(a0,r0));if(!n1)continue;const step=l/(.28+n1.strength)*s2[t.owner].costBias,cost=t.cost+step,prev=i2.get(n1.key);(!prev||cost<prev.cost)&&(i2.set(n1.key,{owner:t.owner,cost}),q.push({key:n1.key,owner:t.owner,cost}))}}
-const groups=s2.map((()=>[]));a.forEach((t=>{const e=i2.get(t.key);e&&groups[e.owner].push(t)}));
-for(let a0=0;a0<groups.length;a0++){let o0=gridLargestComponentV51(groups[a0]);const seedInfo=s2[a0],minCells=seedInfo.seed?e.GRID_MIN_NAMED_AREA_CELLS:e.GRID_MIN_AREA_CELLS;if(o0.length<minCells)continue;
-const feature=gridFeatureFromCellsV51(o0,t,n,l);if(!feature)continue;let areaM2=0;try{areaM2=Math.round(turf.area(feature))}catch(t){}if(areaM2<Math.max(4500,minCells*l*l*.7))continue;
-const center=gridRegionCentroidV51(o0),keys=new Set(o0.map((t=>t.key))),seg=s.filter((t=>{const e0=g(t.mid.lat,t.mid.lng);return keys.has(gridCellKeyV51(Math.floor(e0.y/l),Math.floor(e0.x/l)))})),routeIds=new Set;for(const t of o0)t.routeMap.forEach(((t,e)=>routeIds.add(e)));
-const assignedPois=o.filter((t=>{const e0=g(t.lat,t.lng);return keys.has(gridCellKeyV51(Math.floor(e0.y/l),Math.floor(e0.x/l)))})),avg=o0.reduce(((t,e)=>t+e.strength),0)/o0.length;
-let name,type,source;if(seedInfo.seed){name=seedInfo.seed.name,type=seedInfo.seed.official?"grid_official_named":"grid_named",source=`${seedInfo.seed.source||"거리명"} + 40m 공간셀 상업성/보행성 배타 분할`}else{const reg=await dt(center.lat,center.lng);name=`${reg.dong||reg.gu||"주변"} 상권 ${String.fromCharCode(65+S++)}`,type="grid_estimated",source="40m 공간셀 상업성 + TMAP 보행경로 자동 분할"}
-let finalName=name,dup=2;for(;I.has(finalName);)finalName=`${name} ${dup++}`;I.add(finalName);
-const path=F(feature),confidence=it(.48+.28*avg+.12*Math.min(1,routeIds.size/6)+.12*Math.min(1,assignedPois.length/18),.45,.96);
-x.push({id:`grid_${Date.now()}_${x.length+1}`,name:finalName,type,source,centerLat:center.lat,centerLng:center.lng,path,geometry:feature.geometry,segments:seg,commercialPois:assignedPois,poiCount:assignedPois.length,segmentCount:seg.length,networkLength:Math.round(At(seg)),routeCount:routeIds.size,confidence,areaM2,color:st[x.length%st.length],gridCells:o0.length})}}
-return x.sort(((t,e)=>("grid_official_named"===e.type)-("grid_official_named"===t.type)||e.poiCount-t.poiCount)).slice(0,e.GRID_MAX_AREAS)}
-
-function wt(t){return"official_polygon_fallback"===t.type?5:"grid_official_named"===t.type?4:"grid_named"===t.type?3:"grid_estimated"===t.type?2:"network_official_named"===t.type?2:1}
+function wt(t){return"official_polygon_fallback"===t.type?6:"grid_official_named"===t.type?5:"grid_named"===t.type?4:"grid_estimated"===t.type?3:"network_official_named"===t.type?2:"network_named"===t.type?1:0}
 
 async function bt(t,n){const a=[];let o=1;const r=new Set,s=function(t,n){const a=t.map((()=>[]));
 for(const o of n){let n=null;
@@ -438,11 +373,7 @@ a.push({id:`net_${Date.now()}_${a.length+1}`,name:c,type:d,source:u,centerLat:l.
 segmentCount:i.segments.length,networkLength:Math.round(At(i.segments)),routeCount:y.size,confidence:A,color:st[a.length%st.length]})}return a}
 
 function kt(t){const e=t.color||"#2563eb";
-return"official_polygon_fallback"===t.type?{icon:"🔷",label:"제공된 공식 경계 · 출처 확인 필요",color:e,fill:e}:
-"grid_official_named"===t.type?{icon:"🔵",label:"공식 거리명 · 40m 셀 추정 경계",color:e,fill:e}:
-"grid_named"===t.type?{icon:"🟣",label:"거리명 · 비겹침 추정 경계",color:e,fill:e}:
-"grid_estimated"===t.type?{icon:"🟠",label:"자동 추정 · 비겹침 상권",color:e,fill:e}:
-"network_official_named"===t.type?{icon:"🔵",label:"공식 거리명 · 경계는 추정",color:e,fill:e}:"network_named"===t.type?{icon:"🟣",label:"거리명 · 상권 전체영역",color:e,fill:e}:{icon:"🟠",label:"자동 추정 상권 전체영역",color:e,fill:e}}
+return"grid_official_named"===t.type?{icon:"🔵",label:"공식 거리명 · 30m 적응형 경계",color:e,fill:e}:"grid_named"===t.type?{icon:"🟣",label:"거리명 · 적응형 상권 경계",color:e,fill:e}:"grid_estimated"===t.type?{icon:"🟠",label:"자동 추정 · 적응형 상권 경계",color:e,fill:e}:"network_official_named"===t.type?{icon:"🔵",label:"공식 거리명 · 경계는 추정",color:e,fill:e}:"network_named"===t.type?{icon:"🟣",label:"거리명 · 상권 전체영역",color:e,fill:e}:"official_polygon_fallback"===t.type?{icon:"🔷",label:"제공된 공식 경계 · 출처 확인 필요",color:e,fill:e}:{icon:"🟠",label:"자동 추정 상권 전체영역",color:e,fill:e}}
 function xt(t){return"official_polygon_fallback"===t.type?!1!==document.getElementById("f_area_official")?.checked:!1!==document.getElementById("f_area_estimated")?.checked}
 function It(){
 Object.values(L).forEach((t=>t.setMap(null))),Object.values(C).forEach((t=>t.setMap(null))),L={},C={},v=[],R=null;
@@ -468,7 +399,7 @@ const m=new kakao.maps.CustomOverlay({position:new kakao.maps.LatLng(n.centerLat
 if(xt(n)&&m.setMap(f),C[n.id]=m,t){
 const e=document.createElement("button");
 e.className="w-full text-left bg-white border border-slate-200 hover:border-cyan-400 rounded-lg px-2.5 py-2 transition shadow-sm",e.onclick=()=>Ot(n.id),
-e.innerHTML=`<div class="flex justify-between gap-2 items-start"><span class="text-[11px] font-black text-slate-800">${o.icon} ${V(n.name)}</span><span class="text-[9px] whitespace-nowrap text-slate-400 font-bold">${"official_polygon_fallback"===n.type?"제공 경계":"미검토 추정"}</span></div><div class="text-[9px] mt-0.5 text-slate-500">${o.label} · 면적 ${n.areaM2?Math.round(n.areaM2/100)/10+"천㎡":"-"} · ${n.gridCells?"40m셀 "+n.gridCells+"칸 · ":""}보행축 ${n.networkLength||0}m · OD ${n.routeCount||0}개</div>`,
+e.innerHTML=`<div class="flex justify-between gap-2 items-start"><span class="text-[11px] font-black text-slate-800">${o.icon} ${V(n.name)}</span><span class="text-[9px] whitespace-nowrap text-slate-400 font-bold">${"official_polygon_fallback"===n.type?"제공 경계":"미검토 추정"}</span></div><div class="text-[9px] mt-0.5 text-slate-500">${o.label} · 면적 ${n.areaM2?Math.round(n.areaM2/100)/10+"천㎡":"-"} · ${n.gridCellCount?"30m 셀 "+n.gridCellCount+"개":"보행축 "+(n.networkLength||0)+"m"} · OD ${n.routeCount||0}개</div>`,
 t.appendChild(e);
 const a=document.createElement("button");
 a.className="text-[10px] text-cyan-800 underline mb-2",a.textContent="이 경계 보관하기",
@@ -490,6 +421,51 @@ id:`fallback_${t.id}`,name:t.name,type:"official_polygon_fallback",path:F(t.geom
 centerLat:t.centerLat,centerLng:t.centerLng,segments:[],networkLength:0,routeCount:0,confidence:null,color:st[e%st.length],
 areaM2:(()=>{try{return Math.round(turf.area(H(t.path)))}catch(t){return 0}})(),source:t.source}))),a}
 
+
+function gridPoiWeight(t){
+const e=`${t.name||""} ${t.category||""}`;
+if(/올리브영|화장품|미용|뷰티|패션|의류|사진|렌즈|안경/.test(e))return{commerce:1.55,target:1.7};
+if(/다이소|백화점|쇼핑|영화|오락|문화/.test(e))return{commerce:1.25,target:1.15};
+if(/카페|음식|편의점/.test(e))return{commerce:.82,target:.35};
+return{commerce:.92,target:.2}}
+function gridNeighbors(t,n){const a=[];for(let o=-1;o<=1;o++)for(let r=-1;r<=1;r++){if(!o&&!r)continue;const s=n.get(`${t.row+o}:${t.col+r}`);s&&a.push(s)}return a}
+function gridBuild(t,n,a=e.GRID_CELL_METERS){
+const o=a/110540,r=a/(111320*Math.cos(t*Math.PI/180)),s=Math.ceil(e.AUTO_GRAPH_RADIUS/a),i=[];
+for(let l=-s;l<=s;l++)for(let c=-s;c<=s;c++){if(i.length>=e.GRID_MAX_CELLS)break;const d=t+l*o,u=n+c*r;if(Pt(t,n,d,u)>e.AUTO_GRAPH_RADIUS+1.2*a)continue;
+i.push({row:l,col:c,key:`${l}:${c}`,lat:d,lng:u,latStep:o,lngStep:r,poiCount:0,commerceRaw:0,targetRaw:0,flowRaw:0,routeIds:new Set,score:0,active:!1,core:!1})}return i}
+function gridScore(t,n,a){
+for(const o of t){
+for(const t of n){const n=Pt(o.lat,o.lng,t.lat,t.lng);if(n>e.GRID_POI_RADIUS)continue;const a=Math.max(0,1-n/e.GRID_POI_RADIUS),r=gridPoiWeight(t);o.commerceRaw+=r.commerce*a,o.targetRaw+=r.target*a,o.poiCount++}
+for(const t of a||[]){const n=Dt(o.lng,o.lat,t.a.lng,t.a.lat,t.b.lng,t.b.lat);if(n>e.GRID_FLOW_RADIUS)continue;const r=Math.max(0,1-n/e.GRID_FLOW_RADIUS),s=.55+(t.strength||0);o.flowRaw+=s*r,t.routeMap&&t.routeMap.forEach(((t,e)=>o.routeIds.add(e)))}}
+const o=t.filter((t=>t.poiCount>0||t.flowRaw>.02));if(!o.length)return{cells:t,signal:[],coreThreshold:1,expandThreshold:1,gapThreshold:1};
+const r=o.map((t=>t.commerceRaw)),s=o.map((t=>t.targetRaw)),i=o.map((t=>t.flowRaw)),l=i.some((t=>t>.02));
+o.forEach((t=>{t.commerceN=ft(t.commerceRaw,r),t.targetN=ft(t.targetRaw,s),t.flowN=l?ft(t.flowRaw,i):0,t.score=l?it(.58*t.commerceN+.24*t.flowN+.18*t.targetN,0,1):it(.76*t.commerceN+.24*t.targetN,0,1)}));
+const c=o.map((t=>t.score)).sort(((t,e)=>t-e));let d=gt(c,e.GRID_CORE_QUANTILE),u=gt(c,e.GRID_EXPAND_QUANTILE),m=gt(c,e.GRID_GAP_QUANTILE);
+let g=o.filter((t=>t.score>=d&&(t.poiCount>0||t.flowRaw>.08)));if(g.length<3){g=[...o].sort(((t,e)=>e.score-t.score)).slice(0,Math.min(12,Math.max(3,Math.ceil(o.length*.12))));d=g.at(-1)?.score||d}
+g.forEach((t=>t.core=!0));return{cells:t,signal:o,coreThreshold:d,expandThreshold:u,gapThreshold:m}}
+function gridActivate(t,n,a,o){
+const r=new Map(t.map((t=>[t.key,t]))),s=[],i=new Set;
+for(const t of n){t.active=!0,s.push(t),i.add(t.key)}
+for(;s.length;){const t=s.shift();for(const n of gridNeighbors(t,r)){if(n.active)continue;const l=n.poiCount>0||n.flowRaw>.02,c=n.score>=a||(n.score>=o&&l&&gridNeighbors(n,r).filter((t=>t.active)).length>=2);if(!c)continue;n.active=!0,i.add(n.key),s.push(n)}}
+for(let t=0;t<2;t++){const n=[];for(const t of r.values()){if(t.active)continue;const s=gridNeighbors(t,r).filter((t=>t.active));if(s.length>=2&&t.score>=o&&(t.poiCount>0||t.flowRaw>.02))n.push(t)}n.forEach((t=>{t.active=!0,i.add(t.key)}));if(!n.length)break}
+return{map:r,active:[...r.values()].filter((t=>t.active))}}
+function gridComponents(t,n){const a=new Set(t.map((t=>t.key))),o=[];for(const t of a){if(!a.has(t))continue;const r=[n.get(t)],s=[];a.delete(t);while(r.length){const t=r.shift();s.push(t);for(const i of gridNeighbors(t,n))a.has(i.key)&&(a.delete(i.key),r.push(i))}o.push(s)}return o.sort(((t,e)=>e.length-t.length))}
+function gridNearestCell(t,n){let a=null,o=1/0;for(const e of t){const t=Pt(n.lat,n.lng,e.lat,e.lng);t<o&&(a=e,o=t)}return{cell:a,distance:o}}
+function gridPartition(t,n){
+if(n.length<=1)return[{seed:n[0]||null,cells:t}];const a=new Map(t.map((t=>[t.key,t]))),o=new Map,r=[];
+n.forEach(((n,s)=>{const i=gridNearestCell(t,n);if(!i.cell||i.distance>e.GRID_SEED_ATTACH_METERS)return;const l=n.official?0:12;r.push({key:i.cell.key,owner:s,cost:l}),o.set(i.cell.key,{owner:s,cost:l})}));
+if(!r.length)return[{seed:null,cells:t}];
+for(;r.length;){r.sort(((t,e)=>t.cost-e.cost));const t=r.shift(),n=o.get(t.key);if(!n||n.owner!==t.owner||Math.abs(n.cost-t.cost)>1e-9)continue;const s=a.get(t.key);for(const i of gridNeighbors(s,a)){const a=i.row!==s.row&&i.col!==s.col?1.414:1,l=e.GRID_CELL_METERS*a/(.42+.85*Math.max(.05,i.score)),c=t.cost+l,d=o.get(i.key);(!d||c<d.cost)&&(o.set(i.key,{owner:t.owner,cost:c}),r.push({key:i.key,owner:t.owner,cost:c}))}}
+const s=n.map(((t,e)=>({seed:t,cells:[]})));for(const t of a.values()){const e=o.get(t.key);e&&s[e.owner]&&s[e.owner].cells.push(t)}return s.filter((t=>t.cells.length))}
+function gridFeature(t){const e=t.latStep/2,n=t.lngStep/2;return turf.polygon([[[t.lng-n,t.lat-e],[t.lng+n,t.lat-e],[t.lng+n,t.lat+e],[t.lng-n,t.lat+e],[t.lng-n,t.lat-e]]])}
+function gridCellsPolygon(t){if(!t.length||!window.turf)return null;try{let n=turf.union(turf.featureCollection(t.map(gridFeature)));if(!n)return null;try{n=turf.simplify(n,{tolerance:18e-6,highQuality:!0})}catch(t){}return n}catch(e){console.warn("Grid union 실패",e);try{return turf.multiPolygon(t.map((t=>gridFeature(t).geometry.coordinates)))}catch(t){return null}}}
+async function gridAreas(t,n,a,o,r){
+const s=[];let i=1;for(const l of t){const c=n.filter((t=>gridNearestCell(l,t).distance<=e.GRID_SEED_ATTACH_METERS)),d=gridPartition(l,c);
+for(const t of d){const n=t.seed,a=t.cells;if(a.length<(n?e.GRID_MIN_SEEDED_CELLS:e.GRID_MIN_COMPONENT_CELLS))continue;const l=gridCellsPolygon(a);if(!l)continue;const c=turf.area(l);if(c<e.AUTO_AREA_MIN_EXCLUSIVE_M2)continue;const d=K(l),u=new Set,m=a.reduce(((t,e)=>t+e.poiCount),0),g=a.reduce(((t,e)=>t+e.score),0)/a.length;a.forEach((t=>t.routeIds.forEach((t=>u.add(t)))));let f=n?.name||"",h="grid_estimated",p="30m 적응형 상업밀도 + 보행흐름";
+if(n){h=n.official?"grid_official_named":"grid_named",p=`${n.source||"거리명"} + 30m 적응형 상권경계`}else{const t=await dt(d.lat,d.lng);f=`${t.dong||t.gu||"주변"} 상권 ${String.fromCharCode(64+i++)}`}
+s.push({id:`grid_${Date.now()}_${s.length+1}`,name:f,type:h,source:p,geometry:l.geometry,path:F(l),centerLat:d.lat,centerLng:d.lng,segments:[],networkLength:0,routeCount:u.size,confidence:it(.45+.32*g+.12*Math.min(1,m/30)+.11*Math.min(1,u.size/6),.45,.96),color:st[s.length%st.length],areaM2:Math.round(c),gridCellCount:a.length,poiCount:m,avgGridScore:g})}}
+return s.slice(0,e.GRID_MAX_AREAS)}
+
 async function discoverTradeAreas(){
 if(T)return alert("현재 다른 분석이 진행 중입니다. 잠시 후 다시 눌러주세요.");
 $(!0);const t=++O;r=new AbortController,w=null,b=null,R=null,
@@ -498,108 +474,42 @@ const n=document.getElementById("btnDiscoverAreas"),a=document.getElementById("s
 n&&(n.disabled=!0,n.innerText="상권 경계 계산 중..."),Rt();
 try{
 await async function(){
-const t=[];
-for(const[n,a]of[["official_polygons.geojson","polygon"],["official_streets.json","street"]])
-try{
-const o=await fetch("./data/"+n,{cache:"no-store",signal:AbortSignal.timeout(8e3)});if(!o.ok)throw new Error("파일 없음");
-const r=await o.json();
-if("polygon"===a)e=r,P=(e?.features||[]).filter(j).map(((t,e)=>{
-const n=F(t),a=K(n);
-return{id:t.properties?.id||`official_${e}`,name:t.properties?.name||t.properties?.상권명||`경계 자료 ${e+1}`,type:"official_polygon_fallback",geometry:t.geometry,path:n,centerLat:a.lat,
-centerLng:a.lng,source:t.properties?.source||"제공된 경계 GeoJSON",meta:t.properties||{}}}));
-else{const t=Array.isArray(r)?r:r.items||r.data||[];
-N=t.map(((t,e)=>({id:t.id||`street_${e}`,name:t.name||t.stretNm||t.거리명,lat:Number(t.lat??t.latitude??t.위도),lng:Number(t.lng??t.longitude??t.경도),source:t.source||"추가 거리 자료"}))).filter((t=>t.name&&Number.isFinite(t.lat)&&Number.isFinite(t.lng)))}
-t.push("polygon"===a?`경계 자료 ${P.length}개`:`거리명 자료 ${N.length}개`)}
-catch(e){t.push("polygon"===a?"공식 경계 파일 미확보":"추가 거리명 파일 미확보")}
-var e;l=t.join(" · "),document.getElementById("areaDataNotice").textContent=l+" · 공식 Polygon 외 경계는 40m 셀 기반 추정이며 상권끼리 중복되지 않게 배정합니다."}(),It();
+const t=[];for(const[n,a]of[["official_polygons.geojson","polygon"],["official_streets.json","street"]])try{
+const o=await fetch("./data/"+n,{cache:"no-store",signal:AbortSignal.timeout(8e3)});if(!o.ok)throw new Error("파일 없음");const r=await o.json();
+if("polygon"===a)e=r,P=(e?.features||[]).filter(j).map(((t,e)=>{const n=F(t),a=K(n);return{id:t.properties?.id||`official_${e}`,name:t.properties?.name||t.properties?.상권명||`경계 자료 ${e+1}`,type:"official_polygon_fallback",geometry:t.geometry,path:n,centerLat:a.lat,centerLng:a.lng,source:t.properties?.source||"제공된 경계 GeoJSON",meta:t.properties||{}}}));
+else{const t=Array.isArray(r)?r:r.items||r.data||[];N=t.map(((t,e)=>({id:t.id||`street_${e}`,name:t.name||t.stretNm||t.거리명,lat:Number(t.lat??t.latitude??t.위도),lng:Number(t.lng??t.longitude??t.경도),source:t.source||"추가 거리 자료"}))).filter((t=>t.name&&Number.isFinite(t.lat)&&Number.isFinite(t.lng)))}
+t.push("polygon"===a?`경계 자료 ${P.length}개`:`거리명 자료 ${N.length}개`)}catch(e){t.push("polygon"===a?"공식 경계 파일 미확보":"추가 거리명 파일 미확보")}
+l=t.join(" · "),document.getElementById("areaDataNotice").textContent=l+" · 공식 Polygon이 없는 곳은 30m 적응형 경계입니다."}(),It();
 
-const n=f.getCenter(),o=n.getLat(),r=n.getLng(),s=function(t,e,n,a=48){const o=[];
-for(let r=0;r<a;r++){const s=2*Math.PI*r/a,i=Math.sin(s)*n,l=Math.cos(s)*n;o.push({lat:t+i/110540,lng:e+l/(111320*Math.cos(t*Math.PI/180))})}return o}(o,r,e.AUTO_GRAPH_RADIUS,56);
-a.innerText="🧭 1/5 공식 거리명·주변 상업시설 수집 중...";
-const[i,c]=await Promise.all([mt(o,r),ut(o,r,e.AUTO_GRAPH_RADIUS,e.AUTO_AREA_POI_PAGES)]);
-a.innerText="🚇 2/5 지하철 출구·정류장·상업 목적지 구성 중...";
-const{gates:d,destinations:u}=await async function(t,n,a,o){
-const r=new kakao.maps.LatLng(t,n),
-s=await tt("SW8",{location:r,radius:e.AUTO_GRAPH_RADIUS,sort:kakao.maps.services.SortBy.DISTANCE},2),
-i=await qt(et(s)),
-l=await Z("버스정류장",{location:r,radius:e.AUTO_GRAPH_RADIUS,sort:kakao.maps.services.SortBy.DISTANCE},2),
-c=await Z("공영주차장",{location:r,radius:e.AUTO_GRAPH_RADIUS,sort:kakao.maps.services.SortBy.DISTANCE},1),
-d=await Z("대학교",{location:r,radius:e.AUTO_GRAPH_RADIUS,sort:kakao.maps.services.SortBy.DISTANCE},1);
-let u=[...i,...l.slice(0,16).map((t=>({lat:+t.y,lng:+t.x,type:"bus",name:t.place_name}))),
-...c.slice(0,6).map((t=>({lat:+t.y,lng:+t.x,type:"parking",name:t.place_name}))),
-...d.slice(0,6).map((t=>({lat:+t.y,lng:+t.x,type:"university",name:t.place_name})))];
-u=Vt(u,15);
-const m=function(t,e=95,n=5){
-const a=new Set(t.map(((t,e)=>e))),o=[];
-for(;a.size;){const r=a.values().next().value;a.delete(r);const s=[r],i=[t[r]];
-for(;s.length;){const n=t[s.shift()];for(const o of[...a]){const r=t[o];Pt(n.lat,n.lng,r.lat,r.lng)<=e&&(a.delete(o),s.push(o),i.push(r))}}
-i.length>=n&&o.push(i)}return o.sort(((t,e)=>e.length-t.length))}(a,95,5).slice(0,7);
-let g=[];
-return m.forEach(((t,e)=>{
-const n=t.reduce(((t,e)=>t+e.lat),0)/t.length,a=t.reduce(((t,e)=>t+e.lng),0)/t.length;
-g.push({lat:n,lng:a,kind:"mall",name:`상업밀집 ${e+1}`,poiCount:t.length})})),
-o.slice(0,6).forEach((t=>g.push({lat:t.lat,lng:t.lng,kind:"mall",name:t.name,namedSeed:t}))),
-a.filter((t=>/올리브영|다이소|백화점|쇼핑|영화|사진|렌즈|안경/.test(`${t.name} ${t.category}`))).slice(0,10).forEach((t=>g.push({lat:t.lat,lng:t.lng,
-kind:/올리브영/.test(t.name)?"olive":/다이소/.test(t.name)?"daiso":"mall",name:t.name}))),
-g.push({lat:t,lng:n,kind:"center",name:"검색 중심"}),g=Qt(g,t,n),{gates:u,destinations:g}}(o,r,c,i);
+const n=f.getCenter(),o=n.getLat(),r=n.getLng();a.innerText="🧭 1/5 공식 거리명·주변 상업시설 수집 중...";
+const[i,c]=await Promise.all([mt(o,r),ut(o,r,e.AUTO_GRAPH_RADIUS,e.AUTO_AREA_POI_PAGES)]);U(t);
 
-a.innerText="🕸️ 3/5 TMAP 길찾기 경로 생성 중...";
-const m=await async function(t,n,a,o,r){
-const s=function(t,n,a,o){
-const r=Jt(t,a,o).slice(0,8),s=[...n].sort(((t,e)=>zt(e.kind)-zt(t.kind))).slice(0,10),i=[];
-for(const t of r)for(const e of s){const n=Pt(t.lat,t.lng,e.lat,e.lng);if(n<70||n>2800)continue;
-const a=Yt(t.type)*zt(e.kind);i.push({gate:t,dest:e,distance:n,pairWeight:a,rankValue:2.4*a+450/Math.max(n,120)})}
-i.sort(((t,e)=>e.rankValue-t.rankValue));
-const l=[],c=new Map,d=new Map;
-for(const t of i){const n=c.get(t.gate.name)||0,a=d.get(t.dest.name)||0;
-if(!(n>=4||a>=4)&&(l.push(t),c.set(t.gate.name,n+1),d.set(t.dest.name,a+1),l.length>=e.AUTO_GRAPH_MAX_ROUTES))break}return l}(t,n,a,o),i=[];
-let l=1;const c=O;
-for(let t=0;t<s.length;t++){U(c);const n=s[t];
-r.innerText=`🕸️ 길찾기 경로 수집 중... (${t+1}/${s.length})`;
-const a=Xt(await Wt(n.gate.lng,n.gate.lat,n.dest.lng,n.dest.lat));
-a.length>=2&&i.push({id:"AR"+l++,gate:n.gate,dest:n.dest,coords:a,samples:Gt(a,e.SEGMENT_NODE_SPACING),weight:n.pairWeight,name:`${n.gate.name} → ${n.dest.name}`}),
-await z(e.AUTO_GRAPH_ROUTE_DELAY_MS)}return i}(d,u,o,r,a);
-if(U(t),!m.length)return v=await Tt(o,r),St(),void(a.innerText=v.length?"⚠️ TMAP 보행경로를 확보하지 못해 공식 Polygon만 표시했습니다.":"⚠️ TMAP 보행경로를 확보하지 못했습니다. API 호출상태를 확인하거나 직접 펜스를 사용해주세요.");
+a.innerText="🚇 2/5 보행 유입점·상업 목적지 구성 중...";
+let d=[],u=[];try{const R=new kakao.maps.LatLng(o,r),S=await tt("SW8",{location:R,radius:e.AUTO_GRAPH_RADIUS,sort:kakao.maps.services.SortBy.DISTANCE},2),I=await qt(et(S)),A1=await Z("버스정류장",{location:R,radius:e.AUTO_GRAPH_RADIUS,sort:kakao.maps.services.SortBy.DISTANCE},2),A2=await Z("공영주차장",{location:R,radius:e.AUTO_GRAPH_RADIUS,sort:kakao.maps.services.SortBy.DISTANCE},1),A3=await Z("대학교",{location:R,radius:e.AUTO_GRAPH_RADIUS,sort:kakao.maps.services.SortBy.DISTANCE},1);
+d=Vt([...I,...A1.slice(0,16).map((t=>({lat:+t.y,lng:+t.x,type:"bus",name:t.place_name}))),...A2.slice(0,6).map((t=>({lat:+t.y,lng:+t.x,type:"parking",name:t.place_name}))),...A3.slice(0,6).map((t=>({lat:+t.y,lng:+t.x,type:"university",name:t.place_name})))],15);
+const cl=[];for(const p1 of c){let found=!1;for(const q1 of cl){if(Pt(p1.lat,p1.lng,q1.lat,q1.lng)<=95){q1.items.push(p1),q1.lat=q1.items.reduce(((x,y)=>x+y.lat),0)/q1.items.length,q1.lng=q1.items.reduce(((x,y)=>x+y.lng),0)/q1.items.length,found=!0;break}}found||cl.push({lat:p1.lat,lng:p1.lng,items:[p1]})}
+u=cl.filter((t=>t.items.length>=4)).sort(((t,e)=>e.items.length-t.items.length)).slice(0,8).map(((t,e)=>({lat:t.lat,lng:t.lng,kind:"mall",name:`상업밀집 ${e+1}`,poiCount:t.items.length})));
+i.slice(0,6).forEach((t=>u.push({lat:t.lat,lng:t.lng,kind:"mall",name:t.name,namedSeed:t}))),c.filter((t=>/올리브영|다이소|백화점|쇼핑|영화|사진|렌즈|안경/.test(`${t.name} ${t.category}`))).slice(0,10).forEach((t=>u.push({lat:t.lat,lng:t.lng,kind:/올리브영/.test(t.name)?"olive":/다이소/.test(t.name)?"daiso":"mall",name:t.name}))),u.push({lat:o,lng:r,kind:"center",name:"검색 중심"}),u=Qt(u,o,r)}catch(e1){console.warn("유입점 구성 일부 실패",e1)}
 
-a.innerText="🧠 4/5 길 Segment 상업성·OD 통과량·Graph 중심성 계산 중...";
-let g=ee(te(m,s));
-g=function(t,n,a){
-t.forEach((t=>{
-const e=function(t,e){let n=0,a=0,o=0;
-for(const r of e){const e=Pt(t.lat,t.lng,r.lat,r.lng);if(e>70)continue;const s=Math.max(0,1-e/70);let i=1;const l=`${r.name} ${r.category}`;
-/올리브영|화장품|미용|패션|의류|사진|렌즈|안경/.test(l)?i=1.35:/카페|음식|편의점/.test(l)&&(i=.75),n+=s*i,a++,/올리브영|다이소|사진|패션|화장품/.test(l)&&(o+=.15*s)}
-return{raw:n+Math.min(o,1.5),count:a}}(t.mid,a);
-t.commerceRaw=e.raw,t.poiCount=e.count,t.flowRaw=[...t.routeMap.values()].reduce(((t,e)=>t+(e.weight||1)),0),t.routeCount=t.routeMap.size})),
-function(t){
-t.forEach((t=>t.neighbors=new Set));
-for(let n=0;n<t.length;n++){const a=t[n];for(let o=n+1;o<t.length;o++){
-const n=t[o],r=Pt(a.mid.lat,a.mid.lng,n.mid.lat,n.mid.lng);if(r>42)continue;
-const s=ht(a,n);r<=e.AUTO_GRAPH_CONNECT_PARALLEL&&Bt(a.bearing,n.bearing),s<=2.5&&(a.neighbors.add(n.id),n.neighbors.add(a.id))}}}(t),
-t.forEach((t=>{t.centralRaw=1.3*t.routeCount+.55*t.neighbors.size+.25*Math.min(t.flowRaw,8)}));
-const o=t.map((t=>t.commerceRaw)),r=t.map((t=>t.flowRaw)),s=t.map((t=>t.centralRaw));
-return t.forEach((t=>{
-t.commerceN=ft(t.commerceRaw,o),t.flowN=ft(t.flowRaw,r),t.centralN=ft(t.centralRaw,s),t.strength=it(.5*t.commerceN+.32*t.flowN+.18*t.centralN,0,1),
-t.length=Pt(t.a.lat,t.a.lng,t.b.lat,t.b.lng)})),t}(g,0,c);
+a.innerText="🕸️ 3/5 가능한 보행경로를 보정자료로 수집 중...";
+let m=[];try{const pairs=[];for(const g1 of Jt(d,o,r).slice(0,8))for(const q1 of [...u].sort(((t,e)=>zt(e.kind)-zt(t.kind))).slice(0,10)){const D1=Pt(g1.lat,g1.lng,q1.lat,q1.lng);if(D1<70||D1>2800)continue;const W1=Yt(g1.type)*zt(q1.kind);pairs.push({gate:g1,dest:q1,distance:D1,pairWeight:W1,rankValue:2.4*W1+450/Math.max(D1,120)})}pairs.sort(((t,e)=>e.rankValue-t.rankValue));const chosen=[],gc=new Map,dc=new Map;for(const p1 of pairs){const G1=gc.get(p1.gate.name)||0,D1=dc.get(p1.dest.name)||0;if(G1>=4||D1>=4)continue;chosen.push(p1),gc.set(p1.gate.name,G1+1),dc.set(p1.dest.name,D1+1);if(chosen.length>=e.AUTO_GRAPH_MAX_ROUTES)break}
+let id=1;for(let q=0;q<chosen.length;q++){U(t);a.innerText=`🕸️ 보행경로 수집 중... (${q+1}/${chosen.length})`;const p1=chosen[q],coords=Xt(await Wt(p1.gate.lng,p1.gate.lat,p1.dest.lng,p1.dest.lat));coords.length>=2&&m.push({id:"AR"+id++,gate:p1.gate,dest:p1.dest,coords,samples:Gt(coords,e.SEGMENT_NODE_SPACING),weight:p1.pairWeight,name:`${p1.gate.name} → ${p1.dest.name}`}),await z(e.AUTO_GRAPH_ROUTE_DELAY_MS)}}catch(e1){console.warn("보행경로 보정자료 수집 실패",e1)}
+U(t);
 
-const h=function(t){
-const n=t.filter((t=>t.strength>=e.AUTO_GRAPH_ACTIVE_MIN||t.commerceN>=.52&&t.flowN>=.18||t.flowN>=.64&&t.commerceN>=.14)),a=new Set(n.map((t=>t.id)));
-return n.forEach((t=>{t.neighbors=new Set([...t.neighbors].filter((t=>a.has(t))))})),n}(g);
-a.innerText=h.length<6?"🗺️ 5/5 보행자료가 적어 상업시설 중심으로 비겹침 상권 생성 중...":"🗺️ 5/5 40m 공간셀에 상업성·보행성을 계산해 비겹침 상권 생성 중...";
-const officialAreas=await Tt(o,r);
-const gridAreas=await buildGridTradeAreasV51(o,r,i.filter((t=>!t.geometry)),c,m,h,officialAreas);
-v=[...officialAreas,...gridAreas],U(t),
-v=function(t){
-if(!window.turf?.difference)return t;
-const n=[...t].sort(((t,e)=>wt(e)-wt(t))),a=[];
-for(const t of n){let n=H(t.geometry||t.path);if(!n)continue;const o="official_polygon_fallback"===t.type;
-if(!o)for(const e of a){if(!n)break;try{n=turf.difference(turf.featureCollection([n,e.feature]))}catch(e){t.overlapUnresolved=!0}}
-if(!n)continue;const r=turf.area(n);if(!o&&r<e.AUTO_AREA_MIN_EXCLUSIVE_M2)continue;
-t.geometry=n.geometry,t.path=F(n),t.areaM2=Math.round(r);const s=K(n);t.centerLat=s.lat,t.centerLng=s.lng,
-t.exclusive=!o&&!t.overlapUnresolved,a.push({area:t,feature:n})}return a.map((t=>t.area))}(v),St(),
-a.innerText=v.length?`✅ V51 상권 분할 완료 · 보행경로 ${m.length}개 · 분석 Segment ${h.length}개 · 비겹침 상권 ${v.length}개 · 추정 경계는 현장 검토 필요`:"⚠️ 상권으로 묶을 만큼 연속적인 상업 보행축이 부족합니다. 직접 펜스를 사용해주세요."
-}catch(t){
-if("AbortError"===t.name)return void(a.textContent="상권 탐색을 취소했습니다.");
-console.error("V51 비겹침 상권 탐색 오류:",t),a.innerText=`⚠️ 보행상권 생성 실패: ${t.message||"알 수 없는 오류"}`}
+a.innerText="🧠 4/5 30m 적응형 셀 · 상대 상업밀도 계산 중...";
+let g=[];if(m.length){g=ee(te(m,[]));g.forEach((t=>{let raw=0,cnt=0;for(const p1 of c){const D1=Pt(t.mid.lat,t.mid.lng,p1.lat,p1.lng);if(D1>70)continue;const W1=gridPoiWeight(p1);raw+=W1.commerce*Math.max(0,1-D1/70),cnt++}t.commerceRaw=raw,t.poiCount=cnt,t.flowRaw=[...t.routeMap.values()].reduce(((x,y)=>x+(y.weight||1)),0),t.routeCount=t.routeMap.size,t.length=Pt(t.a.lat,t.a.lng,t.b.lat,t.b.lng)}));const gc=g.map((q=>q.commerceRaw)),gf=g.map((q=>q.flowRaw));g.forEach((t=>{t.strength=.45*ft(t.commerceRaw,gc)+.55*ft(t.flowRaw,gf)}))}
+const grid=gridBuild(o,r),scored=gridScore(grid,c,g),activated=gridActivate(scored.cells,scored.signal.filter((t=>t.core)),scored.expandThreshold,scored.gapThreshold),components=gridComponents(activated.active,activated.map);
+
+const viable=[];for(const comp of components){const seeded=i.some((seed=>gridNearestCell(comp,seed).distance<=e.GRID_SEED_ATTACH_METERS));if(comp.length>=(seeded?e.GRID_MIN_SEEDED_CELLS:e.GRID_MIN_COMPONENT_CELLS))viable.push(comp)}
+const diagnostics={poi:c.length,routes:m.length,totalCells:grid.length,signalCells:scored.signal.length,coreCells:scored.signal.filter((t=>t.core)).length,activeCells:activated.active.length,components:components.length,viable:viable.length,maxComponent:components[0]?.length||0};
+
+a.innerText="🗺️ 5/5 상권별 배타적 영역을 병합 중...";
+const official=await Tt(o,r),estimated=await gridAreas(viable,i,o,r,g);v=[...official,...estimated];U(t);
+if(window.turf?.difference){const ordered=[...v].sort(((t,e)=>wt(e)-wt(t))),kept=[];for(const area of ordered){let geom=H(area.geometry||area.path);if(!geom)continue;const fixed="official_polygon_fallback"===area.type;if(!fixed)for(const prev of kept){if(!geom)break;try{geom=turf.difference(turf.featureCollection([geom,prev.feature]))}catch(e1){area.overlapUnresolved=!0}}if(!geom)continue;const ar=turf.area(geom);if(!fixed&&ar<e.AUTO_AREA_MIN_EXCLUSIVE_M2)continue;area.geometry=geom.geometry,area.path=F(geom),area.areaM2=Math.round(ar);const cc=K(geom);area.centerLat=cc.lat,area.centerLng=cc.lng,kept.push({area,feature:geom})}v=kept.map((t=>t.area))}
+St();
+if(v.length)a.innerText=`✅ 상권 탐색 완료 · POI ${diagnostics.poi}개 · 보행경로 ${diagnostics.routes}개 · 활성셀 ${diagnostics.activeCells}개 · 상권 ${v.length}개`;
+else a.innerText=`⚠️ 상권 후보는 찾았지만 경계 생성 기준을 통과하지 못했습니다. POI ${diagnostics.poi}개 · 신호셀 ${diagnostics.signalCells}개 · Core ${diagnostics.coreCells}개 · 활성 ${diagnostics.activeCells}개 · 최대 연결 ${diagnostics.maxComponent}셀. 지도를 조금 확대/이동 후 다시 시도하거나 직접 펜스를 사용해주세요.`
+}catch(t){if("AbortError"===t.name)return void(a.textContent="상권 탐색을 취소했습니다.");console.error("V51.2 적응형 상권 탐색 오류:",t),a.innerText=`⚠️ 상권 생성 실패: ${t.message||"알 수 없는 오류"}`}
 finally{$(!1),n&&(n.disabled=!1,n.innerText="이 지역 상권 자동 나누기")}}
 
 function Ot(t){
