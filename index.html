@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>렌즈미 상권 분석 대시보드 V56.2 교통-횡단 연계 TOP3</title>
+<title>렌즈미 상권 분석 대시보드 V56.3 교통-횡단 연계 TOP3</title>
 <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css" rel="stylesheet">
 <script src="https://cdn.tailwindcss.com"></script>
 <style>
@@ -31,7 +31,7 @@ details[open]>summary::before{content:'📂 '}
 <div class="w-full md:w-1/4 bg-white border-r border-gray-200 p-6 flex flex-col shadow-lg z-20 overflow-y-auto">
 <h1 class="text-xl font-extrabold text-slate-800 border-b-4 border-indigo-500 pb-3 mb-4 flex justify-between items-center">
 <span>🗺️ 전국 상권 관제탑</span>
-<span class="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded-full font-bold">V56.2</span>
+<span class="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded-full font-bold">V56.3</span>
 </h1>
 
 <div class="mb-3">
@@ -858,9 +858,9 @@ const a=["#7f1d1d","#1d4ed8","#047857"][rankIdx]||"#334155",o=t.recommendationWi
 t.recommendationWindow=o,t.displayPoint={...p};
 const r=new kakao.maps.Polyline({path:o.path.map((t=>new kakao.maps.LatLng(t.lat,t.lng))),strokeWeight:9,strokeColor:a,strokeOpacity:.96,strokeStyle:"solid"});
 r.setMap(f),_.push(r);
-const s=rankIdx+1,i=`${1===s?"🥇":2===s?"🥈":"🥉"} ${s}위 · ${candidateTypeLabel(t)}`,l=new kakao.maps.CustomOverlay({
+const s=rankIdx+1,i=`${1===s?"🥇":2===s?"🥈":"🥉"} ${s}위`,l=new kakao.maps.CustomOverlay({
 position:new kakao.maps.LatLng(p.lat,p.lng),
-content:`<div style="position:relative;z-index:999;text-align:center;pointer-events:none"><div style="background:${a};color:white;padding:5px 10px;border-radius:8px;font-weight:900;font-size:12px;border:2px solid white;box-shadow:0 3px 7px rgba(0,0,0,.35);white-space:nowrap;margin-bottom:3px">${i} · ${Math.round(t.score)}점</div><div style="width:14px;height:14px;border-radius:50%;background:#fff;border:4px solid ${a};box-shadow:0 1px 4px rgba(0,0,0,.4);margin:0 auto"></div></div>`,
+content:`<div style="position:relative;z-index:999;text-align:center;pointer-events:none"><div style="background:${a};color:white;padding:5px 10px;border-radius:9px;font-weight:900;font-size:12px;border:2px solid white;box-shadow:0 3px 7px rgba(0,0,0,.35);white-space:nowrap;margin-bottom:3px">${i}</div><div style="width:12px;height:12px;border-radius:50%;background:#fff;border:4px solid ${a};box-shadow:0 1px 4px rgba(0,0,0,.4);margin:0 auto"></div></div>`,
 xAnchor:.5,yAnchor:1});return l.setMap(f),_.push(l),i}
 function le(t,e){
 return e?`${tradeZoneLabel(t)}의 ${candidateTypeLabel(t)}입니다. ${t.routeHitIds.length>=5?"여러 핵심 시설 간 보행경로가 겹치고":t.routeHitIds.length>=3?"복수 보행경로가 겹치며":"주요 보행경로가 통과하며"} 주변 60m 상업시설 표본 ${t.commercial?.count60||0}곳을 함께 반영했습니다. ${t.transportLink?.routeCount?`역출구·버스와 가까운 유효 횡단지점을 거쳐 이 길목으로 이어지는 보행경로 ${t.transportLink.routeCount}개가 확인됩니다. `:""}${t.entryIndex>=75?"상권 진입 흐름과도 강하게 연결됩니다. ":""}${t.competition.competitorCount80>0?`80m 내 경쟁 렌즈샵 ${t.competition.competitorCount80}곳이 있으나 TOP3 점수에는 반영하지 않습니다.`:"80m 내 주요 경쟁 렌즈샵은 없으며 경쟁사 유무는 TOP3 점수에 반영하지 않습니다."} 1층 여부·전면폭·간판 가시성·임대료는 현장에서 최종 확인하세요.`:"길찾기 경로가 확보되지 않아 추천구간 분석을 수행하지 못했습니다."}
@@ -957,10 +957,25 @@ const mid=usable.filter(x=>x.zone==="middle").sort((x,y)=>((.34*y.flowIndex+.28*
 inner=usable.filter(x=>x.zone==="inner").sort((x,y)=>((.28*y.commercialIndex+.24*y.flowIndex+.22*y.demandIndex+.14*y.captureIndex+.12*y.accessIndex)-(.28*x.commercialIndex+.24*x.flowIndex+.22*x.demandIndex+.14*x.captureIndex+.12*x.accessIndex)))[0]||usable.sort((x,y)=>(y.entryDistance||0)-(x.entryDistance||0))[0],
 entrySeg=usable.filter(x=>x.zone==="entry").sort((x,y)=>(y.entryIndex||0)-(x.entryIndex||0))[0]||usable[0];
 const point=s=>s?(he(s,10).center||s.mid):null;return{depth,entryPoint:n.primary?.point||point(entrySeg),entryEstimated:!n.primary,middlePoint:point(mid),innerPoint:point(inner),middleSegment:mid,innerSegment:inner,entrySegment:entrySeg}}
-function v56RenderStructure(t){
-const specs=[{p:t.entryPoint,label:t.entryEstimated?"🚪 진입부(추정)":"🚪 상권 진입부",c:"#d97706"},{p:t.middlePoint,label:"⭐ 중간 핵심부",c:"#7c3aed"},{p:t.innerPoint,label:"🎯 안쪽 핵심부",c:"#0f766e"}],placed=[];
-for(const s of specs){if(!s.p)continue;if(placed.some(p=>Pt(p.lat,p.lng,s.p.lat,s.p.lng)<e.STRUCTURE_MARKER_MIN_SEPARATION))continue;placed.push(s.p);
-const ov=new kakao.maps.CustomOverlay({position:new kakao.maps.LatLng(s.p.lat,s.p.lng),xAnchor:.5,yAnchor:1.35,content:`<div style="pointer-events:none;background:white;border:2px solid ${s.c};color:${s.c};font-size:10px;font-weight:900;border-radius:999px;padding:3px 7px;box-shadow:0 2px 6px rgba(0,0,0,.18);white-space:nowrap">${s.label}</div>`});ov.setMap(f);_.push(ov)}}
+function v563WalkBeforeEntry(entry,meters=55){
+const route=entry?.route,coords=route?.coords||[];if(!route||coords.length<2)return[];
+let remain=meters,cur={...entry.point},idx=Math.max(0,Math.min(entry.segmentIndex,coords.length-2)),rev=[cur];
+let target=coords[idx],d=Pt(cur.lat,cur.lng,target.lat,target.lng);
+if(d>0){if(d>=remain){const q=remain/d;rev.push({lat:cur.lat+(target.lat-cur.lat)*q,lng:cur.lng+(target.lng-cur.lng)*q});return rev.reverse()}rev.push({...target});remain-=d}
+for(let j=idx-1;j>=0&&remain>0;j--){const from=coords[j+1],to=coords[j],dd=Pt(from.lat,from.lng,to.lat,to.lng);if(dd>=remain&&dd>0){const q=remain/dd;rev.push({lat:from.lat+(to.lat-from.lat)*q,lng:from.lng+(to.lng-from.lng)*q});remain=0;break}rev.push({...to});remain-=dd}
+return rev.reverse()}
+function v563WalkAfterEntry(entry,meters=35){
+const route=entry?.route,coords=route?.coords||[];if(!route||coords.length<2)return[];
+let remain=meters,cur={...entry.point},idx=Math.max(0,Math.min(entry.segmentIndex,coords.length-2)),arr=[cur];
+let target=coords[idx+1],d=Pt(cur.lat,cur.lng,target.lat,target.lng);
+if(d>0){if(d>=remain){const q=remain/d;arr.push({lat:cur.lat+(target.lat-cur.lat)*q,lng:cur.lng+(target.lng-cur.lng)*q});return arr}arr.push({...target});remain-=d}
+for(let j=idx+1;j<coords.length-1&&remain>0;j++){const from=coords[j],to=coords[j+1],dd=Pt(from.lat,from.lng,to.lat,to.lng);if(dd>=remain&&dd>0){const q=remain/dd;arr.push({lat:from.lat+(to.lat-from.lat)*q,lng:from.lng+(to.lng-from.lng)*q});remain=0;break}arr.push({...to});remain-=dd}
+return arr}
+function v563RenderMainInflow(entryModel){
+const entry=entryModel?.primary;if(!entry?.route?.coords?.length||!entry.point)return;
+const before=v563WalkBeforeEntry(entry,55),after=v563WalkAfterEntry(entry,35),path=[...before.slice(0,-1),...after];if(path.length<2)return;
+const line=new kakao.maps.Polyline({path:path.map(p=>new kakao.maps.LatLng(p.lat,p.lng)),strokeWeight:5,strokeColor:"#f97316",strokeOpacity:.95,strokeStyle:"solid",endArrow:true,zIndex:130});line.setMap(f);_.push(line);
+const start=path[0],label=new kakao.maps.CustomOverlay({position:new kakao.maps.LatLng(start.lat,start.lng),xAnchor:.5,yAnchor:1.25,zIndex:135,content:`<div style="pointer-events:none;background:#fff7ed;border:2px solid #f97316;color:#c2410c;font-size:10px;font-weight:900;border-radius:999px;padding:3px 8px;box-shadow:0 2px 6px rgba(0,0,0,.18);white-space:nowrap">메인 유입</div>`});label.setMap(f);_.push(label)}
 function v56ProfileTop(t){const m={mainFlow:"메인동선",commercial:"상가밀집",transport:"교통접근",transportLink:"교통연계",entry:"진입효과",destination:"목적시설"};return Object.entries(t).filter(([k,v])=>m[k]&&Number.isFinite(v)).sort((a,b)=>b[1]-a[1]).slice(0,3).map(([k,v])=>`${m[k]} ${v}`).join(" · ")}
 
 
@@ -1148,7 +1163,7 @@ t.excluded=function(t,n,a){
 return n.some((n=>"f_lensme"===n.brandKey&&!isRelocationStore(n,a)&&Dt(+n.x,+n.y,t.a.lng,t.a.lat,t.b.lng,t.b.lat)<=e.TEAM_KILL_METERS))}(t,T,s),
 t.excluded&&(t.score=0)}));
 
-// V56.2: 횡단보도 자체가 아니라 교통시설→횡단→펜스진입→내부길목으로 실제 보행경로가 이어질 때만 교통-횡단 연계를 반영한다.
+// V56.3: 횡단보도 자체가 아니라 교통시설→횡단→펜스진입→내부길목으로 실제 보행경로가 이어질 때만 교통-횡단 연계를 반영한다.
 N.forEach(seg=>{const em=v56EntryMetric(seg,entryModel,t);seg.entryDistance=em.distance;seg.entryIndex=em.index;seg.entryRouteHits=em.routeHits;seg.transportLink=v562TransportLinkMetric(seg,transportCrosswalkModel,entryModel)});
 const tlRaw=N.map(x=>x.transportLink?.raw||0);
 N.forEach(seg=>{seg.transportLinkIndex=transportCrosswalkModel.validCount?Math.round(100*oe(tlRaw,seg.transportLink?.raw||0)):0});
@@ -1170,7 +1185,7 @@ strokeColor:t.excluded?"#64748b":(n=t.score,n>=80?"#dc2626":n>=65?"#f97316":n>=5
 strokeOpacity:.72,strokeStyle:t.excluded?"shortdash":"solid"});
 var n;analysisLines.push(e),document.getElementById("showAnalysisLines")?.checked&&e.setMap(f),_.push(e)}))}(N);
 
-v56RenderStructure(structure);
+v563RenderMainInflow(entryModel);
 const H=ye(N,t,3);
 i={context:s,qualityIssues:l,segments:N,topSegments:H,routeCount:R.length,profile,weights,structure,entryModel,transportCrosswalkModel};
 const F=H.length?Math.round(H.reduce(((t,e)=>t+e.score),0)/H.length):0;
@@ -1189,7 +1204,7 @@ let j=`
 <div class="rounded bg-amber-50 px-1 py-1"><span class="block text-slate-400">진입</span><b class="text-amber-700">${profile.entry}</b></div>
 <div class="rounded bg-pink-50 px-1 py-1"><span class="block text-slate-400">목적</span><b class="text-pink-700">${profile.destination}</b></div>
 </div>
-<div class="mt-2 rounded-lg bg-white/80 border border-indigo-100 px-2 py-1.5 text-[9.5px] text-slate-600 font-bold">🚪 진입부 · ⭐ 중간 핵심부 · 🎯 안쪽 핵심부 · 🚦 유효 교통-횡단 연계 ${transportCrosswalkModel.validCount}곳</div>
+<div class="mt-2 rounded-lg bg-white/80 border border-indigo-100 px-2 py-1.5 text-[9.5px] text-slate-600 font-bold">지도 표시는 TOP3와 가장 강한 메인 유입 방향만 표시합니다.</div>
 <p class="text-[9px] text-slate-400 mt-1.5">가중치는 상권 성격에 따라 제한적으로 조정됩니다. 추가 TMAP 호출 없이 기존 경로를 재사용합니다.</p>
 ${l.length?`<p class="text-[9.5px] text-amber-700 mt-1"><b>데이터 주의:</b> ${V([...new Set(l)].join(" · "))}</p>`:""}
 </div>`;
