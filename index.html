@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>렌즈미 상권 분석 대시보드 V57.0 공백도로 복구·자동지역분류</title>
+<title>렌즈미 상권 분석 대시보드 V57.2 전국→시군구→상권 드릴다운</title>
 <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css" rel="stylesheet">
 <script src="https://cdn.tailwindcss.com"></script>
 <style>
@@ -30,11 +30,22 @@ input[type=checkbox]{width:1.1rem;height:1.1rem;cursor:pointer}
 .poly-nametag-text{position:relative;z-index:1;line-height:1.15}
 .poly-nametag.active .poly-nametag-text{font-weight:1000}
 
-.province-label-wrap{pointer-events:none;white-space:nowrap}
-.province-label{font-size:27px;font-weight:1000;letter-spacing:-1.2px;color:rgba(51,65,85,.44);text-shadow:0 2px 0 rgba(255,255,255,.95),0 0 10px rgba(255,255,255,.92),0 2px 12px rgba(15,23,42,.12);user-select:none}
-.admin-focus-label-wrap{pointer-events:none;white-space:nowrap}
-.admin-focus-label{font-weight:1000;letter-spacing:-.7px;color:rgba(30,41,59,.58);background:rgba(255,255,255,.60);border:1px solid rgba(148,163,184,.22);box-shadow:0 3px 14px rgba(15,23,42,.08);backdrop-filter:blur(5px);padding:5px 10px;border-radius:999px;user-select:none}
-.admin-focus-label.city{font-size:20px}.admin-focus-label.dong{font-size:16px}
+.province-label-wrap,.city-label-wrap{pointer-events:auto;white-space:nowrap;animation:regionPop .22s ease-out both}
+.region-province-btn,.region-city-btn{appearance:none;-webkit-appearance:none;border:0;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:8px;white-space:nowrap;transition:transform .16s ease,box-shadow .16s ease,background .16s ease,border-color .16s ease;user-select:none}
+.region-province-btn{padding:9px 12px 9px 13px;border-radius:16px;background:rgba(255,255,255,.86);border:1px solid rgba(148,163,184,.30);box-shadow:0 8px 24px rgba(15,23,42,.12),inset 0 1px 0 rgba(255,255,255,.92);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);color:#334155}
+.region-province-btn:hover{transform:translateY(-3px) scale(1.035);background:rgba(255,255,255,.98);border-color:rgba(79,70,229,.30);box-shadow:0 14px 30px rgba(15,23,42,.18),0 0 0 3px rgba(99,102,241,.08)}
+.region-province-btn.has-areas{color:#1e293b;border-color:rgba(99,102,241,.25)}
+.region-province-btn.no-areas{opacity:.56;filter:saturate(.75)}
+.region-province-name{font-size:17px;font-weight:1000;letter-spacing:-.7px;line-height:1}
+.region-province-count{display:inline-flex;align-items:center;justify-content:center;min-width:24px;height:24px;padding:0 7px;border-radius:999px;background:linear-gradient(135deg,#eef2ff,#fce7f3);color:#6d28d9;font-size:10px;font-weight:1000;border:1px solid rgba(124,58,237,.10)}
+.region-city-btn{padding:10px 13px;border-radius:14px;background:linear-gradient(135deg,rgba(255,255,255,.98),rgba(248,250,252,.94));border:1px solid rgba(225,29,72,.18);box-shadow:0 8px 22px rgba(15,23,42,.14);color:#1e293b;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+.region-city-btn:hover{transform:translateY(-3px) scale(1.04);border-color:rgba(225,29,72,.45);box-shadow:0 14px 28px rgba(15,23,42,.20),0 0 0 3px rgba(244,63,94,.08)}
+.region-city-dot{width:9px;height:9px;border-radius:999px;background:linear-gradient(135deg,#f43f5e,#be123c);box-shadow:0 0 0 4px rgba(244,63,94,.10)}
+.region-city-text{display:flex;flex-direction:column;align-items:flex-start;gap:1px}.region-city-name{font-size:14px;font-weight:1000;letter-spacing:-.45px;line-height:1.1}.region-city-count{font-size:9px;font-weight:900;color:#94a3b8}
+.region-nav-shell{position:absolute;top:14px;left:14px;z-index:24;display:flex;align-items:center;gap:8px;max-width:min(650px,calc(100% - 220px));padding:7px 9px;background:rgba(255,255,255,.90);border:1px solid rgba(226,232,240,.9);border-radius:16px;box-shadow:0 8px 26px rgba(15,23,42,.14);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px)}
+.region-nav-back{width:31px;height:31px;border:0;border-radius:10px;background:#f1f5f9;color:#475569;font-size:17px;font-weight:1000;cursor:pointer;transition:.15s;flex:0 0 auto}.region-nav-back:hover{background:#e2e8f0;transform:translateX(-1px)}
+.region-breadcrumb{display:flex;align-items:center;gap:5px;min-width:0;overflow:hidden}.region-crumb{border:0;background:transparent;color:#64748b;font-size:11px;font-weight:900;padding:4px 6px;border-radius:8px;cursor:pointer;white-space:nowrap}.region-crumb:hover{background:#f1f5f9;color:#334155}.region-crumb.current{color:#be123c;background:#fff1f2}.region-crumb-sep{color:#cbd5e1;font-size:11px;font-weight:1000}.region-nav-meta{font-size:8.5px;font-weight:800;color:#94a3b8;padding:0 6px 2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+@keyframes regionPop{from{opacity:0;transform:translateY(5px) scale(.96)}to{opacity:1;transform:translateY(0) scale(1)}}
 .map-layer-btn{background:rgba(255,255,255,.96);border:1px solid #e2e8f0;border-radius:12px;padding:7px 10px;font-size:11px;font-weight:900;color:#334155;box-shadow:0 5px 16px rgba(15,23,42,.14);backdrop-filter:blur(10px);transition:.15s;display:flex;align-items:center;gap:5px}
 .map-layer-btn:hover{transform:translateY(-1px);box-shadow:0 7px 18px rgba(15,23,42,.18)}
 .map-layer-menu{width:158px;background:rgba(255,255,255,.97);border:1px solid #e2e8f0;border-radius:14px;padding:8px;box-shadow:0 12px 30px rgba(15,23,42,.18);backdrop-filter:blur(12px)}
@@ -42,18 +53,19 @@ input[type=checkbox]{width:1.1rem;height:1.1rem;cursor:pointer}
 .map-layer-row:hover{background:#f8fafc}.map-layer-row input{width:14px;height:14px}
 .flow-legend{background:rgba(255,255,255,.94);border:1px solid #e2e8f0;border-radius:12px;padding:9px 10px;box-shadow:0 6px 18px rgba(15,23,42,.14);backdrop-filter:blur(10px);min-width:116px}
 
-details>summary{list-style:none;cursor:pointer;font-weight:800;color:#334155;padding:4px 0;font-size:14px}
+details>summary{list-style:none;cursor:pointer;font-weight:900;color:#334155;padding:7px 9px;font-size:13px;border-radius:10px;transition:.15s}
+details>summary:hover{background:#f8fafc;color:#be123c}
 details>summary::-webkit-details-marker{display:none}
-details>summary::before{content:'📁 '}
-details[open]>summary::before{content:'📂 '}
-.tree-indent{margin-left:16px;border-left:2px dashed #cbd5e1;padding-left:8px}
+details>summary::before{content:'▸';display:inline-block;width:16px;color:#94a3b8;transition:transform .15s}
+details[open]>summary::before{content:'▾';color:#e11d48}
+.tree-indent{margin-left:11px;border-left:1px solid #e2e8f0;padding-left:8px}
 </style>
 </head>
 <body class="flex flex-col md:flex-row h-screen text-slate-800">
 <div class="w-full md:w-1/4 bg-white border-r border-gray-200 p-6 flex flex-col shadow-lg z-20 overflow-y-auto">
 <h1 class="text-xl font-extrabold text-slate-800 border-b-4 border-indigo-500 pb-3 mb-4 flex justify-between items-center">
 <span>🗺️ 전국 상권 관제탑</span>
-<span class="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded-full font-bold">V57.0</span>
+<span class="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded-full font-bold">V57.2</span>
 </h1>
 
 <div class="mb-3">
@@ -88,7 +100,7 @@ details[open]>summary::before{content:'📂 '}
 <label class="underline cursor-pointer">복원<input type="file" accept=".json" class="hidden" onchange="importAreas(this)"></label>
 </div>
 </div>
-<div id="savedPolygonTree" class="max-h-52 overflow-y-auto space-y-1 text-sm"></div><p class="text-[9.5px] text-slate-400 mt-2">지도 말풍선을 누르면 TOP3·메인/보조 유입이 펼쳐지고, 다시 누르면 접힙니다.</p>
+<div id="savedPolygonTree" class="max-h-52 overflow-y-auto space-y-1 text-sm"></div><p class="text-[9.5px] text-slate-400 mt-2">저장목록은 위치 이동, 지도 말풍선은 분석 ON/OFF입니다. 전국 지도에서는 시·도 → 시·군·구 → 상권 순서로 탐색할 수 있습니다.</p>
 </div>
 
 <div class="mb-2 bg-white p-3 rounded-xl border border-indigo-200 shadow-sm">
@@ -117,6 +129,14 @@ details[open]>summary::before{content:'📂 '}
 <button onclick="switchTab('map')" id="btn-map" class="tab-btn active px-4 py-2 mr-4 text-base hover:text-indigo-500 transition">거리별 조사 우선순위</button>
 </div>
 <div id="tab-map" class="flex-grow w-full h-full relative">
+<div id="regionNavigator" class="region-nav-shell">
+<button id="regionBackBtn" type="button" class="region-nav-back hidden" onclick="v572RegionBack()" title="이전 지역">←</button>
+<div class="min-w-0">
+<div id="regionBreadcrumb" class="region-breadcrumb"></div>
+<div id="regionNavigatorMeta" class="region-nav-meta">전국 지역을 눌러 저장 상권으로 단계별 이동할 수 있습니다.</div>
+</div>
+</div>
+
 <div id="statusMessage" class="absolute top-4 left-1/2 transform -translate-x-1/2 z-10 bg-white/95 backdrop-blur-sm px-6 py-2 rounded-full shadow-md text-sm font-bold text-slate-700 border border-slate-200 text-center transition-all">
 상권을 그리면 TOP3를 확인할 수 있고, 저장 후에는 상권명 말풍선을 눌러 분석을 펼치거나 접을 수 있습니다.
 </div>
@@ -185,16 +205,20 @@ if(!window.kakao?.maps?.services||!window.kakao?.maps?.drawing)throw document.ge
 new Error("Kakao SDK unavailable");
 let n="new",a="",o=null,r=null,s=[],i=null,l="",c=null,d=0,u=document.getElementById("map"),m=new kakao.maps.LatLng(37.59970,127.13015),g=m,f=new kakao.maps.Map(u,{center:m,
 level:3}),h=new kakao.maps.services.Places,p=new kakao.maps.services.Geocoder,y=[],_=[],A=new Map,E=new Map,M=new kakao.maps.CustomOverlay({xAnchor:.5,yAnchor:1.5,zIndex:150
-}),w=null,b=null,k={},x={},I=!1,S=null,T=!1,O=0,v=[],L={},C={},R=null,P=[],N=[],analysisLines=[],rankOverlays=[],inflowOverlays=[],flowLines=[],expandedSavedAreaId=null,focusedSavedAreaId=null,lastAnalyzedSavedId=null,lastAnalyzedFenceKey="",savedAreaAnalysisCache=new Map,savedBubbleEls={},provinceLabelOverlays=[],adminFocusOverlay=null,regionLabelTimer=null,regionLabelRequestSeq=0;
+}),w=null,b=null,k={},x={},I=!1,S=null,T=!1,O=0,v=[],L={},C={},R=null,P=[],N=[],analysisLines=[],rankOverlays=[],inflowOverlays=[],flowLines=[],expandedSavedAreaId=null,focusedSavedAreaId=null,lastAnalyzedSavedId=null,lastAnalyzedFenceKey="",savedAreaAnalysisCache=new Map,savedBubbleEls={},provinceLabelOverlays=[],cityLabelOverlays=[],adminFocusOverlay=null,regionLabelTimer=null,regionLabelRequestSeq=0,mapDrillState={level:"national",si:null,gu:null};
 
 function D(t){return String(t.id||`${t.place_name}|${t.x}|${t.y}`)}
 function v564FenceKey(path){return(Array.isArray(path)?path:[]).map(p=>`${Number(p.lat).toFixed(6)},${Number(p.lng).toFixed(6)}`).join("|")}
 function layerChecked(id,defaultValue=true){const el=document.getElementById(id);return el?!!el.checked:defaultValue}
 function toggleMapLayerMenu(ev){ev?.stopPropagation?.();document.getElementById("mapLayerMenu")?.classList.toggle("hidden")}
+function v572AreaMatchesCurrentCity(area){
+if(!area||mapDrillState.level!=="city")return false;
+const gu=area.gu||area.dong||"";return String(area.si||"")===String(mapDrillState.si||"")&&String(gu)===String(mapDrillState.gu||"")
+}
 function applyMapDisplayFilters(){
-const analysisOpen=!!expandedSavedAreaId||(!b&&!!w),showRank=analysisOpen&&layerChecked("layer_rank",true),showInflow=analysisOpen&&layerChecked("layer_inflow",true),showFlow=analysisOpen&&layerChecked("layer_flow",false),showNames=layerChecked("layer_names",true),level=f.getLevel(),focusedKey=focusedSavedAreaId==null?null:String(focusedSavedAreaId),activeKey=expandedSavedAreaId==null?null:String(expandedSavedAreaId);
+const analysisOpen=!!expandedSavedAreaId||(!b&&!!w),showRank=analysisOpen&&layerChecked("layer_rank",true),showInflow=analysisOpen&&layerChecked("layer_inflow",true),showFlow=analysisOpen&&layerChecked("layer_flow",false),showNames=layerChecked("layer_names",true),focusedKey=focusedSavedAreaId==null?null:String(focusedSavedAreaId),activeKey=expandedSavedAreaId==null?null:String(expandedSavedAreaId);
 rankOverlays.forEach(o=>{try{o.setMap(showRank?f:null)}catch(e){}});inflowOverlays.forEach(o=>{try{o.setMap(showInflow?f:null)}catch(e){}});flowLines.forEach(o=>{try{o.setMap(showFlow?f:null)}catch(e){}});
-Object.entries(x).forEach(([id,o])=>{try{const keepAtZoom=level<=3||String(id)===focusedKey||String(id)===activeKey;o.setMap(showNames&&keepAtZoom?f:null)}catch(e){}});
+Object.entries(x).forEach(([id,o])=>{try{const area=Lt.find(a=>String(a.id)===String(id)),showByCity=v572AreaMatchesCurrentCity(area),keep=String(id)===focusedKey||String(id)===activeKey||showByCity;o.setMap(showNames&&keep?f:null)}catch(e){}});
 document.getElementById("heatLegend")?.classList.toggle("hidden",!showFlow);
 }
 function v571EnableAnalysisLayers(){["layer_rank","layer_inflow","layer_flow","layer_names"].forEach(id=>{const el=document.getElementById(id);if(el)el.checked=true})}
@@ -318,28 +342,54 @@ p.coord2RegionCode(t,e,((t,e)=>{
 if(e===kakao.maps.services.Status.OK&&t?.length){const e=t.find((t=>"B"===t.region_type))||t.find((t=>"H"===t.region_type))||t[0];o({si:e.region_1depth_name||"",gu:e.region_2depth_name||"",dong:e.region_3depth_name||""})}
 else o({si:"",gu:"",dong:""})}))}))}
 
-const V571_PROVINCES=[
-{name:"서울특별시",lat:37.5665,lng:126.9780},{name:"부산광역시",lat:35.1796,lng:129.0756},{name:"대구광역시",lat:35.8714,lng:128.6014},{name:"인천광역시",lat:37.4563,lng:126.7052},
+const V572_PROVINCES=[
+{name:"서울특별시",lat:37.5665,lng:126.9780},{name:"부산광역시",lat:35.1796,lng:129.0756},{name:"대구광역시",lat:35.8714,lng:128.6014},{name:"인천광역시",lat:37.4563,lng:126.6500},
 {name:"광주광역시",lat:35.1595,lng:126.8526},{name:"대전광역시",lat:36.3504,lng:127.3845},{name:"울산광역시",lat:35.5384,lng:129.3114},{name:"세종특별자치시",lat:36.4800,lng:127.2890},
-{name:"경기도",lat:37.4138,lng:127.5183},{name:"강원특별자치도",lat:37.8228,lng:128.1555},{name:"충청북도",lat:36.8000,lng:127.7000},{name:"충청남도",lat:36.5184,lng:126.8000},
+{name:"경기도",lat:37.2500,lng:127.4200},{name:"강원특별자치도",lat:37.8228,lng:128.1555},{name:"충청북도",lat:36.8000,lng:127.7000},{name:"충청남도",lat:36.4700,lng:126.7200},
 {name:"전북특별자치도",lat:35.7175,lng:127.1530},{name:"전라남도",lat:34.8679,lng:126.9910},{name:"경상북도",lat:36.4919,lng:128.8889},{name:"경상남도",lat:35.4606,lng:128.2132},
 {name:"제주특별자치도",lat:33.4890,lng:126.4983}
 ];
-function v571InitProvinceLabels(){
-provinceLabelOverlays.forEach(o=>{try{o.setMap(null)}catch(e){}});provinceLabelOverlays=[];
-for(const item of V571_PROVINCES){const wrap=document.createElement("div"),label=document.createElement("div");wrap.className="province-label-wrap";label.className="province-label";label.textContent=item.name;wrap.appendChild(label);provinceLabelOverlays.push(new kakao.maps.CustomOverlay({position:new kakao.maps.LatLng(item.lat,item.lng),content:wrap,xAnchor:.5,yAnchor:.5,zIndex:2}))}
+function v572AreasFor(si=null,gu=null){return (Lt||[]).filter(a=>(si==null||String(a.si||"")===String(si))&&(gu==null||String(a.gu||a.dong||"")===String(gu)))}
+function v572BoundsForAreas(areas){const bounds=new kakao.maps.LatLngBounds;let count=0;for(const area of areas||[]){for(const pt of F(area.geometry||area.path)){bounds.extend(new kakao.maps.LatLng(pt.lat,pt.lng));count++}}return count?bounds:null}
+function v572CenterForAreas(areas,fallback=null){let lat=0,lng=0,n=0;for(const area of areas||[]){const c=K(area.geometry||area.path);if(Number.isFinite(c.lat)&&Number.isFinite(c.lng)){lat+=c.lat;lng+=c.lng;n++}}return n?{lat:lat/n,lng:lng/n}:fallback}
+function v572MunicipalityGroups(si){const groups=new Map;for(const area of v572AreasFor(si)){const gu=area.gu||area.dong||"미분류";if(!groups.has(gu))groups.set(gu,[]);groups.get(gu).push(area)}return [...groups.entries()].map(([name,areas])=>({name,areas,center:v572CenterForAreas(areas)})).filter(x=>x.center).sort((a,b)=>a.name.localeCompare(b.name,"ko"))}
+function v572ClearProvinceLabels(){provinceLabelOverlays.forEach(o=>{try{o.setMap(null)}catch(e){}});provinceLabelOverlays=[]}
+function v572ClearCityLabels(){cityLabelOverlays.forEach(o=>{try{o.setMap(null)}catch(e){}});cityLabelOverlays=[]}
+function v572HideAdminFocus(){if(adminFocusOverlay){try{adminFocusOverlay.setMap(null)}catch(e){}}adminFocusOverlay=null}
+function v572UpdateBreadcrumb(){
+ const root=document.getElementById("regionBreadcrumb"),meta=document.getElementById("regionNavigatorMeta"),back=document.getElementById("regionBackBtn");if(!root)return;
+ root.innerHTML="";const add=(txt,click,current=false)=>{const btn=document.createElement("button");btn.type="button";btn.className=`region-crumb${current?" current":""}`;btn.textContent=txt;if(click)btn.addEventListener("click",click);root.appendChild(btn)};const sep=()=>{const s=document.createElement("span");s.className="region-crumb-sep";s.textContent="›";root.appendChild(s)};
+ const state=mapDrillState;add("대한민국",()=>v572GoNational(),state.level==="national");
+ if(state.si){sep();add(state.si,()=>v572GoProvince(state.si),state.level==="province")}
+ if(state.gu){sep();add(state.gu,null,true)}
+ if(back)back.classList.toggle("hidden",state.level==="national");
+ const total=(Lt||[]).length;if(meta){if(state.level==="national")meta.textContent=`전국 저장상권 ${total}개 · 시·도를 클릭해 들어가세요`;else if(state.level==="province"){const groups=v572MunicipalityGroups(state.si);meta.textContent=`${state.si} · ${groups.length}개 시·군·구 · 저장상권 ${v572AreasFor(state.si).length}개`}else meta.textContent=`${state.gu} · 저장상권 ${v572AreasFor(state.si,state.gu).length}개 · 말풍선을 누르면 분석`}
 }
-function v571HideAdminFocus(){if(adminFocusOverlay){try{adminFocusOverlay.setMap(null)}catch(e){}}}
-async function v571UpdateRegionLabels(){
-const seq=++regionLabelRequestSeq,level=f.getLevel(),provinceOn=level>=9;provinceLabelOverlays.forEach(o=>{try{o.setMap(provinceOn?f:null)}catch(e){}});
-if(provinceOn||level<=3){v571HideAdminFocus();applyMapDisplayFilters();return}
-const center=f.getCenter(),region=await dt(center.getLng(),center.getLat());if(seq!==regionLabelRequestSeq)return;
-let text="",kind="city";if(level>=6){text=region.gu||region.si||"";kind="city"}else{text=region.dong||region.gu||region.si||"";kind="dong"}
-if(!text){v571HideAdminFocus();applyMapDisplayFilters();return}
-const wrap=document.createElement("div"),label=document.createElement("div");wrap.className="admin-focus-label-wrap";label.className=`admin-focus-label ${kind}`;label.textContent=text;wrap.appendChild(label);
-if(adminFocusOverlay){try{adminFocusOverlay.setMap(null)}catch(e){}}adminFocusOverlay=new kakao.maps.CustomOverlay({position:center,content:wrap,xAnchor:.5,yAnchor:.5,zIndex:3});adminFocusOverlay.setMap(f);applyMapDisplayFilters()
+function v572SmoothMove(center,targetLevel,bounds=null){if(!center)return;const ll=new kakao.maps.LatLng(center.lat,center.lng);try{f.panTo(ll)}catch(e){f.setCenter(ll)}setTimeout(()=>{try{if(bounds)f.setBounds(bounds,90,80,80,80);else f.setLevel(targetLevel,{anchor:ll,animate:{duration:360}})}catch(e){bounds?f.setBounds(bounds):f.setLevel(targetLevel)}},150)}
+function v572RenderProvinceLabels(){
+ v572ClearProvinceLabels();if(mapDrillState.level!=="national"||f.getLevel()<8)return;
+ for(const item of V572_PROVINCES){const count=v572AreasFor(item.name).length,wrap=document.createElement("div"),btn=document.createElement("button"),name=document.createElement("span"),badge=document.createElement("span");wrap.className="province-label-wrap";btn.type="button";btn.className=`region-province-btn ${count?"has-areas":"no-areas"}`;name.className="region-province-name";name.textContent=item.name;badge.className="region-province-count";badge.textContent=count?`${count}`:"0";btn.append(name,badge);wrap.appendChild(btn);btn.addEventListener("click",ev=>{ev.stopPropagation();v572GoProvince(item.name)});const ov=new kakao.maps.CustomOverlay({position:new kakao.maps.LatLng(item.lat,item.lng),content:wrap,xAnchor:.5,yAnchor:.5,zIndex:6});ov.setMap(f);provinceLabelOverlays.push(ov)}
 }
-function v571ScheduleRegionLabels(){clearTimeout(regionLabelTimer);regionLabelTimer=setTimeout(()=>{v571UpdateRegionLabels().catch(err=>console.warn("region label update failed",err))},160)}
+function v572RenderCityLabels(){
+ v572ClearCityLabels();if(mapDrillState.level!=="province"||!mapDrillState.si)return;const groups=v572MunicipalityGroups(mapDrillState.si);
+ for(const group of groups){const wrap=document.createElement("div"),btn=document.createElement("button"),dot=document.createElement("span"),text=document.createElement("span"),name=document.createElement("span"),count=document.createElement("span");wrap.className="city-label-wrap";btn.type="button";btn.className="region-city-btn";dot.className="region-city-dot";text.className="region-city-text";name.className="region-city-name";name.textContent=group.name;count.className="region-city-count";count.textContent=`저장상권 ${group.areas.length}개`;text.append(name,count);btn.append(dot,text);wrap.appendChild(btn);btn.addEventListener("click",ev=>{ev.stopPropagation();v572GoCity(mapDrillState.si,group.name)});const ov=new kakao.maps.CustomOverlay({position:new kakao.maps.LatLng(group.center.lat,group.center.lng),content:wrap,xAnchor:.5,yAnchor:.5,zIndex:8});ov.setMap(f);cityLabelOverlays.push(ov)}
+}
+function v572CloseAnalysisForNavigation(){if(expandedSavedAreaId!=null||w){expandedSavedAreaId=null;b=null;w=null;R=null;v564HideAnalysis()}focusedSavedAreaId=null;v570SyncSavedBubbleState(null);v564SetSavedAreaVisual(null)}
+function v572GoNational(){
+ v572CloseAnalysisForNavigation();mapDrillState={level:"national",si:null,gu:null};v572ClearCityLabels();v572HideAdminFocus();Ct();v572UpdateBreadcrumb();const bounds=new kakao.maps.LatLngBounds;bounds.extend(new kakao.maps.LatLng(33.05,125.85));bounds.extend(new kakao.maps.LatLng(38.65,129.65));try{f.setBounds(bounds,60,60,60,60)}catch(e){f.setCenter(new kakao.maps.LatLng(36.15,127.75));f.setLevel(13)}setTimeout(()=>v572RefreshRegionNavigation(),180);document.getElementById("statusMessage").innerText="대한민국 전체 보기 · 시·도를 클릭하면 저장된 시·군·구가 펼쳐집니다."
+}
+function v572GoProvince(si){
+ v572CloseAnalysisForNavigation();mapDrillState={level:"province",si,gu:null};v572ClearProvinceLabels();v572ClearCityLabels();Ct();v572UpdateBreadcrumb();const areas=v572AreasFor(si),fallback=V572_PROVINCES.find(x=>x.name===si)||{lat:36.4,lng:127.8},center=v572CenterForAreas(areas,fallback),bounds=v572BoundsForAreas(areas);v572SmoothMove(center,7,bounds);setTimeout(()=>{v572RenderCityLabels();applyMapDisplayFilters()},320);document.getElementById("statusMessage").innerText=areas.length?`${si} · 저장된 시·군·구를 선택하세요.`:`${si}에 저장된 상권이 아직 없습니다.`
+}
+function v572GoCity(si,gu){
+ v572CloseAnalysisForNavigation();mapDrillState={level:"city",si,gu};v572ClearProvinceLabels();v572ClearCityLabels();const areas=v572AreasFor(si,gu),center=v572CenterForAreas(areas,V572_PROVINCES.find(x=>x.name===si)||null),bounds=v572BoundsForAreas(areas);Ct();v572UpdateBreadcrumb();v572SmoothMove(center,5,bounds);setTimeout(()=>applyMapDisplayFilters(),260);document.getElementById("statusMessage").innerText=areas.length?`${gu} · 지도 상권 말풍선을 누르면 TOP3·유입·유동인구 분석이 열립니다.`:`${gu}에 저장된 상권이 없습니다.`
+}
+function v572RegionBack(){if(mapDrillState.level==="city")v572GoProvince(mapDrillState.si);else if(mapDrillState.level==="province")v572GoNational()}
+function v572RefreshRegionNavigation(){
+ v572HideAdminFocus();v572UpdateBreadcrumb();if(mapDrillState.level==="national"){v572ClearCityLabels();v572RenderProvinceLabels()}else if(mapDrillState.level==="province"){v572ClearProvinceLabels();v572RenderCityLabels()}else{v572ClearProvinceLabels();v572ClearCityLabels()}applyMapDisplayFilters()
+}
+function v571InitProvinceLabels(){v572RefreshRegionNavigation()}
+function v571ScheduleRegionLabels(){clearTimeout(regionLabelTimer);regionLabelTimer=setTimeout(()=>v572RefreshRegionNavigation(),120)}
 
 async function ut(t,n,a,o=e.AUTO_AREA_POI_PAGES){const r=new kakao.maps.LatLng(t,n),s=[];
 rt.forEach((t=>s.push(tt(t,{location:r,radius:a},o)))),ot.forEach((t=>s.push(Z(t,{location:r,radius:a,sort:kakao.maps.services.SortBy.DISTANCE},o))));
@@ -717,7 +767,7 @@ const bubbleCenter=K(area.geometry||area.path),wrap=document.createElement("div"
 wrap.className="poly-nametag-wrap";btn.type="button";btn.className=`poly-nametag${active?" active":""}`;btn.setAttribute("aria-pressed",active?"true":"false");icon.className=active?"poly-nametag-check":"poly-nametag-pin";icon.textContent=active?"✓":"📍";label.className="poly-nametag-text";label.textContent=area.name;btn.append(icon,label);wrap.appendChild(btn);btn.addEventListener("click",ev=>{ev.stopPropagation();toggleSavedPolygonAnalysis(areaId)});
 const ov=new kakao.maps.CustomOverlay({position:new kakao.maps.LatLng(bubbleCenter.lat,bubbleCenter.lng),content:wrap,xAnchor:.5,yAnchor:1,zIndex:active?125:110});ov.setMap(f);x[areaId]=ov;savedBubbleEls[areaId]={wrap,button:btn,icon,label,overlay:ov}
 }cityBody.appendChild(dongEl)}root.appendChild(cityEl)}
-v570SyncSavedBubbleState(expandedSavedAreaId);v564SetSavedAreaVisual(expandedSavedAreaId);applyMapDisplayFilters()
+v570SyncSavedBubbleState(expandedSavedAreaId);v564SetSavedAreaVisual(expandedSavedAreaId);applyMapDisplayFilters();if(typeof v572RefreshRegionNavigation==="function")v572RefreshRegionNavigation()
 }
 
 async function v569NormalizeSavedRegions(){
@@ -734,7 +784,7 @@ function deletePolygon(t){const key=String(t);if(confirm("이 상권 경계를 �
 function selectSavedPolygon(t){
 const key=String(t),area=Lt.find(e=>String(e.id)===key);if(!area)return;
 if(T)return alert("현재 분석이 진행 중입니다. 분석이 끝난 뒤 다시 눌러주세요.");
-focusedSavedAreaId=key;
+focusedSavedAreaId=key;mapDrillState={level:"city",si:area.si||null,gu:area.gu||area.dong||null};v572ClearProvinceLabels();v572ClearCityLabels();v572UpdateBreadcrumb();
 if(expandedSavedAreaId!=null){expandedSavedAreaId=null;b=null;w=null;R=null;v564HideAnalysis()}
 const path=F(area.geometry||area.path);let bounds=new kakao.maps.LatLngBounds;path.forEach(p=>bounds.extend(new kakao.maps.LatLng(p.lat,p.lng)));f.setBounds(bounds);g=bounds.getCenter();
 document.getElementById("targetLocationInput").innerText=area.name;document.getElementById("btnClearPolygon").classList.add("hidden");
@@ -745,7 +795,7 @@ document.getElementById("statusMessage").innerText=`📍 ${area.name} 위치로 
 function toggleSavedPolygonAnalysis(t){
 const key=String(t),area=Lt.find(e=>String(e.id)===key);if(!area)return;
 if(T)return alert("현재 분석이 진행 중입니다. 분석이 끝난 뒤 다시 눌러주세요.");
-focusedSavedAreaId=key;
+focusedSavedAreaId=key;mapDrillState={level:"city",si:area.si||null,gu:area.gu||area.dong||null};v572ClearProvinceLabels();v572ClearCityLabels();v572UpdateBreadcrumb();
 if(expandedSavedAreaId!=null&&String(expandedSavedAreaId)===key){
 expandedSavedAreaId=null;b=null;w=null;R=null;v564HideAnalysis();Ct();v564SetSavedAreaVisual(null);v570SyncSavedBubbleState(null);applyMapDisplayFilters();
 document.getElementById("targetLocationInput").innerText=area.name;document.getElementById("btnClearPolygon").classList.add("hidden");
@@ -1507,7 +1557,7 @@ kakao.maps.event.addListener(f,"zoom_changed",(()=>{applyMapDisplayFilters();v57
 kakao.maps.event.addListener(f,"idle",(async function(){I||w||T||await Ht();v571ScheduleRegionLabels()}));
 v571InitProvinceLabels();v571ScheduleRegionLabels();
 Ct();
-document.getElementById("statusMessage").innerText="📍 렌즈미 체인본부 주변에서 시작합니다. 저장상권 목록은 위치 이동, 지도 말풍선은 분석 열기입니다.";
+document.getElementById("statusMessage").innerText="📍 렌즈미 체인본부 주변에서 시작합니다. 줌아웃 후 시·도 → 시·군·구 → 저장상권 순서로 들어갈 수 있습니다.";
 Ft();
 setTimeout(()=>{v569NormalizeSavedRegions().catch(err=>console.warn("saved region normalize failed",err))},350);
 </script>
