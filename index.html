@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>렌즈미 상권 분석 대시보드 V57.3 자동 행정구역 드릴다운</title>
+<title>렌즈미 상권 분석 대시보드 V57.4 지역 말풍선·필터 기본OFF</title>
 <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css" rel="stylesheet">
 <script src="https://cdn.tailwindcss.com"></script>
 <style>
@@ -32,9 +32,10 @@ input[type=checkbox]{width:1.1rem;height:1.1rem;cursor:pointer}
 
 
 .province-label-wrap,.city-label-wrap,.dong-label-wrap{pointer-events:auto;white-space:nowrap;animation:regionPop .18s ease-out both}
-.region-province-btn,.region-city-btn,.region-dong-btn{appearance:none;-webkit-appearance:none;border:0;cursor:pointer;font-family:inherit;display:flex;align-items:center;white-space:nowrap;user-select:none;transition:transform .14s ease,box-shadow .14s ease,border-color .14s ease}
+.region-province-btn,.region-city-btn,.region-dong-btn{appearance:none;-webkit-appearance:none;border:0;cursor:pointer;font-family:inherit;display:flex;align-items:center;white-space:nowrap;user-select:none;transition:transform .14s ease,box-shadow .14s ease,border-color .14s ease;position:relative}
 .region-province-btn{gap:9px;padding:10px 13px;border-radius:14px;background:#ffffff;border:2px solid #cbd5e1;box-shadow:0 8px 20px rgba(15,23,42,.18),0 1px 2px rgba(15,23,42,.08);color:#0f172a}
 .region-province-btn:hover{transform:translateY(-2px) scale(1.03);border-color:#6366f1;box-shadow:0 12px 26px rgba(15,23,42,.22),0 0 0 3px rgba(99,102,241,.12)}
+.region-province-btn::after{content:"";position:absolute;left:50%;bottom:-7px;width:12px;height:12px;background:#fff;border-right:2px solid #cbd5e1;border-bottom:2px solid #cbd5e1;transform:translateX(-50%) rotate(45deg);border-radius:0 0 3px 0}
 .region-province-btn.has-areas{border-color:#818cf8}
 .region-province-btn.no-areas{background:#f8fafc;color:#334155;border-color:#cbd5e1}
 .region-province-name{font-size:17px;font-weight:1000;letter-spacing:-.75px;line-height:1}
@@ -42,16 +43,29 @@ input[type=checkbox]{width:1.1rem;height:1.1rem;cursor:pointer}
 .region-province-btn.no-areas .region-province-count{background:#f1f5f9;color:#64748b;border-color:#e2e8f0}
 .region-city-btn{gap:9px;padding:10px 13px;border-radius:13px;background:#ffffff;border:2px solid #fecdd3;box-shadow:0 7px 18px rgba(15,23,42,.16),0 1px 2px rgba(15,23,42,.07);color:#111827}
 .region-city-btn:hover{transform:translateY(-2px) scale(1.035);border-color:#e11d48;box-shadow:0 11px 24px rgba(15,23,42,.20),0 0 0 3px rgba(225,29,72,.10)}
+.region-city-btn::after{content:"";position:absolute;left:50%;bottom:-7px;width:12px;height:12px;background:#fff;border-right:2px solid #fecdd3;border-bottom:2px solid #fecdd3;transform:translateX(-50%) rotate(45deg);border-radius:0 0 3px 0}
 .region-city-dot{width:10px;height:10px;border-radius:999px;background:#e11d48;box-shadow:0 0 0 4px #ffe4e6}
 .region-city-text{display:flex;flex-direction:column;align-items:flex-start;gap:2px}
 .region-city-name{font-size:14px;font-weight:1000;letter-spacing:-.5px;line-height:1.05}
 .region-city-count{font-size:9px;font-weight:900;color:#64748b}
 .region-dong-btn{gap:8px;padding:9px 12px;border-radius:12px;background:#fff;border:2px solid #bfdbfe;box-shadow:0 6px 16px rgba(15,23,42,.15),0 1px 2px rgba(15,23,42,.06);color:#0f172a}
 .region-dong-btn:hover{transform:translateY(-2px) scale(1.035);border-color:#2563eb;box-shadow:0 10px 22px rgba(15,23,42,.20),0 0 0 3px rgba(37,99,235,.10)}
+.region-dong-btn::after{content:"";position:absolute;left:50%;bottom:-7px;width:12px;height:12px;background:#fff;border-right:2px solid #bfdbfe;border-bottom:2px solid #bfdbfe;transform:translateX(-50%) rotate(45deg);border-radius:0 0 3px 0}
 .region-dong-icon{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:8px;background:#eff6ff;color:#1d4ed8;font-size:11px;font-weight:1000;border:1px solid #dbeafe}
 .region-dong-text{display:flex;flex-direction:column;align-items:flex-start;gap:1px}
 .region-dong-name{font-size:13px;font-weight:1000;letter-spacing:-.45px;line-height:1.05}
 .region-dong-count{font-size:9px;font-weight:900;color:#64748b}
+
+.region-context-wrap{pointer-events:none;white-space:nowrap;transform:translateY(-20px);animation:regionPop .18s ease-out both}
+.region-context-bubble{position:relative;display:flex;align-items:center;gap:9px;padding:10px 14px;background:#0f172a;color:#fff;border:2px solid #fff;border-radius:15px;box-shadow:0 10px 26px rgba(15,23,42,.30),0 0 0 2px rgba(15,23,42,.12);font-weight:1000}
+.region-context-bubble::after{content:"";position:absolute;left:50%;bottom:-7px;width:12px;height:12px;background:#0f172a;border-right:2px solid #fff;border-bottom:2px solid #fff;transform:translateX(-50%) rotate(45deg);border-radius:0 0 3px 0}
+.region-context-bubble .ctx-icon{display:inline-flex;align-items:center;justify-content:center;width:25px;height:25px;border-radius:9px;background:#fff;color:#0f172a;font-size:12px;font-weight:1000}
+.region-context-bubble .ctx-copy{display:flex;flex-direction:column;align-items:flex-start;gap:1px}
+.region-context-bubble .ctx-title{font-size:14px;line-height:1.05;letter-spacing:-.4px}
+.region-context-bubble .ctx-sub{font-size:9px;line-height:1;color:#cbd5e1;font-weight:900}
+.region-context-bubble.dong{background:#1d4ed8}
+.region-context-bubble.dong::after{background:#1d4ed8}
+.region-context-bubble.dong .ctx-icon{color:#1d4ed8}
 .region-nav-shell{position:absolute;top:14px;left:14px;z-index:24;display:flex;align-items:center;gap:8px;max-width:min(760px,calc(100% - 220px));padding:8px 10px;background:#ffffff;border:2px solid #e2e8f0;border-radius:15px;box-shadow:0 8px 22px rgba(15,23,42,.17)}
 .region-breadcrumb{display:flex;align-items:center;gap:5px;min-width:0;overflow:hidden}
 .region-crumb{display:inline-flex;align-items:center;color:#475569;font-size:11px;font-weight:900;padding:4px 6px;border-radius:8px;white-space:nowrap;background:#f8fafc;border:1px solid #e2e8f0}
@@ -78,7 +92,7 @@ details[open]>summary::before{content:'▾';color:#e11d48}
 <div class="w-full md:w-1/4 bg-white border-r border-gray-200 p-6 flex flex-col shadow-lg z-20 overflow-y-auto">
 <h1 class="text-xl font-extrabold text-slate-800 border-b-4 border-indigo-500 pb-3 mb-4 flex justify-between items-center">
 <span>🗺️ 전국 상권 관제탑</span>
-<span class="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded-full font-bold">V57.3</span>
+<span class="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded-full font-bold">V57.4</span>
 </h1>
 
 <div class="mb-3">
@@ -164,7 +178,7 @@ details[open]>summary::before{content:'▾';color:#e11d48}
 </div>
 
 <div class="absolute top-16 left-4 z-10 bg-white/95 backdrop-blur-sm p-4 rounded-xl shadow-lg border border-slate-200 w-64 max-h-[80vh] overflow-y-auto hidden md:block">
-<p class="text-xs font-extrabold text-slate-800 mb-2.5 border-b pb-1 flex justify-between"><span>🎯 렌즈 전문 브랜드</span><span class="text-[10px] text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded">참고 수치</span></p>
+<p class="text-xs font-extrabold text-slate-800 mb-2.5 border-b pb-1 flex justify-between"><span>🎯 렌즈 전문 브랜드</span><span class="text-[10px] text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded">기본 OFF</span></p>
 <div class="space-y-2 mb-4">
 <label class="flex items-center space-x-2 cursor-pointer"><input type="checkbox" id="f_lensme" onchange="refreshBrandVisibility()" class="chk-purple"><span class="text-[13px] font-bold text-purple-700 flex-grow">🟣 렌즈미</span><span id="cnt_lensme" class="text-[12px] font-bold text-slate-500">(-)</span></label>
 <label class="flex items-center space-x-2 cursor-pointer"><input type="checkbox" id="f_olens" onchange="refreshBrandVisibility()" class="chk-orange"><span class="text-[13px] font-bold text-orange-600 flex-grow">🟠 오렌즈</span><span id="cnt_olens" class="text-[12px] font-bold text-slate-500">(-)</span></label>
@@ -173,14 +187,14 @@ details[open]>summary::before{content:'▾';color:#e11d48}
 <label class="flex items-center space-x-2 cursor-pointer"><input type="checkbox" id="f_withlens" onchange="refreshBrandVisibility()" class="chk-emerald"><span class="text-[13px] font-bold text-emerald-600 flex-grow">🟢 위드렌즈</span><span id="cnt_withlens" class="text-[12px] font-bold text-blue-500">로딩중..</span></label>
 <label class="flex items-center space-x-2 cursor-pointer"><input type="checkbox" id="f_lensvery" onchange="refreshBrandVisibility()" class="chk-yellow"><span class="text-[13px] font-bold text-yellow-600 flex-grow">🟡 렌즈베리</span><span id="cnt_lensvery" class="text-[12px] font-bold text-blue-500">로딩중..</span></label>
 <label class="flex items-center space-x-2 cursor-pointer"><input type="checkbox" id="f_lenstown" onchange="refreshBrandVisibility()" class="chk-red"><span class="text-[13px] font-bold text-red-600 flex-grow">🔴 렌즈타운</span><span id="cnt_lenstown" class="text-[12px] font-bold text-blue-500">로딩중..</span></label>
-<label class="flex items-center space-x-2 cursor-pointer"><input type="checkbox" id="f_optical_gen" onchange="refreshBrandVisibility()" class="chk-blue"><span class="text-[13px] font-bold text-slate-600 flex-grow">⚪ 일반 안경원</span><span id="cnt_optical_gen" class="text-[12px] font-bold text-slate-500">(-)</span></label>
+<label class="flex items-center space-x-2 cursor-pointer"><input type="checkbox" id="f_optical_gen" onchange="refreshBrandVisibility()" class="chk-blue"><span class="text-[13px] font-bold text-slate-600 flex-grow">⚪ 일반 안경원</span></label>
 </div>
-<p class="text-xs font-extrabold text-slate-800 mb-2 border-b pb-1 mt-3 flex justify-between"><span>🌿 핵심 집객시설</span><span class="text-[10px] text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded">참고 수치</span></p>
+<p class="text-xs font-extrabold text-slate-800 mb-2 border-b pb-1 mt-3 flex justify-between"><span>🌿 핵심 집객시설</span><span class="text-[10px] text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded">기본 OFF</span></p>
 <div class="space-y-2">
-<label class="flex items-center space-x-2 cursor-pointer"><input type="checkbox" id="f_olive" checked onchange="refreshBrandVisibility()" class="chk-green"><span class="text-[13px] font-bold text-green-600 flex-grow">🟩 일반 올리브영</span><span id="cnt_olive" class="text-[12px] font-bold text-slate-500">(-)</span></label>
-<label class="flex items-center space-x-2 cursor-pointer"><input type="checkbox" id="f_olive_hapa" checked onchange="refreshBrandVisibility()" class="chk-green"><span class="text-[13px] font-bold text-teal-700 flex-grow">🌿 올영(하파크리스틴)</span><span id="cnt_olive_hapa" class="text-[12px] font-bold text-blue-500">로딩중..</span></label>
-<label class="flex items-center space-x-2 cursor-pointer"><input type="checkbox" id="f_daiso" checked onchange="refreshBrandVisibility()" class="chk-red"><span class="text-[13px] font-bold text-rose-600 flex-grow">🟥 다이소</span><span id="cnt_daiso" class="text-[12px] font-bold text-slate-500">(-)</span></label>
-<label class="flex items-center space-x-2 cursor-pointer"><input type="checkbox" id="f_davich" checked onchange="refreshBrandVisibility()" class="chk-blue"><span class="text-[13px] font-bold text-blue-700 flex-grow">🟦 다비치안경</span><span id="cnt_davich" class="text-[12px] font-bold text-slate-500">(-)</span></label>
+<label class="flex items-center space-x-2 cursor-pointer"><input type="checkbox" id="f_olive" onchange="refreshBrandVisibility()" class="chk-green"><span class="text-[13px] font-bold text-green-600 flex-grow">🟩 일반 올리브영</span><span id="cnt_olive" class="text-[12px] font-bold text-slate-500">(-)</span></label>
+<label class="flex items-center space-x-2 cursor-pointer"><input type="checkbox" id="f_olive_hapa" onchange="refreshBrandVisibility()" class="chk-green"><span class="text-[13px] font-bold text-teal-700 flex-grow">🌿 올영(하파크리스틴)</span><span id="cnt_olive_hapa" class="text-[12px] font-bold text-blue-500">로딩중..</span></label>
+<label class="flex items-center space-x-2 cursor-pointer"><input type="checkbox" id="f_daiso" onchange="refreshBrandVisibility()" class="chk-red"><span class="text-[13px] font-bold text-rose-600 flex-grow">🟥 다이소</span><span id="cnt_daiso" class="text-[12px] font-bold text-slate-500">(-)</span></label>
+<label class="flex items-center space-x-2 cursor-pointer"><input type="checkbox" id="f_davich" onchange="refreshBrandVisibility()" class="chk-blue"><span class="text-[13px] font-bold text-blue-700 flex-grow">🟦 다비치안경</span><span id="cnt_davich" class="text-[12px] font-bold text-slate-500">(-)</span></label>
 </div>
 </div>
 
@@ -225,11 +239,12 @@ function v564FenceKey(path){return(Array.isArray(path)?path:[]).map(p=>`${Number
 function layerChecked(id,defaultValue=true){const el=document.getElementById(id);return el?!!el.checked:defaultValue}
 function toggleMapLayerMenu(ev){ev?.stopPropagation?.();document.getElementById("mapLayerMenu")?.classList.toggle("hidden")}
 function v572AreaMatchesCurrentCity(area){
-if(!area||mapDrillState.level!=="dong")return false;
+if(!area)return false;
 const sameSi=String(area.si||"")===String(mapDrillState.si||"");
 const sameGu=String(area.gu||"")===String(mapDrillState.gu||"");
-const sameDong=String(area.dong||"")===String(mapDrillState.dong||"");
-return sameSi&&sameGu&&sameDong
+if(mapDrillState.level==="city")return sameSi&&sameGu;
+if(mapDrillState.level==="dong"){const sameDong=String(area.dong||"")===String(mapDrillState.dong||"");return sameSi&&sameGu&&sameDong}
+return false
 }
 function applyMapDisplayFilters(){
 const analysisOpen=!!expandedSavedAreaId||(!b&&!!w),showRank=analysisOpen&&layerChecked("layer_rank",true),showInflow=analysisOpen&&layerChecked("layer_inflow",true),showFlow=analysisOpen&&layerChecked("layer_flow",false),showNames=layerChecked("layer_names",true),focusedKey=focusedSavedAreaId==null?null:String(focusedSavedAreaId),activeKey=expandedSavedAreaId==null?null:String(expandedSavedAreaId);
@@ -425,6 +440,15 @@ function v573RenderDongLabels(){
   const ov=new kakao.maps.CustomOverlay({position:new kakao.maps.LatLng(group.center.lat,group.center.lng),content:wrap,xAnchor:.5,yAnchor:.5,zIndex:9});ov.setMap(f);dongLabelOverlays.push(ov)
  }
 }
+function v574RenderContextBubble(){
+ v572HideAdminFocus();const state=mapDrillState;if(!state||!["city","dong"].includes(state.level))return;
+ const areas=v572AreasFor(state.si,state.gu,state.level==="dong"?state.dong:null);
+ const fallbackCenter=f.getCenter(),center=v572CenterForAreas(areas,{lat:fallbackCenter.getLat(),lng:fallbackCenter.getLng()});if(!center)return;
+ const wrap=document.createElement("div"),card=document.createElement("div"),icon=document.createElement("span"),copy=document.createElement("span"),title=document.createElement("span"),sub=document.createElement("span");
+ wrap.className="region-context-wrap";card.className=`region-context-bubble${state.level==="dong"?" dong":""}`;icon.className="ctx-icon";copy.className="ctx-copy";title.className="ctx-title";sub.className="ctx-sub";
+ const label=state.level==="dong"?(state.dong||state.gu||state.si):(state.gu||state.si);icon.textContent=state.level==="dong"?"동":"지역";title.textContent=label;sub.textContent=`저장상권 ${areas.length}개`;copy.append(title,sub);card.append(icon,copy);wrap.appendChild(card);
+ adminFocusOverlay=new kakao.maps.CustomOverlay({position:new kakao.maps.LatLng(center.lat,center.lng),content:wrap,xAnchor:.5,yAnchor:1,zIndex:10});adminFocusOverlay.setMap(f)
+}
 function v572CloseAnalysisForNavigation(){if(expandedSavedAreaId!=null||w){expandedSavedAreaId=null;b=null;w=null;R=null;v564HideAnalysis()}focusedSavedAreaId=null;v570SyncSavedBubbleState(null);v564SetSavedAreaVisual(null)}
 function v572GoNational(){
  v572CloseAnalysisForNavigation();mapDrillState={level:"national",si:null,gu:null,dong:null};lastAutoRegionKey="national";v573ClearRegionLabels();v572UpdateBreadcrumb();
@@ -440,7 +464,7 @@ function v572GoProvince(si){
 function v572GoCity(si,gu){
  v572CloseAnalysisForNavigation();mapDrillState={level:"city",si,gu,dong:null};lastAutoRegionKey=`city|${si}|${gu}`;v573ClearRegionLabels();v572UpdateBreadcrumb();
  const areas=v572AreasFor(si,gu),center=v572CenterForAreas(areas,V572_PROVINCES.find(x=>x.name===si)||null);v572SmoothMove(center,5);
- setTimeout(()=>v573SyncRegionFromMap(true),360);const label=gu||si;document.getElementById("statusMessage").innerText=areas.length?`${label} · 저장상권이 있는 읍·면·동이 표시됩니다.`:`${label} · 저장된 상권이 없습니다.`
+ setTimeout(()=>v573SyncRegionFromMap(true),360);const label=gu||si;document.getElementById("statusMessage").innerText=areas.length?`${label} · 읍·면·동 말풍선과 저장상권 말풍선이 함께 표시됩니다.`:`${label} · 저장된 상권이 없습니다.`
 }
 function v573GoDong(si,gu,dong){
  v572CloseAnalysisForNavigation();mapDrillState={level:"dong",si,gu,dong};lastAutoRegionKey=`dong|${si}|${gu}|${dong}`;v573ClearRegionLabels();v572UpdateBreadcrumb();
@@ -452,7 +476,8 @@ function v572RefreshRegionNavigation(){
  v572HideAdminFocus();v572UpdateBreadcrumb();v573ClearRegionLabels();
  if(mapDrillState.level==="national")v572RenderProvinceLabels();
  else if(mapDrillState.level==="province")v572RenderCityLabels();
- else if(mapDrillState.level==="city")v573RenderDongLabels();
+ else if(mapDrillState.level==="city"){v573RenderDongLabels();v574RenderContextBubble()}
+ else if(mapDrillState.level==="dong")v574RenderContextBubble();
  applyMapDisplayFilters()
 }
 async function v573SyncRegionFromMap(force=false){
@@ -937,7 +962,7 @@ async function Ht(){
 if(T)return;$(!0);const t=++O;r=new AbortController;
 try{let n=f.getBounds(),a=Object.keys(J);
 for(let o of a){U(t);let a=await Z(J[o].kw,{bounds:n},e.MAP_MAX_PAGES);U(t),a.forEach((t=>jt(t,o))),await z(30)}
-let o=await Z("안경",{bounds:n},e.MAP_MAX_PAGES);U(t);let genCount=0;o.forEach((t=>{if(!t.place_name.includes("렌즈")&&!t.place_name.includes("다비치")&&jt(t,"f_optical_gen","%2364748b"))genCount++}));const genEl=document.getElementById("cnt_optical_gen");genEl&&(genEl.innerText=`(${genCount}개)`)}
+let o=await Z("안경",{bounds:n},e.MAP_MAX_PAGES);U(t);o.forEach((t=>{if(!t.place_name.includes("렌즈")&&!t.place_name.includes("다비치"))jt(t,"f_optical_gen","%2364748b")}))}
 catch(t){"AbortError"!==t.name&&console.error("지도 마커 검색 오류:",t)}finally{$(!1)}}
 function searchLocation(){
 if(T)return alert("진행 중인 작업이 끝난 뒤 검색해주세요.");
