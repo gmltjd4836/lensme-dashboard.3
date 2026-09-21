@@ -29,6 +29,12 @@ input[type=checkbox]{width:1.1rem;height:1.1rem;cursor:pointer}
 .poly-nametag-check{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:999px;background:rgba(255,255,255,.20);font-size:12px;font-weight:1000}
 .poly-nametag-text{position:relative;z-index:1;line-height:1.15}
 .poly-nametag.active .poly-nametag-text{font-weight:1000}
+
+.province-label-wrap{pointer-events:none;white-space:nowrap}
+.province-label{font-size:27px;font-weight:1000;letter-spacing:-1.2px;color:rgba(51,65,85,.44);text-shadow:0 2px 0 rgba(255,255,255,.95),0 0 10px rgba(255,255,255,.92),0 2px 12px rgba(15,23,42,.12);user-select:none}
+.admin-focus-label-wrap{pointer-events:none;white-space:nowrap}
+.admin-focus-label{font-weight:1000;letter-spacing:-.7px;color:rgba(30,41,59,.58);background:rgba(255,255,255,.60);border:1px solid rgba(148,163,184,.22);box-shadow:0 3px 14px rgba(15,23,42,.08);backdrop-filter:blur(5px);padding:5px 10px;border-radius:999px;user-select:none}
+.admin-focus-label.city{font-size:20px}.admin-focus-label.dong{font-size:16px}
 .map-layer-btn{background:rgba(255,255,255,.96);border:1px solid #e2e8f0;border-radius:12px;padding:7px 10px;font-size:11px;font-weight:900;color:#334155;box-shadow:0 5px 16px rgba(15,23,42,.14);backdrop-filter:blur(10px);transition:.15s;display:flex;align-items:center;gap:5px}
 .map-layer-btn:hover{transform:translateY(-1px);box-shadow:0 7px 18px rgba(15,23,42,.18)}
 .map-layer-menu{width:158px;background:rgba(255,255,255,.97);border:1px solid #e2e8f0;border-radius:14px;padding:8px;box-shadow:0 12px 30px rgba(15,23,42,.18);backdrop-filter:blur(12px)}
@@ -179,19 +185,23 @@ if(!window.kakao?.maps?.services||!window.kakao?.maps?.drawing)throw document.ge
 new Error("Kakao SDK unavailable");
 let n="new",a="",o=null,r=null,s=[],i=null,l="",c=null,d=0,u=document.getElementById("map"),m=new kakao.maps.LatLng(37.59970,127.13015),g=m,f=new kakao.maps.Map(u,{center:m,
 level:3}),h=new kakao.maps.services.Places,p=new kakao.maps.services.Geocoder,y=[],_=[],A=new Map,E=new Map,M=new kakao.maps.CustomOverlay({xAnchor:.5,yAnchor:1.5,zIndex:150
-}),w=null,b=null,k={},x={},I=!1,S=null,T=!1,O=0,v=[],L={},C={},R=null,P=[],N=[],analysisLines=[],rankOverlays=[],inflowOverlays=[],flowLines=[],expandedSavedAreaId=null,lastAnalyzedSavedId=null,lastAnalyzedFenceKey="",savedAreaAnalysisCache=new Map,savedBubbleEls={};
+}),w=null,b=null,k={},x={},I=!1,S=null,T=!1,O=0,v=[],L={},C={},R=null,P=[],N=[],analysisLines=[],rankOverlays=[],inflowOverlays=[],flowLines=[],expandedSavedAreaId=null,focusedSavedAreaId=null,lastAnalyzedSavedId=null,lastAnalyzedFenceKey="",savedAreaAnalysisCache=new Map,savedBubbleEls={},provinceLabelOverlays=[],adminFocusOverlay=null,regionLabelTimer=null,regionLabelRequestSeq=0;
 
 function D(t){return String(t.id||`${t.place_name}|${t.x}|${t.y}`)}
 function v564FenceKey(path){return(Array.isArray(path)?path:[]).map(p=>`${Number(p.lat).toFixed(6)},${Number(p.lng).toFixed(6)}`).join("|")}
 function layerChecked(id,defaultValue=true){const el=document.getElementById(id);return el?!!el.checked:defaultValue}
 function toggleMapLayerMenu(ev){ev?.stopPropagation?.();document.getElementById("mapLayerMenu")?.classList.toggle("hidden")}
 function applyMapDisplayFilters(){
-const expanded=!!expandedSavedAreaId||(!b&&!!w),showRank=expanded&&layerChecked("layer_rank",true),showInflow=expanded&&layerChecked("layer_inflow",true),showFlow=expanded&&layerChecked("layer_flow",false),showNames=layerChecked("layer_names",true);
-rankOverlays.forEach(o=>{try{o.setMap(showRank?f:null)}catch(e){}});inflowOverlays.forEach(o=>{try{o.setMap(showInflow?f:null)}catch(e){}});flowLines.forEach(o=>{try{o.setMap(showFlow?f:null)}catch(e){}});Object.values(x).forEach(o=>{try{o.setMap(showNames?f:null)}catch(e){}});document.getElementById("heatLegend")?.classList.toggle("hidden",!showFlow);
+const analysisOpen=!!expandedSavedAreaId||(!b&&!!w),showRank=analysisOpen&&layerChecked("layer_rank",true),showInflow=analysisOpen&&layerChecked("layer_inflow",true),showFlow=analysisOpen&&layerChecked("layer_flow",false),showNames=layerChecked("layer_names",true),level=f.getLevel(),focusedKey=focusedSavedAreaId==null?null:String(focusedSavedAreaId),activeKey=expandedSavedAreaId==null?null:String(expandedSavedAreaId);
+rankOverlays.forEach(o=>{try{o.setMap(showRank?f:null)}catch(e){}});inflowOverlays.forEach(o=>{try{o.setMap(showInflow?f:null)}catch(e){}});flowLines.forEach(o=>{try{o.setMap(showFlow?f:null)}catch(e){}});
+Object.entries(x).forEach(([id,o])=>{try{const keepAtZoom=level<=3||String(id)===focusedKey||String(id)===activeKey;o.setMap(showNames&&keepAtZoom?f:null)}catch(e){}});
+document.getElementById("heatLegend")?.classList.toggle("hidden",!showFlow);
 }
+function v571EnableAnalysisLayers(){["layer_rank","layer_inflow","layer_flow","layer_names"].forEach(id=>{const el=document.getElementById(id);if(el)el.checked=true})}
+
 function v564HideAnalysis(){_.forEach(o=>{try{o.setMap(null)}catch(e){}});flowLines.forEach(o=>{try{o.setMap(null)}catch(e){}});document.getElementById("heatLegend")?.classList.add("hidden");document.getElementById("rankingResultBox")?.classList.add("hidden")}
 function v564ShowAnalysis(){_.forEach(o=>{try{o.setMap(f)}catch(e){}});applyMapDisplayFilters();const box=document.getElementById("rankingResultBox"),txt=document.getElementById("rankingResultText");if(box&&txt?.innerHTML.trim())box.classList.remove("hidden")}
-function v564SetSavedAreaVisual(activeId=null){Object.entries(k).forEach(([id,poly])=>{const active=id===activeId;poly.setOptions({fillColor:active?"#e11d48":"#f43f5e",fillOpacity:active?.22:.075,strokeColor:active?"#be123c":"#e11d48",strokeOpacity:active?.95:.65,strokeWeight:active?4:2})})}
+function v564SetSavedAreaVisual(activeId=expandedSavedAreaId){const activeKey=activeId==null?null:String(activeId),focusKey=focusedSavedAreaId==null?null:String(focusedSavedAreaId);Object.entries(k).forEach(([id,poly])=>{const active=String(id)===activeKey,focused=String(id)===focusKey;poly.setOptions({fillColor:active?"#e11d48":focused?"#fb7185":"#f43f5e",fillOpacity:active?.24:focused?.13:.075,strokeColor:active?"#9f1239":focused?"#f43f5e":"#e11d48",strokeOpacity:active?1:focused?.9:.65,strokeWeight:active?5:focused?4:2})})}
 function isRelocationStore(t,ctx){return !!(ctx&&ctx.mode==="reloc"&&Array.isArray(ctx.relocationStoreIds)&&ctx.relocationStoreIds.includes(D(t)))}
 function U(t){if(t!==O||r?.signal.aborted)throw new DOMException("분석 취소","AbortError")}
 function $(t){T=t;const b=document.getElementById("cancelAnalysisBtn");b&&b.classList.toggle("hidden",!t)}
@@ -307,6 +317,29 @@ let a=!1;const o=t=>{a||(a=!0,clearTimeout(r),n(t))},r=setTimeout((()=>o({si:"",
 p.coord2RegionCode(t,e,((t,e)=>{
 if(e===kakao.maps.services.Status.OK&&t?.length){const e=t.find((t=>"B"===t.region_type))||t.find((t=>"H"===t.region_type))||t[0];o({si:e.region_1depth_name||"",gu:e.region_2depth_name||"",dong:e.region_3depth_name||""})}
 else o({si:"",gu:"",dong:""})}))}))}
+
+const V571_PROVINCES=[
+{name:"서울특별시",lat:37.5665,lng:126.9780},{name:"부산광역시",lat:35.1796,lng:129.0756},{name:"대구광역시",lat:35.8714,lng:128.6014},{name:"인천광역시",lat:37.4563,lng:126.7052},
+{name:"광주광역시",lat:35.1595,lng:126.8526},{name:"대전광역시",lat:36.3504,lng:127.3845},{name:"울산광역시",lat:35.5384,lng:129.3114},{name:"세종특별자치시",lat:36.4800,lng:127.2890},
+{name:"경기도",lat:37.4138,lng:127.5183},{name:"강원특별자치도",lat:37.8228,lng:128.1555},{name:"충청북도",lat:36.8000,lng:127.7000},{name:"충청남도",lat:36.5184,lng:126.8000},
+{name:"전북특별자치도",lat:35.7175,lng:127.1530},{name:"전라남도",lat:34.8679,lng:126.9910},{name:"경상북도",lat:36.4919,lng:128.8889},{name:"경상남도",lat:35.4606,lng:128.2132},
+{name:"제주특별자치도",lat:33.4890,lng:126.4983}
+];
+function v571InitProvinceLabels(){
+provinceLabelOverlays.forEach(o=>{try{o.setMap(null)}catch(e){}});provinceLabelOverlays=[];
+for(const item of V571_PROVINCES){const wrap=document.createElement("div"),label=document.createElement("div");wrap.className="province-label-wrap";label.className="province-label";label.textContent=item.name;wrap.appendChild(label);provinceLabelOverlays.push(new kakao.maps.CustomOverlay({position:new kakao.maps.LatLng(item.lat,item.lng),content:wrap,xAnchor:.5,yAnchor:.5,zIndex:2}))}
+}
+function v571HideAdminFocus(){if(adminFocusOverlay){try{adminFocusOverlay.setMap(null)}catch(e){}}}
+async function v571UpdateRegionLabels(){
+const seq=++regionLabelRequestSeq,level=f.getLevel(),provinceOn=level>=9;provinceLabelOverlays.forEach(o=>{try{o.setMap(provinceOn?f:null)}catch(e){}});
+if(provinceOn||level<=3){v571HideAdminFocus();applyMapDisplayFilters();return}
+const center=f.getCenter(),region=await dt(center.getLng(),center.getLat());if(seq!==regionLabelRequestSeq)return;
+let text="",kind="city";if(level>=6){text=region.gu||region.si||"";kind="city"}else{text=region.dong||region.gu||region.si||"";kind="dong"}
+if(!text){v571HideAdminFocus();applyMapDisplayFilters();return}
+const wrap=document.createElement("div"),label=document.createElement("div");wrap.className="admin-focus-label-wrap";label.className=`admin-focus-label ${kind}`;label.textContent=text;wrap.appendChild(label);
+if(adminFocusOverlay){try{adminFocusOverlay.setMap(null)}catch(e){}}adminFocusOverlay=new kakao.maps.CustomOverlay({position:center,content:wrap,xAnchor:.5,yAnchor:.5,zIndex:3});adminFocusOverlay.setMap(f);applyMapDisplayFilters()
+}
+function v571ScheduleRegionLabels(){clearTimeout(regionLabelTimer);regionLabelTimer=setTimeout(()=>{v571UpdateRegionLabels().catch(err=>console.warn("region label update failed",err))},160)}
 
 async function ut(t,n,a,o=e.AUTO_AREA_POI_PAGES){const r=new kakao.maps.LatLng(t,n),s=[];
 rt.forEach((t=>s.push(tt(t,{location:r,radius:a},o)))),ot.forEach((t=>s.push(Z(t,{location:r,radius:a,sort:kakao.maps.services.SortBy.DISTANCE},o))));
@@ -631,7 +664,7 @@ const next=old?[...Lt.filter(t=>t.id!==old.id),r]:[...Lt,r];
 if(X(next)){
 const analyzedPath=Array.isArray(w)&&w.length>=3?w:F(e),analyzedKey=v564FenceKey(analyzedPath),sameFence=!!(lastAnalyzedFenceKey&&lastAnalyzedFenceKey===analyzedKey&&i?.topSegments?.length);
 if(sameFence)savedAreaAnalysisCache.set(String(o),{fenceKey:lastAnalyzedFenceKey,analysis:i,html:document.getElementById("rankingResultText")?.innerHTML||""});
-lastAnalyzedSavedId=sameFence?String(o):null;expandedSavedAreaId=null;b=null;w=null;R=null;
+lastAnalyzedSavedId=sameFence?String(o):null;expandedSavedAreaId=null;focusedSavedAreaId=null;b=null;w=null;R=null;
 redrawTarget=null,vt.clear(),I=!1,S=null,setDrawUi(!1),v564HideAnalysis(),Ct();
 document.getElementById("targetLocationInput").innerText=`저장됨 · ${n.trim()}`;
 document.getElementById("btnClearPolygon").classList.add("hidden");
@@ -670,21 +703,21 @@ const grouped={};
 Lt.forEach(area=>{const city=area.si||"미분류",dong=area.dong||"미분류";(grouped[city]||(grouped[city]={}));(grouped[city][dong]||(grouped[city][dong]=[])).push(area)});
 const cities=Object.keys(grouped).sort((a,b)=>a.localeCompare(b,"ko"));
 if(!cities.length){root.innerHTML='<div class="text-[11px] text-slate-400 py-3 text-center">저장된 상권이 없습니다.</div>';return}
-const activeKey=expandedSavedAreaId==null?null:String(expandedSavedAreaId);
+const activeKey=expandedSavedAreaId==null?null:String(expandedSavedAreaId),focusKey=focusedSavedAreaId==null?null:String(focusedSavedAreaId);
 for(const city of cities){
 const cityEl=document.createElement("details");cityEl.open=!0;cityEl.innerHTML=`<summary>${V(city)}</summary><div class="tree-indent"></div>`;const cityBody=cityEl.querySelector(".tree-indent");
 for(const dong of Object.keys(grouped[city]).sort((a,b)=>a.localeCompare(b,"ko"))){
 const dongEl=document.createElement("details");dongEl.open=!0;dongEl.innerHTML=`<summary>${V(dong)}</summary><div class="tree-indent"></div>`;const dongBody=dongEl.querySelector(".tree-indent");
 for(const area of grouped[city][dong].sort((a,b)=>String(a.name).localeCompare(String(b.name),"ko"))){
-const areaId=String(area.id),active=activeKey===areaId,row=document.createElement("div");row.className=`flex items-center gap-1 py-1.5 px-1 rounded-lg border-b border-slate-100 last:border-0 ${active?"bg-rose-50":""}`;
-row.innerHTML=`<button class="min-w-0 flex-1 text-left font-extrabold ${active?"text-rose-700":"text-slate-700"} hover:text-rose-600 truncate" data-area-select="${V(areaId)}">${active?"●":"○"} ${V(area.name)}</button><button data-area-rename="${V(areaId)}" title="이름 변경" class="text-[10px] px-1.5 py-1 rounded bg-slate-50 text-slate-500">이름</button><button data-area-redraw="${V(areaId)}" title="경계 수정" class="text-[10px] px-1.5 py-1 rounded bg-slate-50 text-slate-500">수정</button><button data-area-delete="${V(areaId)}" title="삭제" class="text-[10px] px-1.5 py-1 rounded bg-slate-50 text-slate-400">×</button>`;
+const areaId=String(area.id),active=activeKey===areaId,focused=focusKey===areaId,row=document.createElement("div");row.className=`flex items-center gap-1 py-1.5 px-1 rounded-lg border-b border-slate-100 last:border-0 ${active?"bg-rose-50":focused?"bg-indigo-50":""}`;
+row.innerHTML=`<button class="min-w-0 flex-1 text-left font-extrabold ${active?"text-rose-700":focused?"text-indigo-700":"text-slate-700"} hover:text-rose-600 truncate" data-area-select="${V(areaId)}">${active?"●":focused?"▶":"○"} ${V(area.name)}</button><button data-area-rename="${V(areaId)}" title="이름 변경" class="text-[10px] px-1.5 py-1 rounded bg-slate-50 text-slate-500">이름</button><button data-area-redraw="${V(areaId)}" title="경계 수정" class="text-[10px] px-1.5 py-1 rounded bg-slate-50 text-slate-500">수정</button><button data-area-delete="${V(areaId)}" title="삭제" class="text-[10px] px-1.5 py-1 rounded bg-slate-50 text-slate-400">×</button>`;
 row.querySelector('[data-area-select]')?.addEventListener('click',()=>selectSavedPolygon(areaId));row.querySelector('[data-area-rename]')?.addEventListener('click',()=>renamePolygon(areaId));row.querySelector('[data-area-redraw]')?.addEventListener('click',()=>redrawPolygon(areaId));row.querySelector('[data-area-delete]')?.addEventListener('click',()=>deletePolygon(areaId));dongBody.appendChild(row);
-const poly=W(area.geometry||area.path,{strokeWeight:active?5:2,strokeColor:active?"#9f1239":"#e11d48",strokeOpacity:active?1:.65,fillOpacity:active?.24:.075,fillColor:active?"#e11d48":"#f43f5e"},(()=>selectSavedPolygon(areaId)));poly.setMap(f);k[areaId]=poly;
+const poly=W(area.geometry||area.path,{strokeWeight:active?5:focused?4:2,strokeColor:active?"#9f1239":focused?"#f43f5e":"#e11d48",strokeOpacity:active?1:focused?.9:.65,fillOpacity:active?.24:focused?.13:.075,fillColor:active?"#e11d48":focused?"#fb7185":"#f43f5e"},(()=>selectSavedPolygon(areaId)));poly.setMap(f);k[areaId]=poly;
 const bubbleCenter=K(area.geometry||area.path),wrap=document.createElement("div"),btn=document.createElement("button"),icon=document.createElement("span"),label=document.createElement("span");
-wrap.className="poly-nametag-wrap";btn.type="button";btn.className=`poly-nametag${active?" active":""}`;btn.setAttribute("aria-pressed",active?"true":"false");icon.className=active?"poly-nametag-check":"poly-nametag-pin";icon.textContent=active?"✓":"📍";label.className="poly-nametag-text";label.textContent=area.name;btn.append(icon,label);wrap.appendChild(btn);btn.addEventListener("click",ev=>{ev.stopPropagation();selectSavedPolygon(areaId)});
+wrap.className="poly-nametag-wrap";btn.type="button";btn.className=`poly-nametag${active?" active":""}`;btn.setAttribute("aria-pressed",active?"true":"false");icon.className=active?"poly-nametag-check":"poly-nametag-pin";icon.textContent=active?"✓":"📍";label.className="poly-nametag-text";label.textContent=area.name;btn.append(icon,label);wrap.appendChild(btn);btn.addEventListener("click",ev=>{ev.stopPropagation();toggleSavedPolygonAnalysis(areaId)});
 const ov=new kakao.maps.CustomOverlay({position:new kakao.maps.LatLng(bubbleCenter.lat,bubbleCenter.lng),content:wrap,xAnchor:.5,yAnchor:1,zIndex:active?125:110});ov.setMap(f);x[areaId]=ov;savedBubbleEls[areaId]={wrap,button:btn,icon,label,overlay:ov}
 }cityBody.appendChild(dongEl)}root.appendChild(cityEl)}
-v570SyncSavedBubbleState(expandedSavedAreaId);applyMapDisplayFilters()
+v570SyncSavedBubbleState(expandedSavedAreaId);v564SetSavedAreaVisual(expandedSavedAreaId);applyMapDisplayFilters()
 }
 
 async function v569NormalizeSavedRegions(){
@@ -701,31 +734,35 @@ function deletePolygon(t){const key=String(t);if(confirm("이 상권 경계를 �
 function selectSavedPolygon(t){
 const key=String(t),area=Lt.find(e=>String(e.id)===key);if(!area)return;
 if(T)return alert("현재 분석이 진행 중입니다. 분석이 끝난 뒤 다시 눌러주세요.");
+focusedSavedAreaId=key;
+if(expandedSavedAreaId!=null){expandedSavedAreaId=null;b=null;w=null;R=null;v564HideAnalysis()}
+const path=F(area.geometry||area.path);let bounds=new kakao.maps.LatLngBounds;path.forEach(p=>bounds.extend(new kakao.maps.LatLng(p.lat,p.lng)));f.setBounds(bounds);g=bounds.getCenter();
+document.getElementById("targetLocationInput").innerText=area.name;document.getElementById("btnClearPolygon").classList.add("hidden");
+Ct();v564SetSavedAreaVisual(null);v570SyncSavedBubbleState(null);applyMapDisplayFilters();v571ScheduleRegionLabels();
+setTimeout(()=>{if(f.getLevel()>5)f.setLevel(5);applyMapDisplayFilters();v571ScheduleRegionLabels()},40);
+document.getElementById("statusMessage").innerText=`📍 ${area.name} 위치로 이동했습니다. 지도 위 상권 말풍선을 누르면 순위·유입·유동인구 분석이 표시됩니다.`
+}
+function toggleSavedPolygonAnalysis(t){
+const key=String(t),area=Lt.find(e=>String(e.id)===key);if(!area)return;
+if(T)return alert("현재 분석이 진행 중입니다. 분석이 끝난 뒤 다시 눌러주세요.");
+focusedSavedAreaId=key;
 if(expandedSavedAreaId!=null&&String(expandedSavedAreaId)===key){
-expandedSavedAreaId=null;b=null;w=null;R=null;v564HideAnalysis();v564SetSavedAreaVisual(null);v570SyncSavedBubbleState(null);Ct();
-document.getElementById("targetLocationInput").innerText="선택 없음";document.getElementById("btnClearPolygon").classList.add("hidden");
-document.getElementById("statusMessage").innerText=`${area.name} 분석을 접었습니다. 말풍선을 다시 누르면 펼쳐집니다.`;return}
-expandedSavedAreaId=key;b=key;w=F(area.geometry||area.path);R=null;
-v570SyncSavedBubbleState(key);
-document.getElementById("targetLocationInput").innerText=area.name;document.getElementById("btnClearPolygon").classList.remove("hidden");
-let bounds=new kakao.maps.LatLngBounds;w.forEach(p=>bounds.extend(new kakao.maps.LatLng(p.lat,p.lng)));f.setBounds(bounds);g=bounds.getCenter();Ct();v564SetSavedAreaVisual(key);v570SyncSavedBubbleState(key);
+expandedSavedAreaId=null;b=null;w=null;R=null;v564HideAnalysis();Ct();v564SetSavedAreaVisual(null);v570SyncSavedBubbleState(null);applyMapDisplayFilters();
+document.getElementById("targetLocationInput").innerText=area.name;document.getElementById("btnClearPolygon").classList.add("hidden");
+document.getElementById("statusMessage").innerText=`${area.name} 분석을 접었습니다. 말풍선을 다시 누르면 분석이 펼쳐집니다.`;return}
+expandedSavedAreaId=key;b=key;w=F(area.geometry||area.path);R=null;v571EnableAnalysisLayers();
+v570SyncSavedBubbleState(key);document.getElementById("targetLocationInput").innerText=area.name;document.getElementById("btnClearPolygon").classList.remove("hidden");
+let bounds=new kakao.maps.LatLngBounds;w.forEach(p=>bounds.extend(new kakao.maps.LatLng(p.lat,p.lng)));f.setBounds(bounds);g=bounds.getCenter();Ct();v564SetSavedAreaVisual(key);v570SyncSavedBubbleState(key);applyMapDisplayFilters();
 const fenceKey=v564FenceKey(w),cached=savedAreaAnalysisCache.get(key);
-if(cached?.fenceKey===fenceKey&&cached?.analysis?.topSegments?.length){
- v566RestoreCachedAnalysis(cached,w,key);document.getElementById("statusMessage").innerText=`${area.name} · 저장된 TOP3·유입방향을 펼쳤습니다.`;return
-}
-// 저장 직전 분석 결과가 메모리에 남아 있으면 ID 연결 여부와 관계없이 같은 펜스 결과를 즉시 복원한다.
-if(lastAnalyzedFenceKey===fenceKey&&i?.topSegments?.length){
- const liveCache={fenceKey,analysis:i,html:document.getElementById("rankingResultText")?.innerHTML||""};savedAreaAnalysisCache.set(key,liveCache);lastAnalyzedSavedId=key;
- v566RestoreCachedAnalysis(liveCache,w,key);document.getElementById("statusMessage").innerText=`${area.name} · 방금 분석한 TOP3·유입방향을 복원했습니다.`;return
-}
-// F5 후처럼 메모리 캐시가 없으면 저장된 펜스로 자동 재분석한다.
-Rt();document.getElementById("rankingResultBox")?.classList.add("hidden");document.getElementById("statusMessage").innerText=`${area.name} · 저장상권 TOP3를 다시 분석합니다...`;
+if(cached?.fenceKey===fenceKey&&cached?.analysis?.topSegments?.length){v566RestoreCachedAnalysis(cached,w,key);applyMapDisplayFilters();document.getElementById("statusMessage").innerText=`${area.name} · 저장된 TOP3·유입·유동인구를 펼쳤습니다.`;return}
+if(lastAnalyzedFenceKey===fenceKey&&i?.topSegments?.length){const liveCache={fenceKey,analysis:i,html:document.getElementById("rankingResultText")?.innerHTML||""};savedAreaAnalysisCache.set(key,liveCache);lastAnalyzedSavedId=key;v566RestoreCachedAnalysis(liveCache,w,key);applyMapDisplayFilters();document.getElementById("statusMessage").innerText=`${area.name} · 방금 분석한 결과를 펼쳤습니다.`;return}
+Rt();document.getElementById("rankingResultBox")?.classList.add("hidden");document.getElementById("statusMessage").innerText=`${area.name} · 저장상권을 다시 분석합니다...`;
 const path=[...w.map(p=>({...p}))];setTimeout(()=>{if(expandedSavedAreaId!=null&&String(expandedSavedAreaId)===key&&!T)ce(path)},80)
 }
 
 function clearActivePolygon(t=!1){
 if(T)return alert("분석이 끝난 후 해제하거나 먼저 취소해주세요.");
-expandedSavedAreaId=null;b=null,R=null,w=null,S=null,v564HideAnalysis(),
+expandedSavedAreaId=null;focusedSavedAreaId=null;b=null,R=null,w=null,S=null,v564HideAnalysis(),
 document.getElementById("targetLocationInput").innerText="선택 없음",document.getElementById("btnClearPolygon").classList.add("hidden"),
 document.getElementById("comp_count").innerText="-개",document.getElementById("anchor_count").innerText="-개",document.getElementById("rankingResultText").innerHTML="",v564SetSavedAreaVisual(null),Ct(),
 v.forEach((t=>{const n=L[t.id];if(n){const a=kt(t);n.setOptions({strokeWeight:3,fillColor:a.fill,fillOpacity:e.AUTO_AREA_FILL_OPACITY})}})),Rt(),t||I||Ft()}
@@ -1466,9 +1503,11 @@ document.getElementById("btnClearPolygon").classList.remove("hidden"),
 document.getElementById("statusMessage").textContent="✅ 펜스 완성 · 상권 내부 TOP3를 바로 분석합니다...";
 setTimeout((()=>{T||ce(w)}),60)}));
 
-kakao.maps.event.addListener(f,"idle",(async function(){I||w||T||await Ht()}));
+kakao.maps.event.addListener(f,"zoom_changed",(()=>{applyMapDisplayFilters();v571ScheduleRegionLabels()}));
+kakao.maps.event.addListener(f,"idle",(async function(){I||w||T||await Ht();v571ScheduleRegionLabels()}));
+v571InitProvinceLabels();v571ScheduleRegionLabels();
 Ct();
-document.getElementById("statusMessage").innerText="📍 렌즈미 체인본부 주변에서 시작합니다. 상권을 검색하거나 저장상권을 선택하세요.";
+document.getElementById("statusMessage").innerText="📍 렌즈미 체인본부 주변에서 시작합니다. 저장상권 목록은 위치 이동, 지도 말풍선은 분석 열기입니다.";
 Ft();
 setTimeout(()=>{v569NormalizeSavedRegions().catch(err=>console.warn("saved region normalize failed",err))},350);
 </script>
