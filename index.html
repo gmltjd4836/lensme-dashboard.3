@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>렌즈미 상권 분석 대시보드 V56.9 공백도로 복구·자동지역분류</title>
+<title>렌즈미 상권 분석 대시보드 V57.0 공백도로 복구·자동지역분류</title>
 <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css" rel="stylesheet">
 <script src="https://cdn.tailwindcss.com"></script>
 <style>
@@ -23,12 +23,12 @@ input[type=checkbox]{width:1.1rem;height:1.1rem;cursor:pointer}
 .poly-nametag{appearance:none;-webkit-appearance:none;background:rgba(255,255,255,.97);border:1px solid rgba(148,163,184,.34);border-radius:14px;padding:9px 13px 9px 11px;color:#1e293b;font-size:13px;font-weight:900;letter-spacing:-.2px;box-shadow:0 7px 20px rgba(15,23,42,.16),0 1px 3px rgba(15,23,42,.08);cursor:pointer;white-space:nowrap;pointer-events:auto;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);transition:transform .16s ease,box-shadow .16s ease,border-color .16s ease,background .16s ease,color .16s ease;display:flex;align-items:center;gap:6px;position:relative}
 .poly-nametag:hover{transform:translateY(-2px) scale(1.02);box-shadow:0 10px 26px rgba(15,23,42,.20),0 2px 5px rgba(15,23,42,.08);border-color:rgba(225,29,72,.38)}
 .poly-nametag::after{content:'';position:absolute;left:50%;bottom:-6px;width:11px;height:11px;background:inherit;border-right:1px solid rgba(148,163,184,.34);border-bottom:1px solid rgba(148,163,184,.34);transform:translateX(-50%) rotate(45deg);border-radius:0 0 3px 0}
-.poly-nametag.active{background:linear-gradient(135deg,#e11d48 0%,#be123c 100%);color:#fff;border-color:#be123c;box-shadow:0 10px 28px rgba(190,18,60,.30),0 2px 5px rgba(127,29,29,.14)}
+.poly-nametag.active{background:linear-gradient(135deg,#e11d48 0%,#9f1239 100%)!important;color:#fff!important;border:2px solid #881337!important;box-shadow:0 0 0 4px rgba(225,29,72,.18),0 12px 30px rgba(159,18,57,.38)!important;transform:translateY(-2px) scale(1.05)}
 .poly-nametag.active::after{border-color:#be123c}
 .poly-nametag-pin,.poly-nametag-check{position:relative;z-index:1;font-size:14px;line-height:1;filter:drop-shadow(0 1px 1px rgba(15,23,42,.12))}
 .poly-nametag-check{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:999px;background:rgba(255,255,255,.20);font-size:12px;font-weight:1000}
 .poly-nametag-text{position:relative;z-index:1;line-height:1.15}
-.poly-nametag.active .poly-nametag-text::after{content:' · 선택됨';font-size:9px;font-weight:800;opacity:.78;margin-left:4px;vertical-align:1px}
+.poly-nametag.active .poly-nametag-text{font-weight:1000}
 .map-layer-btn{background:rgba(255,255,255,.96);border:1px solid #e2e8f0;border-radius:12px;padding:7px 10px;font-size:11px;font-weight:900;color:#334155;box-shadow:0 5px 16px rgba(15,23,42,.14);backdrop-filter:blur(10px);transition:.15s;display:flex;align-items:center;gap:5px}
 .map-layer-btn:hover{transform:translateY(-1px);box-shadow:0 7px 18px rgba(15,23,42,.18)}
 .map-layer-menu{width:158px;background:rgba(255,255,255,.97);border:1px solid #e2e8f0;border-radius:14px;padding:8px;box-shadow:0 12px 30px rgba(15,23,42,.18);backdrop-filter:blur(12px)}
@@ -47,7 +47,7 @@ details[open]>summary::before{content:'📂 '}
 <div class="w-full md:w-1/4 bg-white border-r border-gray-200 p-6 flex flex-col shadow-lg z-20 overflow-y-auto">
 <h1 class="text-xl font-extrabold text-slate-800 border-b-4 border-indigo-500 pb-3 mb-4 flex justify-between items-center">
 <span>🗺️ 전국 상권 관제탑</span>
-<span class="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded-full font-bold">V56.9</span>
+<span class="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded-full font-bold">V57.0</span>
 </h1>
 
 <div class="mb-3">
@@ -177,9 +177,9 @@ AUTO_AREA_POI_ASSIGN_MAX:125,AUTO_AREA_HULL_MAX_EDGE_METERS:155,AUTO_AREA_FULL_B
 AUTO_AREA_ACTIVE_FILL_OPACITY:.34};
 if(!window.kakao?.maps?.services||!window.kakao?.maps?.drawing)throw document.getElementById("statusMessage").textContent="지도를 불러오지 못했습니다. 기존 등록 도메인에서 index.html을 교체하고 카카오 지도 키·네트워크 설정을 확인해주세요.",
 new Error("Kakao SDK unavailable");
-let n="new",a="",o=null,r=null,s=[],i=null,l="",c=null,d=0,u=document.getElementById("map"),m=new kakao.maps.LatLng(37.498095,127.02761),g=m,f=new kakao.maps.Map(u,{center:m,
+let n="new",a="",o=null,r=null,s=[],i=null,l="",c=null,d=0,u=document.getElementById("map"),m=new kakao.maps.LatLng(37.59970,127.13015),g=m,f=new kakao.maps.Map(u,{center:m,
 level:3}),h=new kakao.maps.services.Places,p=new kakao.maps.services.Geocoder,y=[],_=[],A=new Map,E=new Map,M=new kakao.maps.CustomOverlay({xAnchor:.5,yAnchor:1.5,zIndex:150
-}),w=null,b=null,k={},x={},I=!1,S=null,T=!1,O=0,v=[],L={},C={},R=null,P=[],N=[],analysisLines=[],rankOverlays=[],inflowOverlays=[],flowLines=[],expandedSavedAreaId=null,lastAnalyzedSavedId=null,lastAnalyzedFenceKey="",savedAreaAnalysisCache=new Map;
+}),w=null,b=null,k={},x={},I=!1,S=null,T=!1,O=0,v=[],L={},C={},R=null,P=[],N=[],analysisLines=[],rankOverlays=[],inflowOverlays=[],flowLines=[],expandedSavedAreaId=null,lastAnalyzedSavedId=null,lastAnalyzedFenceKey="",savedAreaAnalysisCache=new Map,savedBubbleEls={};
 
 function D(t){return String(t.id||`${t.place_name}|${t.x}|${t.y}`)}
 function v564FenceKey(path){return(Array.isArray(path)?path:[]).map(p=>`${Number(p.lat).toFixed(6)},${Number(p.lng).toFixed(6)}`).join("|")}
@@ -629,9 +629,9 @@ si:region.si||old?.si||"직접 등록",gu:region.gu||old?.gu||"전체",dong:regi
 regionResolved:!!(region.si&&region.dong),reviewStatus:"사용자 직접 작성",savedAt:(new Date).toISOString()};
 const next=old?[...Lt.filter(t=>t.id!==old.id),r]:[...Lt,r];
 if(X(next)){
-const sameFence=lastAnalyzedFenceKey&&lastAnalyzedFenceKey===v564FenceKey(S)&&i?.topSegments?.length;
-if(sameFence)savedAreaAnalysisCache.set(o,{fenceKey:lastAnalyzedFenceKey,analysis:i,html:document.getElementById("rankingResultText")?.innerHTML||""});
-lastAnalyzedSavedId=sameFence?o:null;expandedSavedAreaId=null;b=null;w=null;R=null;
+const analyzedPath=Array.isArray(w)&&w.length>=3?w:F(e),analyzedKey=v564FenceKey(analyzedPath),sameFence=!!(lastAnalyzedFenceKey&&lastAnalyzedFenceKey===analyzedKey&&i?.topSegments?.length);
+if(sameFence)savedAreaAnalysisCache.set(String(o),{fenceKey:lastAnalyzedFenceKey,analysis:i,html:document.getElementById("rankingResultText")?.innerHTML||""});
+lastAnalyzedSavedId=sameFence?String(o):null;expandedSavedAreaId=null;b=null;w=null;R=null;
 redrawTarget=null,vt.clear(),I=!1,S=null,setDrawUi(!1),v564HideAnalysis(),Ct();
 document.getElementById("targetLocationInput").innerText=`저장됨 · ${n.trim()}`;
 document.getElementById("btnClearPolygon").classList.add("hidden");
@@ -640,40 +640,51 @@ document.getElementById("statusMessage").innerText=`✅ ${n.trim()} 저장 완�
 
 function renamePolygon(id){
 if(T)return alert("분석 종료 후 이름을 변경해주세요.");
-const area=Lt.find(t=>t.id===id);if(!area)return;
+const key=String(id),area=Lt.find(t=>String(t.id)===key);if(!area)return;
 const name=prompt("상권 이름 변경:",area.name);if(!name?.trim()||name.trim()===area.name)return;
-const next=Lt.map(t=>t.id===id?{...t,name:name.trim()}:t);
-X(next)&&(Ct(),b===id&&(document.getElementById("targetLocationInput").innerText=name.trim()))
+const next=Lt.map(t=>String(t.id)===key?{...t,name:name.trim()}:t);
+X(next)&&(Ct(),String(b)===key&&(document.getElementById("targetLocationInput").innerText=name.trim()))
 }
 function redrawPolygon(id){
 if(T)return alert("분석 종료 후 경계를 수정해주세요.");
-const area=Lt.find(t=>t.id===id);if(!area)return;
+const key=String(id),area=Lt.find(t=>String(t.id)===key);if(!area)return;
 if(!confirm(`\"${area.name}\" 경계를 다시 그릴까요?\n취소하면 기존 경계가 복원됩니다.`))return;
 redrawTarget=JSON.parse(JSON.stringify(area));
-X(Lt.filter(t=>t.id!==id)),Ct(),clearActivePolygon(!0),startDrawing(),
+X(Lt.filter(t=>String(t.id)!==key)),Ct(),clearActivePolygon(!0),startDrawing(),
 document.getElementById("statusMessage").innerText=`✏️ ${area.name}: 새 경계를 그린 뒤 꼭짓점을 조정하고 저장하세요.`
 }
 
+function v570SyncSavedBubbleState(activeId=null){
+const activeKey=activeId==null?null:String(activeId);
+Object.entries(savedBubbleEls).forEach(([id,rec])=>{
+ const on=activeKey!==null&&String(id)===activeKey,btn=rec?.button,icon=rec?.icon;
+ if(!btn)return;
+ btn.classList.toggle("active",on);btn.setAttribute("aria-pressed",on?"true":"false");
+ if(icon){icon.textContent=on?"✓":"📍";icon.className=on?"poly-nametag-check":"poly-nametag-pin"}
+});
+}
 function Ct(){
 let root=document.getElementById("savedPolygonTree");if(!root)return;
-root.innerHTML="";Object.values(k).forEach(t=>t.setMap(null));Object.values(x).forEach(t=>t.setMap(null));k={};x={};
+root.innerHTML="";Object.values(k).forEach(t=>t.setMap(null));Object.values(x).forEach(t=>t.setMap(null));k={};x={};savedBubbleEls={};
 const grouped={};
 Lt.forEach(area=>{const city=area.si||"미분류",dong=area.dong||"미분류";(grouped[city]||(grouped[city]={}));(grouped[city][dong]||(grouped[city][dong]=[])).push(area)});
 const cities=Object.keys(grouped).sort((a,b)=>a.localeCompare(b,"ko"));
 if(!cities.length){root.innerHTML='<div class="text-[11px] text-slate-400 py-3 text-center">저장된 상권이 없습니다.</div>';return}
+const activeKey=expandedSavedAreaId==null?null:String(expandedSavedAreaId);
 for(const city of cities){
 const cityEl=document.createElement("details");cityEl.open=!0;cityEl.innerHTML=`<summary>${V(city)}</summary><div class="tree-indent"></div>`;const cityBody=cityEl.querySelector(".tree-indent");
 for(const dong of Object.keys(grouped[city]).sort((a,b)=>a.localeCompare(b,"ko"))){
 const dongEl=document.createElement("details");dongEl.open=!0;dongEl.innerHTML=`<summary>${V(dong)}</summary><div class="tree-indent"></div>`;const dongBody=dongEl.querySelector(".tree-indent");
 for(const area of grouped[city][dong].sort((a,b)=>String(a.name).localeCompare(String(b.name),"ko"))){
-const active=expandedSavedAreaId===area.id,row=document.createElement("div");row.className=`flex items-center gap-1 py-1.5 px-1 rounded-lg border-b border-slate-100 last:border-0 ${active?"bg-rose-50":""}`;
-row.innerHTML=`<button class="min-w-0 flex-1 text-left font-extrabold ${active?"text-rose-700":"text-slate-700"} hover:text-rose-600 truncate" onclick="selectSavedPolygon('${area.id}')">${active?"●":"○"} ${V(area.name)}</button><button onclick="renamePolygon('${area.id}')" title="이름 변경" class="text-[10px] px-1.5 py-1 rounded bg-slate-50 text-slate-500">이름</button><button onclick="redrawPolygon('${area.id}')" title="경계 수정" class="text-[10px] px-1.5 py-1 rounded bg-slate-50 text-slate-500">수정</button><button onclick="deletePolygon('${area.id}')" title="삭제" class="text-[10px] px-1.5 py-1 rounded bg-slate-50 text-slate-400">×</button>`;dongBody.appendChild(row);
-const poly=W(area.geometry||area.path,{strokeWeight:active?4:2,strokeColor:active?"#be123c":"#e11d48",strokeOpacity:active?.95:.65,fillOpacity:active?.22:.075,fillColor:active?"#e11d48":"#f43f5e"},(()=>selectSavedPolygon(area.id)));poly.setMap(f);k[area.id]=poly;
-const bubbleCenter=K(area.geometry||area.path);
-const tag=`<div class="poly-nametag-wrap"><button type="button" class="poly-nametag ${active?"active":""}" onclick="event.stopPropagation();selectSavedPolygon('${area.id}')">${active?'<span class="poly-nametag-check">✓</span>':'<span class="poly-nametag-pin">📍</span>'}<span class="poly-nametag-text">${V(area.name)}</span></button></div>`;
-const ov=new kakao.maps.CustomOverlay({position:new kakao.maps.LatLng(bubbleCenter.lat,bubbleCenter.lng),content:tag,xAnchor:.5,yAnchor:1,zIndex:110});ov.setMap(f);x[area.id]=ov
+const areaId=String(area.id),active=activeKey===areaId,row=document.createElement("div");row.className=`flex items-center gap-1 py-1.5 px-1 rounded-lg border-b border-slate-100 last:border-0 ${active?"bg-rose-50":""}`;
+row.innerHTML=`<button class="min-w-0 flex-1 text-left font-extrabold ${active?"text-rose-700":"text-slate-700"} hover:text-rose-600 truncate" data-area-select="${V(areaId)}">${active?"●":"○"} ${V(area.name)}</button><button data-area-rename="${V(areaId)}" title="이름 변경" class="text-[10px] px-1.5 py-1 rounded bg-slate-50 text-slate-500">이름</button><button data-area-redraw="${V(areaId)}" title="경계 수정" class="text-[10px] px-1.5 py-1 rounded bg-slate-50 text-slate-500">수정</button><button data-area-delete="${V(areaId)}" title="삭제" class="text-[10px] px-1.5 py-1 rounded bg-slate-50 text-slate-400">×</button>`;
+row.querySelector('[data-area-select]')?.addEventListener('click',()=>selectSavedPolygon(areaId));row.querySelector('[data-area-rename]')?.addEventListener('click',()=>renamePolygon(areaId));row.querySelector('[data-area-redraw]')?.addEventListener('click',()=>redrawPolygon(areaId));row.querySelector('[data-area-delete]')?.addEventListener('click',()=>deletePolygon(areaId));dongBody.appendChild(row);
+const poly=W(area.geometry||area.path,{strokeWeight:active?5:2,strokeColor:active?"#9f1239":"#e11d48",strokeOpacity:active?1:.65,fillOpacity:active?.24:.075,fillColor:active?"#e11d48":"#f43f5e"},(()=>selectSavedPolygon(areaId)));poly.setMap(f);k[areaId]=poly;
+const bubbleCenter=K(area.geometry||area.path),wrap=document.createElement("div"),btn=document.createElement("button"),icon=document.createElement("span"),label=document.createElement("span");
+wrap.className="poly-nametag-wrap";btn.type="button";btn.className=`poly-nametag${active?" active":""}`;btn.setAttribute("aria-pressed",active?"true":"false");icon.className=active?"poly-nametag-check":"poly-nametag-pin";icon.textContent=active?"✓":"📍";label.className="poly-nametag-text";label.textContent=area.name;btn.append(icon,label);wrap.appendChild(btn);btn.addEventListener("click",ev=>{ev.stopPropagation();selectSavedPolygon(areaId)});
+const ov=new kakao.maps.CustomOverlay({position:new kakao.maps.LatLng(bubbleCenter.lat,bubbleCenter.lng),content:wrap,xAnchor:.5,yAnchor:1,zIndex:active?125:110});ov.setMap(f);x[areaId]=ov;savedBubbleEls[areaId]={wrap,button:btn,icon,label,overlay:ov}
 }cityBody.appendChild(dongEl)}root.appendChild(cityEl)}
-applyMapDisplayFilters()
+v570SyncSavedBubbleState(expandedSavedAreaId);applyMapDisplayFilters()
 }
 
 async function v569NormalizeSavedRegions(){
@@ -686,23 +697,32 @@ await z(55)}
 if(changed&&X(next))Ct()
 }
 
-function deletePolygon(t){if(confirm("이 상권 경계를 삭제하시겠습니까?"))return T?alert("분석 종료 후 삭제해주세요."):void(X(Lt.filter((e=>e.id!==t)))&&(savedAreaAnalysisCache.delete(t),b===t&&clearActivePolygon(),Ct()))}
+function deletePolygon(t){const key=String(t);if(confirm("이 상권 경계를 삭제하시겠습니까?"))return T?alert("분석 종료 후 삭제해주세요."):void(X(Lt.filter(e=>String(e.id)!==key))&&(savedAreaAnalysisCache.delete(key),String(b)===key&&clearActivePolygon(),Ct()))}
 function selectSavedPolygon(t){
+const key=String(t),area=Lt.find(e=>String(e.id)===key);if(!area)return;
 if(T)return alert("현재 분석이 진행 중입니다. 분석이 끝난 뒤 다시 눌러주세요.");
-const area=Lt.find(e=>e.id===t);if(!area)return;
-if(expandedSavedAreaId===t){
-expandedSavedAreaId=null;b=null;w=null;R=null;v564HideAnalysis();v564SetSavedAreaVisual(null);Ct();
+if(expandedSavedAreaId!=null&&String(expandedSavedAreaId)===key){
+expandedSavedAreaId=null;b=null;w=null;R=null;v564HideAnalysis();v564SetSavedAreaVisual(null);v570SyncSavedBubbleState(null);Ct();
 document.getElementById("targetLocationInput").innerText="선택 없음";document.getElementById("btnClearPolygon").classList.add("hidden");
 document.getElementById("statusMessage").innerText=`${area.name} 분석을 접었습니다. 말풍선을 다시 누르면 펼쳐집니다.`;return}
-expandedSavedAreaId=t;b=t;w=F(area.geometry||area.path);R=null;
+expandedSavedAreaId=key;b=key;w=F(area.geometry||area.path);R=null;
+v570SyncSavedBubbleState(key);
 document.getElementById("targetLocationInput").innerText=area.name;document.getElementById("btnClearPolygon").classList.remove("hidden");
-let bounds=new kakao.maps.LatLngBounds;w.forEach(p=>bounds.extend(new kakao.maps.LatLng(p.lat,p.lng)));f.setBounds(bounds);g=bounds.getCenter();Ct();v564SetSavedAreaVisual(t);
-const fenceKey=v564FenceKey(w),cached=savedAreaAnalysisCache.get(t);
-if(cached?.fenceKey===fenceKey&&cached?.analysis?.topSegments?.length){v566RestoreCachedAnalysis(cached,w,t);document.getElementById("statusMessage").innerText=`${area.name} · 저장된 TOP3·유입방향을 펼쳤습니다.`}
-else{const sameAnalysis=lastAnalyzedSavedId===t&&lastAnalyzedFenceKey===fenceKey&&i?.topSegments?.length&&rankOverlays.length;
-if(sameAnalysis){v564ShowAnalysis();document.getElementById("statusMessage").innerText=`${area.name} · TOP3·유입방향을 펼쳤습니다.`}
-else ce(w)}
+let bounds=new kakao.maps.LatLngBounds;w.forEach(p=>bounds.extend(new kakao.maps.LatLng(p.lat,p.lng)));f.setBounds(bounds);g=bounds.getCenter();Ct();v564SetSavedAreaVisual(key);v570SyncSavedBubbleState(key);
+const fenceKey=v564FenceKey(w),cached=savedAreaAnalysisCache.get(key);
+if(cached?.fenceKey===fenceKey&&cached?.analysis?.topSegments?.length){
+ v566RestoreCachedAnalysis(cached,w,key);document.getElementById("statusMessage").innerText=`${area.name} · 저장된 TOP3·유입방향을 펼쳤습니다.`;return
 }
+// 저장 직전 분석 결과가 메모리에 남아 있으면 ID 연결 여부와 관계없이 같은 펜스 결과를 즉시 복원한다.
+if(lastAnalyzedFenceKey===fenceKey&&i?.topSegments?.length){
+ const liveCache={fenceKey,analysis:i,html:document.getElementById("rankingResultText")?.innerHTML||""};savedAreaAnalysisCache.set(key,liveCache);lastAnalyzedSavedId=key;
+ v566RestoreCachedAnalysis(liveCache,w,key);document.getElementById("statusMessage").innerText=`${area.name} · 방금 분석한 TOP3·유입방향을 복원했습니다.`;return
+}
+// F5 후처럼 메모리 캐시가 없으면 저장된 펜스로 자동 재분석한다.
+Rt();document.getElementById("rankingResultBox")?.classList.add("hidden");document.getElementById("statusMessage").innerText=`${area.name} · 저장상권 TOP3를 다시 분석합니다...`;
+const path=[...w.map(p=>({...p}))];setTimeout(()=>{if(expandedSavedAreaId!=null&&String(expandedSavedAreaId)===key&&!T)ce(path)},80)
+}
+
 function clearActivePolygon(t=!1){
 if(T)return alert("분석이 끝난 후 해제하거나 먼저 취소해주세요.");
 expandedSavedAreaId=null;b=null,R=null,w=null,S=null,v564HideAnalysis(),
@@ -1421,8 +1441,8 @@ ${s?`<div class="bg-blue-50/70 rounded-lg p-2 text-[9.5px] text-blue-700 mb-2"><
 
 H.length||(j+=`<div class="text-xs text-rose-600 font-bold">TOP 후보를 만들 수 없습니다. 렌즈미 50m 제외, 입점가능성·신뢰도 ${e.TOP3_MIN_CONFIDENCE}점·종합점수 ${e.TOP3_MIN_SCORE}점 기준을 통과한 서로 다른 구간이 없습니다. 낮은 근거 후보를 억지로 TOP3에 채우지 않습니다.</div>`),
 U(u),P.innerHTML=j,document.getElementById("rankingResultBox").classList.remove("hidden"),applyMapDisplayFilters(),
-lastAnalyzedFenceKey=analysisFenceKey,lastAnalyzedSavedId=expandedSavedAreaId||b||null;
-if(lastAnalyzedSavedId)savedAreaAnalysisCache.set(lastAnalyzedSavedId,{fenceKey:analysisFenceKey,analysis:i,html:P.innerHTML});
+lastAnalyzedFenceKey=analysisFenceKey,lastAnalyzedSavedId=expandedSavedAreaId!=null?String(expandedSavedAreaId):(b!=null?String(b):null);
+if(lastAnalyzedSavedId)savedAreaAnalysisCache.set(String(lastAnalyzedSavedId),{fenceKey:analysisFenceKey,analysis:i,html:P.innerHTML});
 m.innerText=`TOP3 완료 · 전체도로 ${osmSegments.length}구간 · TMAP ${R.length}경로 · 공백검증 ${gapRecovery.targets.length}곳/복구 ${gapRecovery.routes.length}경로 · 유효 교통-횡단 ${transportCrosswalkModel.validCount}곳 · 후보 ${H.length}곳`;
 }catch(t){
 if("AbortError"===t.name)return void(m.textContent="입지 분석을 취소했습니다.");
@@ -1448,6 +1468,7 @@ setTimeout((()=>{T||ce(w)}),60)}));
 
 kakao.maps.event.addListener(f,"idle",(async function(){I||w||T||await Ht()}));
 Ct();
+document.getElementById("statusMessage").innerText="📍 렌즈미 체인본부 주변에서 시작합니다. 상권을 검색하거나 저장상권을 선택하세요.";
 Ft();
 setTimeout(()=>{v569NormalizeSavedRegions().catch(err=>console.warn("saved region normalize failed",err))},350);
 </script>
