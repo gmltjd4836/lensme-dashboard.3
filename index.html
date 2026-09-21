@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>렌즈미 상권 분석 대시보드 V56.1 경쟁중립 TOP3</title>
+<title>렌즈미 상권 분석 대시보드 V56.2 교통-횡단 연계 TOP3</title>
 <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css" rel="stylesheet">
 <script src="https://cdn.tailwindcss.com"></script>
 <style>
@@ -31,7 +31,7 @@ details[open]>summary::before{content:'📂 '}
 <div class="w-full md:w-1/4 bg-white border-r border-gray-200 p-6 flex flex-col shadow-lg z-20 overflow-y-auto">
 <h1 class="text-xl font-extrabold text-slate-800 border-b-4 border-indigo-500 pb-3 mb-4 flex justify-between items-center">
 <span>🗺️ 전국 상권 관제탑</span>
-<span class="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded-full font-bold">V56.1</span>
+<span class="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded-full font-bold">V56.2</span>
 </h1>
 
 <div class="mb-3">
@@ -142,7 +142,7 @@ const t="mJJ00gscCg39Y6nR0LhUw2yzrIfr7arY65OwUZYk",e={TEAM_KILL_METERS:50,SEARCH
 SEGMENT_BEARING_TOLERANCE:24,TOP_SEGMENT_MIN_DISTANCE:55,SAME_CORRIDOR_MAX_DISTANCE:170,JUNCTION_SCAN_RADIUS:22,ARM_LOOKAHEAD_METERS:28,MAX_TMAP_ROUTES_PER_SCAN:14,
 REQUEST_TIMEOUT_MS:12e3,MIN_RECOMMEND_SCORE:50,MIN_RECOMMEND_ROUTES:3,MIN_RECOMMEND_TARGETS:2,MAX_GATES:7,MAX_DESTINATIONS:10,TMAP_DELAY_MS:110,KAKAO_PAGE_DELAY_MS:45,
 ANALYSIS_MAX_PAGES:3,MAP_MAX_PAGES:2,DEMAND_RADIUS:140,COMPETITION_RADIUS:160,ACCESS_NEAR_GATE_MIN:18,ACCESS_NEAR_GATE_MAX:220,HEATMAP_MAX_SEGMENTS:500,
-TOP3_MIN_SEPARATION_METERS:50,TOP3_WINDOW_METERS:28,TOP3_MIN_SCORE:52,TOP3_MIN_ROUTES:2,ROAD_SNAP_MAX_METERS:18,ENTRY_CLUSTER_RADIUS:48,ENTRY_IDEAL_MIN:22,ENTRY_IDEAL_MAX:70,STRUCTURE_MARKER_MIN_SEPARATION:45,COMMERCIAL_RADIUS:80,COMMERCIAL_HOTSPOT_RADIUS:90,COMMERCIAL_HOTSPOT_SEPARATION:130,AUTO_AREA_RADIUS:1800,
+TOP3_MIN_SEPARATION_METERS:50,TOP3_WINDOW_METERS:28,TOP3_MIN_SCORE:52,TOP3_MIN_ROUTES:2,ROAD_SNAP_MAX_METERS:18,ENTRY_CLUSTER_RADIUS:48,ENTRY_IDEAL_MIN:22,ENTRY_IDEAL_MAX:70,STRUCTURE_MARKER_MIN_SEPARATION:45,CROSSWALK_TRANSIT_RADIUS:65,CROSSWALK_ROUTE_RADIUS:18,CROSSWALK_ENTRY_MAX_ROUTE_METERS:140,CROSSWALK_AFTER_ENTRY_MAX_METERS:170,CROSSWALK_MAX_EFFECTIVE:3,COMMERCIAL_RADIUS:80,COMMERCIAL_HOTSPOT_RADIUS:90,COMMERCIAL_HOTSPOT_SEPARATION:130,AUTO_AREA_RADIUS:1800,
 AUTO_AREA_MAX_NAMED:6,AUTO_AREA_MAX_CLUSTERS:3,AUTO_AREA_POI_PAGES:2,AUTO_AREA_CLUSTER_EPS:85,AUTO_AREA_CLUSTER_MIN_POINTS:7,AUTO_AREA_HULL_BUFFER:24,AUTO_AREA_MIN_POIS:6,
 AUTO_GRAPH_RADIUS:1500,AUTO_GRAPH_MAX_ROUTES:18,AUTO_GRAPH_ROUTE_DELAY_MS:90,AUTO_GRAPH_ACTIVE_MIN:.3,AUTO_GRAPH_CONNECT_ENDPOINT:20,AUTO_GRAPH_CONNECT_PARALLEL:15,
 AUTO_GRAPH_MAX_CORE_DISTANCE:720,AUTO_GRAPH_CORE_SEPARATION:210,AUTO_GRAPH_MAX_COMMUNITIES:6,AUTO_GRAPH_MIN_COMMUNITY_LENGTH:65,AUTO_GRAPH_BUFFER_METERS:24,
@@ -829,7 +829,7 @@ return i}
 function fe(t){return 100}
 function tradeZoneLabel(t){return t?.zone==="entry"?"진입부":t?.zone==="middle"?"중간 핵심부":t?.zone==="inner"?"안쪽 핵심부":"핵심구간"}
 function candidateTypeLabel(t){
-const z=t?.candidateType||"flow";return z==="entry"?"진입부형":z==="commercial"?"상가밀집형":z==="access"?"교통거점형":z==="demand"?"목적시설형":z==="capture"?"길목형":"메인동선형"}
+const z=t?.candidateType||"flow";return z==="entry"?"진입부형":z==="commercial"?"상가밀집형":z==="access"?"교통거점형":z==="transportLink"?"교통유입형":z==="demand"?"목적시설형":z==="capture"?"길목형":"메인동선형"}
 function ye(t,n,a=3){
 const eligible=[];
 for(const r of t){
@@ -863,7 +863,7 @@ position:new kakao.maps.LatLng(p.lat,p.lng),
 content:`<div style="position:relative;z-index:999;text-align:center;pointer-events:none"><div style="background:${a};color:white;padding:5px 10px;border-radius:8px;font-weight:900;font-size:12px;border:2px solid white;box-shadow:0 3px 7px rgba(0,0,0,.35);white-space:nowrap;margin-bottom:3px">${i} · ${Math.round(t.score)}점</div><div style="width:14px;height:14px;border-radius:50%;background:#fff;border:4px solid ${a};box-shadow:0 1px 4px rgba(0,0,0,.4);margin:0 auto"></div></div>`,
 xAnchor:.5,yAnchor:1});return l.setMap(f),_.push(l),i}
 function le(t,e){
-return e?`${tradeZoneLabel(t)}의 ${candidateTypeLabel(t)}입니다. ${t.routeHitIds.length>=5?"여러 핵심 시설 간 보행경로가 겹치고":t.routeHitIds.length>=3?"복수 보행경로가 겹치며":"주요 보행경로가 통과하며"} 주변 60m 상업시설 표본 ${t.commercial?.count60||0}곳을 함께 반영했습니다. ${t.entryIndex>=75?"상권 진입 흐름과도 강하게 연결됩니다. ":""}${t.competition.competitorCount80>0?`80m 내 경쟁 렌즈샵 ${t.competition.competitorCount80}곳이 있으나 TOP3 점수에는 반영하지 않습니다.`:"80m 내 주요 경쟁 렌즈샵은 없으며 경쟁사 유무는 TOP3 점수에 반영하지 않습니다."} 1층 여부·전면폭·간판 가시성·횡단보도·임대료는 현장에서 최종 확인하세요.`:"길찾기 경로가 확보되지 않아 추천구간 분석을 수행하지 못했습니다."}
+return e?`${tradeZoneLabel(t)}의 ${candidateTypeLabel(t)}입니다. ${t.routeHitIds.length>=5?"여러 핵심 시설 간 보행경로가 겹치고":t.routeHitIds.length>=3?"복수 보행경로가 겹치며":"주요 보행경로가 통과하며"} 주변 60m 상업시설 표본 ${t.commercial?.count60||0}곳을 함께 반영했습니다. ${t.transportLink?.routeCount?`역출구·버스와 가까운 유효 횡단지점을 거쳐 이 길목으로 이어지는 보행경로 ${t.transportLink.routeCount}개가 확인됩니다. `:""}${t.entryIndex>=75?"상권 진입 흐름과도 강하게 연결됩니다. ":""}${t.competition.competitorCount80>0?`80m 내 경쟁 렌즈샵 ${t.competition.competitorCount80}곳이 있으나 TOP3 점수에는 반영하지 않습니다.`:"80m 내 주요 경쟁 렌즈샵은 없으며 경쟁사 유무는 TOP3 점수에 반영하지 않습니다."} 1층 여부·전면폭·간판 가시성·임대료는 현장에서 최종 확인하세요.`:"길찾기 경로가 확보되지 않아 추천구간 분석을 수행하지 못했습니다."}
 
 function v56Clamp(t,n=0,a=100){return Math.max(n,Math.min(a,t))}
 function v56Sat(t,n){return 100*(1-Math.exp(-Math.max(0,t)/Math.max(.001,n)))}
@@ -890,6 +890,46 @@ if(a.segmentIndex===n.segmentIndex)return Pt(n.point.lat,n.point.lng,a.point.lat
 let o=Pt(n.point.lat,n.point.lng,t.coords[n.segmentIndex+1].lat,t.coords[n.segmentIndex+1].lng);
 for(let r=n.segmentIndex+1;r<a.segmentIndex;r++)o+=Pt(t.coords[r].lat,t.coords[r].lng,t.coords[r+1].lat,t.coords[r+1].lng);
 o+=Pt(t.coords[a.segmentIndex].lat,t.coords[a.segmentIndex].lng,a.point.lat,a.point.lng);return o}
+function v562RoutePosition(route,snap){
+if(!route?.coords?.length||!snap)return Infinity;let d=0;
+for(let i=0;i<snap.segmentIndex;i++)d+=Pt(route.coords[i].lat,route.coords[i].lng,route.coords[i+1].lat,route.coords[i+1].lng);
+const a=route.coords[snap.segmentIndex],b=route.coords[snap.segmentIndex+1];
+if(a&&b)d+=Pt(a.lat,a.lng,snap.point.lat,snap.point.lng);return d}
+function v562BuildTransportCrosswalkModel(routes,gates,crosswalks,fence,entryModel){
+const transit=(gates||[]).filter(g=>["subway_exit","subway","bus"].includes(g.type)),raw=[];
+for(const cw of crosswalks||[]){
+const nearby=transit.map(g=>({gate:g,d:Pt(cw.lat,cw.lng,g.lat,g.lng)})).filter(x=>x.d<=e.CROSSWALK_TRANSIT_RADIUS).sort((a,b)=>a.d-b.d);
+if(!nearby.length)continue;
+for(const route of routes||[]){
+const entry=entryModel?.routeEntries?.get(route.id);if(!entry)continue;
+const snap=ve(cw,route);if(!snap||snap.distance>e.CROSSWALK_ROUTE_RADIUS)continue;
+const cwPos=v562RoutePosition(route,snap),entryPos=v562RoutePosition(route,entry);if(!Number.isFinite(cwPos)||!Number.isFinite(entryPos))continue;
+const toEntry=entryPos-cwPos;if(toEntry < -20 || toEntry>e.CROSSWALK_ENTRY_MAX_ROUTE_METERS)continue;
+const bestTransit=nearby[0],sameGate=Pt(route.gate.lat,route.gate.lng,bestTransit.gate.lat,bestTransit.gate.lng)<=35;
+const transitCloseness=Math.max(.25,1-bestTransit.d/e.CROSSWALK_TRANSIT_RADIUS),entryCloseness=Math.max(.25,1-Math.max(0,toEntry)/e.CROSSWALK_ENTRY_MAX_ROUTE_METERS);
+const score=(Yt(bestTransit.gate.type)||1)*(route.weight||1)*transitCloseness*entryCloseness*(sameGate?1.18:1);
+raw.push({crosswalk:cw,route,entry,snap,transit:bestTransit.gate,transitDistance:bestTransit.d,toEntry,score,sameGate})
+}}
+const groups=[];
+for(const link of raw){let g=groups.find(x=>Pt(x.crosswalk.lat,x.crosswalk.lng,link.crosswalk.lat,link.crosswalk.lng)<=12);
+if(!g){g={crosswalk:link.crosswalk,links:[],score:0,routeIds:new Set,hasRail:false};groups.push(g)}
+g.links.push(link);g.routeIds.add(link.route.id);g.score+=link.score;g.hasRail=g.hasRail||["subway_exit","subway"].includes(link.transit.type)}
+const effective=groups.filter(g=>g.routeIds.size>=2||(g.hasRail&&g.routeIds.size>=1)).sort((a,b)=>(b.score+.35*b.routeIds.size)-(a.score+.35*a.routeIds.size)).slice(0,e.CROSSWALK_MAX_EFFECTIVE);
+const routeLinks=new Map;for(const g of effective)for(const link of g.links){if(!routeLinks.has(link.route.id))routeLinks.set(link.route.id,[]);routeLinks.get(link.route.id).push({...link,group:g})}
+return{effective,routeLinks,validCount:effective.length,rawCount:groups.length}}
+function v562TransportLinkMetric(seg,model,entryModel){
+if(!model?.validCount)return{raw:0,routeCount:0,crosswalkCount:0,names:[]};
+let raw=0;const routes=new Set,crossings=new Set,names=new Set;
+for(const hit of seg.routeHits||[]){const links=model.routeLinks.get(hit.route.id);if(!links?.length)continue;
+const entry=entryModel.routeEntries.get(hit.route.id),snap=ve(seg.mid,hit.route);if(!entry||!snap)continue;
+const after=v56AlongDistance(hit.route,entry,snap);if(!Number.isFinite(after)||after<0||after>e.CROSSWALK_AFTER_ENTRY_MAX_METERS)continue;
+const insideFactor=after<=90?1:Math.max(.25,1-(after-90)/(e.CROSSWALK_AFTER_ENTRY_MAX_METERS-90));
+const best=Math.max(...links.map(x=>x.score));raw+=best*insideFactor;routes.add(hit.route.id);
+for(const x of links){crossings.add(`${x.crosswalk.lat.toFixed(6)},${x.crosswalk.lng.toFixed(6)}`);names.add(`${x.transit.name} ↔ ${x.crosswalk.name}`)}}
+return{raw,routeCount:routes.size,crosswalkCount:crossings.size,names:[...names].slice(0,3)}}
+function v562TransportLinkProfile(model,segments){
+if(!model?.validCount)return 0;const vals=(segments||[]).map(x=>x.transportLinkIndex||0).sort((a,b)=>b-a),peak=vals.slice(0,Math.max(1,Math.ceil(vals.length*.12))).reduce((a,b)=>a+b,0)/Math.max(1,Math.ceil(vals.length*.12));
+return Math.round(v56Clamp(.55*v56Sat(model.validCount,2)+.45*peak))}
 function v56EntryMetric(t,n,a){
 const o=[];let r=0;
 for(const h of t.routeHits||[]){const en=n.routeEntries.get(h.route.id);if(!en)continue;const snap=ve(t.mid,h.route);if(!snap)continue;const d=v56AlongDistance(h.route,en,snap);if(Number.isFinite(d)){const w=h.route.weight||1;o.push({d,w});r++}}
@@ -905,11 +945,11 @@ transport=v56Clamp(.72*v56Sat(u,6)+(m?22:0)),destination=v56Clamp(v56Sat(g/Math.
 return{mainFlow:Math.round(flow),commercial:Math.round(commercial),transport:Math.round(transport),destination:Math.round(destination)}}
 function v56CompleteProfile(t,n){const a=t.entries.length,o=t.topShare||0,r=n||1,s=v56Clamp((.55*o+.45*Math.min(1,a/Math.max(3,r*.65)))*100);return Math.round(s)}
 function v56Weights(t){
-const base={flow:29,demand:19,commercial:17,access:14,entry:11,capture:10},raw={
-flow:v56Clamp(base.flow+(t.mainFlow-50)*.12,23,35),demand:v56Clamp(base.demand+(t.destination-50)*.10,14,24),commercial:v56Clamp(base.commercial+(t.commercial-50)*.10,12,22),access:v56Clamp(base.access+(t.transport-50)*.10,9,19),entry:v56Clamp(base.entry+(t.entry-50)*.10,6,16)};
-const sum=raw.flow+raw.demand+raw.commercial+raw.access+raw.entry,scale=90/sum;for(const k of Object.keys(raw))raw[k]*=scale;
-return{flow:raw.flow,demand:raw.demand,commercial:raw.commercial,access:raw.access,entry:raw.entry,capture:10}}
-function v56CandidateType(t){const q={flow:t.flowIndex||0,commercial:t.commercialIndex||0,access:t.accessIndex||0,demand:t.demandIndex||0,capture:t.captureIndex||0,entry:(t.entryIndex||0)+(t.zone==="entry"?7:0)};return Object.entries(q).sort((a,b)=>b[1]-a[1])[0][0]}
+const linked=!!t.transportLinkAvailable,base={flow:27,demand:19,commercial:17,access:10,transportLink:linked?8:0,entry:9,capture:10},raw={
+flow:v56Clamp(base.flow+(t.mainFlow-50)*.12,22,34),demand:v56Clamp(base.demand+(t.destination-50)*.10,14,24),commercial:v56Clamp(base.commercial+(t.commercial-50)*.10,12,22),access:v56Clamp(base.access+(t.transport-50)*.08,7,15),transportLink:linked?v56Clamp(base.transportLink+(t.transportLink-50)*.08,5,13):0,entry:v56Clamp(base.entry+(t.entry-50)*.08,5,14)};
+const sum=raw.flow+raw.demand+raw.commercial+raw.access+raw.transportLink+raw.entry,scale=90/sum;for(const k of Object.keys(raw))raw[k]*=scale;
+return{flow:raw.flow,demand:raw.demand,commercial:raw.commercial,access:raw.access,transportLink:raw.transportLink,entry:raw.entry,capture:10}}
+function v56CandidateType(t){const q={flow:t.flowIndex||0,commercial:t.commercialIndex||0,access:t.accessIndex||0,transportLink:t.transportLinkIndex||0,demand:t.demandIndex||0,capture:t.captureIndex||0,entry:(t.entryIndex||0)+(t.zone==="entry"?7:0)};return Object.entries(q).sort((a,b)=>b[1]-a[1])[0][0]}
 function v56Structure(t,n,a){
 const usable=t.filter(x=>!x.excluded&&!x.competition.teamKill),vals=usable.map(x=>x.entryDistance).filter(Number.isFinite).sort((x,y)=>x-y),p90=vals.length?vals[Math.floor(.9*(vals.length-1))]:220,depth=Math.max(120,p90);
 usable.forEach(x=>{x.progressRatio=v56Clamp((x.entryDistance||0)/depth,0,1.25);x.zone=x.progressRatio<=.28?"entry":x.progressRatio<=.72?"middle":"inner"});
@@ -921,7 +961,7 @@ function v56RenderStructure(t){
 const specs=[{p:t.entryPoint,label:t.entryEstimated?"🚪 진입부(추정)":"🚪 상권 진입부",c:"#d97706"},{p:t.middlePoint,label:"⭐ 중간 핵심부",c:"#7c3aed"},{p:t.innerPoint,label:"🎯 안쪽 핵심부",c:"#0f766e"}],placed=[];
 for(const s of specs){if(!s.p)continue;if(placed.some(p=>Pt(p.lat,p.lng,s.p.lat,s.p.lng)<e.STRUCTURE_MARKER_MIN_SEPARATION))continue;placed.push(s.p);
 const ov=new kakao.maps.CustomOverlay({position:new kakao.maps.LatLng(s.p.lat,s.p.lng),xAnchor:.5,yAnchor:1.35,content:`<div style="pointer-events:none;background:white;border:2px solid ${s.c};color:${s.c};font-size:10px;font-weight:900;border-radius:999px;padding:3px 7px;box-shadow:0 2px 6px rgba(0,0,0,.18);white-space:nowrap">${s.label}</div>`});ov.setMap(f);_.push(ov)}}
-function v56ProfileTop(t){const m={mainFlow:"메인동선",commercial:"상가밀집",transport:"교통접근",entry:"진입효과",destination:"목적시설"};return Object.entries(t).sort((a,b)=>b[1]-a[1]).slice(0,3).map(([k,v])=>`${m[k]} ${v}`).join(" · ")}
+function v56ProfileTop(t){const m={mainFlow:"메인동선",commercial:"상가밀집",transport:"교통접근",transportLink:"교통연계",entry:"진입효과",destination:"목적시설"};return Object.entries(t).filter(([k,v])=>m[k]&&Number.isFinite(v)).sort((a,b)=>b[1]-a[1]).slice(0,3).map(([k,v])=>`${m[k]} ${v}`).join(" · ")}
 
 
 async function ce(t){
@@ -938,7 +978,9 @@ m.innerText="🚇 지하철 출구·정류장·학교·주차장 유입구 수�
 let E=et(await tt("SW8",{location:g,radius:Math.min(1600,Math.max(800,p)),sort:kakao.maps.services.SortBy.DISTANCE},2));
 const M=await qt(E),
 w=await Z("버스정류장",{location:g,radius:p,sort:kakao.maps.services.SortBy.DISTANCE},2),
-b=await Z("공영주차장",{location:g,radius:p,sort:kakao.maps.services.SortBy.DISTANCE},1);
+b=await Z("공영주차장",{location:g,radius:p,sort:kakao.maps.services.SortBy.DISTANCE},1),
+crosswalkRows=await Z("횡단보도",{location:g,radius:Math.min(e.SEARCH_RADIUS_MAX,p+220),sort:kakao.maps.services.SortBy.DISTANCE},2),
+crosswalks=Vt(crosswalkRows.map(q=>({lat:+q.y,lng:+q.x,type:"crosswalk",name:q.place_name||"횡단보도"})),10);
 let k=[...M,...w.slice(0,24).map((t=>({lat:+t.y,lng:+t.x,type:"bus",name:t.place_name}))),
 ...b.slice(0,8).map((t=>({lat:+t.y,lng:+t.x,type:"parking",name:t.place_name})))];
 for(const t of["대학교","중학교","고등학교"])
@@ -980,8 +1022,9 @@ if(!d){document.getElementById("rankingResultText").textContent="판단 보류: 
 let v={comp:0,anchor:0};
 T.forEach((e=>{Nt(+e.y,+e.x,t)&&e.brandKey&&J[e.brandKey]&&(J[e.brandKey].isComp?v.comp++:J[e.brandKey].isAnchor&&v.anchor++)})),
 document.getElementById("comp_count").innerText=v.comp+"개",document.getElementById("anchor_count").innerText=v.anchor+"개";
-const L=k.filter((t=>{if("bus"!==t.type)return!0;let e=0;
-for(const n of T)if(Pt(t.lat,t.lng,+n.y,+n.x)<=130&&e++,e>=2)return!0;return!1}));
+const L=k.filter((t=>{if("bus"!==t.type)return!0;let nearTargets=0;
+for(const n of T)if(Pt(t.lat,t.lng,+n.y,+n.x)<=130&&nearTargets++,nearTargets>=2)return!0;
+return crosswalks.some(cw=>Pt(t.lat,t.lng,cw.lat,cw.lng)<=e.CROSSWALK_TRANSIT_RADIUS)}));
 let C=[];
 T.forEach((t=>{const e=+t.y,n=+t.x;
 if(t.brandKey&&J[t.brandKey]){const a=J[t.brandKey];a.isOlive?C.push({lat:e,lng:n,kind:"olive",name:t.place_name}):a.isDaiso&&C.push({lat:e,lng:n,kind:"daiso",name:t.place_name})}
@@ -1016,7 +1059,8 @@ document.getElementById("rankingResultBox").classList.remove("hidden"),void(m.in
 m.innerText=`🧩 길찾기 경로 ${R.length}개를 도로 Segment로 분해 중...`;
 let N=ee(te(R,t));if(!N.length)throw new Error("펜스 내부 Segment 생성 실패");
 const entryModel=v56BuildEntryModel(R,t);
-m.innerText=`🧠 도로구간 ${N.length}개 Flow·Demand·Entry·Access·Competition 분석 중...`;
+const transportCrosswalkModel=v562BuildTransportCrosswalkModel(R,L,crosswalks,t,entryModel);
+m.innerText=`🧠 도로구간 ${N.length}개 동선·상가·교통·횡단연계 분석 중...`;
 
 N=function(t,r,s,i,commercePlaces){
 t.forEach((t=>{
@@ -1104,15 +1148,17 @@ t.excluded=function(t,n,a){
 return n.some((n=>"f_lensme"===n.brandKey&&!isRelocationStore(n,a)&&Dt(+n.x,+n.y,t.a.lng,t.a.lat,t.b.lng,t.b.lat)<=e.TEAM_KILL_METERS))}(t,T,s),
 t.excluded&&(t.score=0)}));
 
-// V56.1: 경쟁사 감점 없이 상권의 진입 흐름·성격만으로 적응형 점수를 계산한다.
-N.forEach(seg=>{const em=v56EntryMetric(seg,entryModel,t);seg.entryDistance=em.distance;seg.entryIndex=em.index;seg.entryRouteHits=em.routeHits});
+// V56.2: 횡단보도 자체가 아니라 교통시설→횡단→펜스진입→내부길목으로 실제 보행경로가 이어질 때만 교통-횡단 연계를 반영한다.
+N.forEach(seg=>{const em=v56EntryMetric(seg,entryModel,t);seg.entryDistance=em.distance;seg.entryIndex=em.index;seg.entryRouteHits=em.routeHits;seg.transportLink=v562TransportLinkMetric(seg,transportCrosswalkModel,entryModel)});
+const tlRaw=N.map(x=>x.transportLink?.raw||0);
+N.forEach(seg=>{seg.transportLinkIndex=transportCrosswalkModel.validCount?Math.round(100*oe(tlRaw,seg.transportLink?.raw||0)):0});
 const structure=v56Structure(N,entryModel,t);
-const profile=v56Profile(t,N,L,T,commerceRaw,{length:R.length,entryModel});profile.entry=v56CompleteProfile(entryModel,R.length);
+const profile=v56Profile(t,N,L,T,commerceRaw,{length:R.length,entryModel});profile.entry=v56CompleteProfile(entryModel,R.length);profile.transportLink=v562TransportLinkProfile(transportCrosswalkModel,N);profile.transportLinkAvailable=transportCrosswalkModel.validCount>0;
 const weights=v56Weights(profile);
 N.forEach(seg=>{
 if(!seg.zone){seg.progressRatio=v56Clamp((seg.entryDistance||0)/Math.max(120,structure.depth),0,1.25);seg.zone=seg.progressRatio<=.28?"entry":seg.progressRatio<=.72?"middle":"inner"}
-let score=(weights.flow*seg.flowIndex+weights.demand*seg.demandIndex+weights.commercial*seg.commercialIndex+weights.access*seg.accessIndex+weights.entry*seg.entryIndex+weights.capture*seg.captureIndex)/100;
-seg.compositeContrib={flow:weights.flow*seg.flowIndex/100,demand:weights.demand*seg.demandIndex/100,commercial:weights.commercial*seg.commercialIndex/100,access:weights.access*seg.accessIndex/100,entry:weights.entry*seg.entryIndex/100,capture:weights.capture*seg.captureIndex/100};
+let score=(weights.flow*seg.flowIndex+weights.demand*seg.demandIndex+weights.commercial*seg.commercialIndex+weights.access*seg.accessIndex+weights.transportLink*seg.transportLinkIndex+weights.entry*seg.entryIndex+weights.capture*seg.captureIndex)/100;
+seg.compositeContrib={flow:weights.flow*seg.flowIndex/100,demand:weights.demand*seg.demandIndex/100,commercial:weights.commercial*seg.commercialIndex/100,access:weights.access*seg.accessIndex/100,transportLink:weights.transportLink*seg.transportLinkIndex/100,entry:weights.entry*seg.entryIndex/100,capture:weights.capture*seg.captureIndex/100};
 seg.candidateType=v56CandidateType(seg);seg.competition.teamKill&&(score=0);seg.excluded&&(score=0);seg.score=v56Clamp(score)});
 const $=N.filter((t=>!t.excluded)).map((t=>t.score)).sort(((t,e)=>t-e));
 N.forEach((t=>{t.topPercent=Math.max(1,101-Math.round(100*ae($,t.score)))})),
@@ -1126,7 +1172,7 @@ var n;analysisLines.push(e),document.getElementById("showAnalysisLines")?.checke
 
 v56RenderStructure(structure);
 const H=ye(N,t,3);
-i={context:s,qualityIssues:l,segments:N,topSegments:H,routeCount:R.length,profile,weights,structure,entryModel};
+i={context:s,qualityIssues:l,segments:N,topSegments:H,routeCount:R.length,profile,weights,structure,entryModel,transportCrosswalkModel};
 const F=H.length?Math.round(H.reduce(((t,e)=>t+e.score),0)/H.length):0;
 
 let j=`
@@ -1135,14 +1181,15 @@ let j=`
 <div class="min-w-0"><p class="text-[10px] font-bold text-indigo-500">상권 성격 자동판단</p><p class="text-[13px] font-black text-indigo-800 leading-snug">${V(v56ProfileTop(profile))}</p></div>
 <div class="text-right shrink-0"><p class="text-[9px] text-slate-400 font-bold">TOP 후보</p><div class="text-2xl font-black text-indigo-700">${H.length}<span class="text-xs ml-1">곳</span></div></div>
 </div>
-<div class="grid grid-cols-5 gap-1 mt-2 text-[9px] font-bold text-center">
+<div class="grid grid-cols-3 gap-1 mt-2 text-[9px] font-bold text-center">
 <div class="rounded bg-indigo-50 px-1 py-1"><span class="block text-slate-400">동선</span><b class="text-indigo-700">${profile.mainFlow}</b></div>
 <div class="rounded bg-cyan-50 px-1 py-1"><span class="block text-slate-400">상가</span><b class="text-cyan-700">${profile.commercial}</b></div>
-<div class="rounded bg-emerald-50 px-1 py-1"><span class="block text-slate-400">교통</span><b class="text-emerald-700">${profile.transport}</b></div>
+<div class="rounded bg-emerald-50 px-1 py-1"><span class="block text-slate-400">교통접근</span><b class="text-emerald-700">${profile.transport}</b></div>
+<div class="rounded bg-teal-50 px-1 py-1"><span class="block text-slate-400">교통연계</span><b class="text-teal-700">${profile.transportLinkAvailable?profile.transportLink:"-"}</b></div>
 <div class="rounded bg-amber-50 px-1 py-1"><span class="block text-slate-400">진입</span><b class="text-amber-700">${profile.entry}</b></div>
 <div class="rounded bg-pink-50 px-1 py-1"><span class="block text-slate-400">목적</span><b class="text-pink-700">${profile.destination}</b></div>
 </div>
-<div class="mt-2 rounded-lg bg-white/80 border border-indigo-100 px-2 py-1.5 text-[9.5px] text-slate-600 font-bold">🚪 진입부 · ⭐ 중간 핵심부 · 🎯 안쪽 핵심부를 기존 TMAP 보행경로에서 계산해 지도에 표시했습니다.</div>
+<div class="mt-2 rounded-lg bg-white/80 border border-indigo-100 px-2 py-1.5 text-[9.5px] text-slate-600 font-bold">🚪 진입부 · ⭐ 중간 핵심부 · 🎯 안쪽 핵심부 · 🚦 유효 교통-횡단 연계 ${transportCrosswalkModel.validCount}곳</div>
 <p class="text-[9px] text-slate-400 mt-1.5">가중치는 상권 성격에 따라 제한적으로 조정됩니다. 추가 TMAP 호출 없이 기존 경로를 재사용합니다.</p>
 ${l.length?`<p class="text-[9.5px] text-amber-700 mt-1"><b>데이터 주의:</b> ${V([...new Set(l)].join(" · "))}</p>`:""}
 </div>`;
@@ -1164,7 +1211,8 @@ j+=`
 <div class="bg-indigo-50 rounded p-2"><span class="text-slate-500">🚶 핵심동선</span><b class="float-right text-indigo-700">${e.compositeContrib.flow.toFixed(1)}/${weights.flow.toFixed(0)}</b></div>
 <div class="bg-pink-50 rounded p-2"><span class="text-slate-500">🎯 관련시설</span><b class="float-right text-pink-700">${e.compositeContrib.demand.toFixed(1)}/${weights.demand.toFixed(0)}</b></div>
 <div class="bg-cyan-50 rounded p-2"><span class="text-slate-500">🏬 상업활성</span><b class="float-right text-cyan-700">${e.compositeContrib.commercial.toFixed(1)}/${weights.commercial.toFixed(0)}</b></div>
-<div class="bg-emerald-50 rounded p-2"><span class="text-slate-500">🚇 접근성</span><b class="float-right text-emerald-700">${e.compositeContrib.access.toFixed(1)}/${weights.access.toFixed(0)}</b></div>
+<div class="bg-emerald-50 rounded p-2"><span class="text-slate-500">🚇 교통접근</span><b class="float-right text-emerald-700">${e.compositeContrib.access.toFixed(1)}/${weights.access.toFixed(0)}</b></div>
+<div class="bg-teal-50 rounded p-2"><span class="text-slate-500">🚦 교통-횡단연계</span><b class="float-right text-teal-700">${e.compositeContrib.transportLink.toFixed(1)}/${weights.transportLink.toFixed(0)}</b></div>
 <div class="bg-amber-50 rounded p-2"><span class="text-slate-500">🚪 진입효과</span><b class="float-right text-amber-700">${e.compositeContrib.entry.toFixed(1)}/${weights.entry.toFixed(0)}</b></div>
 <div class="bg-orange-50 rounded p-2"><span class="text-slate-500">🔀 길목성</span><b class="float-right text-orange-700">${e.compositeContrib.capture.toFixed(1)}/10</b></div>
 </div>
@@ -1175,6 +1223,7 @@ j+=`
 <div class="flex justify-between"><span>경쟁 렌즈샵 참고</span><b>${V(i)}</b></div>
 <div class="flex justify-between"><span>보행 분기방향</span><b>${e.junction.armCount}방향</b></div>
 <div class="flex justify-between"><span>대표 진입부부터</span><b>${Number.isFinite(e.entryDistance)?Math.round(e.entryDistance)+"m":"-"}</b></div>
+<div class="flex justify-between"><span>교통-횡단 연계</span><b class="text-teal-700">${e.transportLink?.routeCount?`${e.transportLink.routeCount}경로 · 유효횡단 ${e.transportLink.crosswalkCount}곳`:"없음"}</b></div>
 <div class="flex justify-between"><span>표시 위치</span><b class="text-emerald-700">TMAP 보행선 위</b></div>
 <div class="flex justify-between"><span>경쟁 환경</span><b>${i}</b></div>
 </div>
@@ -1189,7 +1238,7 @@ ${s?`<div class="bg-blue-50/70 rounded-lg p-2 text-[9.5px] text-blue-700 mb-2"><
 
 H.length||(j+=`<div class="text-xs text-rose-600 font-bold">TOP 후보를 만들 수 없습니다. 렌즈미 50m 제외, 최소 보행경로 ${e.TOP3_MIN_ROUTES}개, 점수 ${e.TOP3_MIN_SCORE}점 기준을 통과한 서로 다른 구간이 없습니다. 낮은 점수 후보를 억지로 TOP3에 채우지 않습니다.</div>`),
 U(u),P.innerHTML=j,document.getElementById("rankingResultBox").classList.remove("hidden"),
-m.innerText=`적응형 TOP3 완료 · ${v56ProfileTop(profile)} · 보행경로 ${R.length}개 · 후보 ${H.length}곳`;
+m.innerText=`적응형 TOP3 완료 · ${v56ProfileTop(profile)} · 유효 교통-횡단 ${transportCrosswalkModel.validCount}곳 · 보행경로 ${R.length}개 · 후보 ${H.length}곳`;
 }catch(t){
 if("AbortError"===t.name)return void(m.textContent="입지 분석을 취소했습니다.");
 console.error("V45 분석 에러:",t),m.innerText="⚠️ 분석 중 에러가 발생했습니다. 개발자도구 Console을 확인하세요."}
