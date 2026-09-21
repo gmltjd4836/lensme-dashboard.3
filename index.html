@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>렌즈미 상권 분석 대시보드 V56.5 지도 레이어·유동인구</title>
+<title>렌즈미 상권 분석 대시보드 V56.8 전체 도로망·유동인구</title>
 <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css" rel="stylesheet">
 <script src="https://cdn.tailwindcss.com"></script>
 <style>
@@ -19,14 +19,14 @@ input[type=checkbox]{width:1.1rem;height:1.1rem;cursor:pointer}
 .chk-blue{accent-color:#3b82f6}.chk-emerald{accent-color:#059669}
 .store-tooltip{background:#fff;border:2px solid #334155;border-radius:8px;padding:6px 12px;font-size:13px;font-weight:800;color:#0f172a;box-shadow:0 4px 10px rgba(0,0,0,.2);white-space:nowrap;transform:translateY(-10px);z-index:200}
 .store-tooltip::after{content:'';position:absolute;bottom:-6px;left:50%;transform:translateX(-50%);border-width:6px 6px 0;border-style:solid;border-color:#334155 transparent transparent transparent}
-.poly-nametag{background:rgba(255,255,255,.96);border:1px solid rgba(225,29,72,.22);border-radius:999px;padding:8px 12px;color:#9f1239;font-size:12px;font-weight:900;box-shadow:0 8px 22px rgba(15,23,42,.16);cursor:pointer;white-space:nowrap;pointer-events:auto;backdrop-filter:blur(10px);transition:.18s ease;display:flex;align-items:center;gap:7px;position:relative}
-.poly-nametag:hover{transform:translateY(-2px);box-shadow:0 11px 26px rgba(15,23,42,.22);border-color:rgba(225,29,72,.45)}
-.poly-nametag::after{content:'';position:absolute;left:50%;bottom:-7px;transform:translateX(-50%);width:12px;height:12px;background:inherit;border-right:1px solid rgba(225,29,72,.22);border-bottom:1px solid rgba(225,29,72,.22);rotate:45deg;border-radius:2px}
-.poly-nametag.active{background:linear-gradient(135deg,#e11d48,#be123c);color:#fff;border-color:#be123c;box-shadow:0 10px 28px rgba(190,18,60,.28)}
+.poly-nametag-wrap{position:relative;z-index:110;transform:translateY(-7px)}
+.poly-nametag{appearance:none;-webkit-appearance:none;background:rgba(255,255,255,.97);border:1px solid rgba(148,163,184,.34);border-radius:14px;padding:9px 13px 9px 11px;color:#1e293b;font-size:13px;font-weight:900;letter-spacing:-.2px;box-shadow:0 7px 20px rgba(15,23,42,.16),0 1px 3px rgba(15,23,42,.08);cursor:pointer;white-space:nowrap;pointer-events:auto;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);transition:transform .16s ease,box-shadow .16s ease,border-color .16s ease,background .16s ease,color .16s ease;display:flex;align-items:center;gap:6px;position:relative}
+.poly-nametag:hover{transform:translateY(-2px) scale(1.02);box-shadow:0 10px 26px rgba(15,23,42,.20),0 2px 5px rgba(15,23,42,.08);border-color:rgba(225,29,72,.38)}
+.poly-nametag::after{content:'';position:absolute;left:50%;bottom:-6px;width:11px;height:11px;background:inherit;border-right:1px solid rgba(148,163,184,.34);border-bottom:1px solid rgba(148,163,184,.34);transform:translateX(-50%) rotate(45deg);border-radius:0 0 3px 0}
+.poly-nametag.active{background:linear-gradient(135deg,#e11d48 0%,#be123c 100%);color:#fff;border-color:#be123c;box-shadow:0 10px 28px rgba(190,18,60,.30),0 2px 5px rgba(127,29,29,.14)}
 .poly-nametag.active::after{border-color:#be123c}
-.poly-nametag-dot{width:8px;height:8px;border-radius:50%;background:#fb7185;box-shadow:0 0 0 4px rgba(251,113,133,.14);position:relative;z-index:1}
-.poly-nametag.active .poly-nametag-dot{background:#fff;box-shadow:0 0 0 4px rgba(255,255,255,.18)}
-.poly-nametag-text,.poly-nametag-arrow{position:relative;z-index:1}.poly-nametag-arrow{font-size:15px;line-height:1;opacity:.8}
+.poly-nametag-pin{position:relative;z-index:1;font-size:14px;line-height:1;filter:drop-shadow(0 1px 1px rgba(15,23,42,.12))}
+.poly-nametag-text{position:relative;z-index:1;line-height:1.15}
 .map-layer-btn{background:rgba(255,255,255,.96);border:1px solid #e2e8f0;border-radius:12px;padding:7px 10px;font-size:11px;font-weight:900;color:#334155;box-shadow:0 5px 16px rgba(15,23,42,.14);backdrop-filter:blur(10px);transition:.15s;display:flex;align-items:center;gap:5px}
 .map-layer-btn:hover{transform:translateY(-1px);box-shadow:0 7px 18px rgba(15,23,42,.18)}
 .map-layer-menu{width:158px;background:rgba(255,255,255,.97);border:1px solid #e2e8f0;border-radius:14px;padding:8px;box-shadow:0 12px 30px rgba(15,23,42,.18);backdrop-filter:blur(12px)}
@@ -45,7 +45,7 @@ details[open]>summary::before{content:'📂 '}
 <div class="w-full md:w-1/4 bg-white border-r border-gray-200 p-6 flex flex-col shadow-lg z-20 overflow-y-auto">
 <h1 class="text-xl font-extrabold text-slate-800 border-b-4 border-indigo-500 pb-3 mb-4 flex justify-between items-center">
 <span>🗺️ 전국 상권 관제탑</span>
-<span class="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded-full font-bold">V56.5</span>
+<span class="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded-full font-bold">V56.8</span>
 </h1>
 
 <div class="mb-3">
@@ -80,7 +80,7 @@ details[open]>summary::before{content:'📂 '}
 <label class="underline cursor-pointer">복원<input type="file" accept=".json" class="hidden" onchange="importAreas(this)"></label>
 </div>
 </div>
-<div id="savedPolygonTree" class="max-h-52 overflow-y-auto space-y-1 text-sm"></div><p class="text-[9.5px] text-slate-400 mt-2">지도 말풍선을 누르면 TOP3·유입방향이 펼쳐지고, 다시 누르면 접힙니다.</p>
+<div id="savedPolygonTree" class="max-h-52 overflow-y-auto space-y-1 text-sm"></div><p class="text-[9.5px] text-slate-400 mt-2">지도 말풍선을 누르면 TOP3·메인/보조 유입이 펼쳐지고, 다시 누르면 접힙니다.</p>
 </div>
 
 <div class="mb-2 bg-white p-3 rounded-xl border border-indigo-200 shadow-sm">
@@ -152,7 +152,7 @@ details[open]>summary::before{content:'📂 '}
 <div><span class="inline-block w-4 h-1.5 rounded mr-1.5" style="background:#f97316"></span>높음</div>
 <div><span class="inline-block w-4 h-1.5 rounded mr-1.5" style="background:#dc2626"></span>매우 높음</div>
 </div>
-<p class="text-[8px] text-slate-400 mt-1.5">길찾기·시설 기반 추정지수</p>
+<p class="text-[8px] text-slate-400 mt-1.5">도로망·길찾기·시설 기반 추정지수<br>선이 흐릴수록 근거 신뢰도 낮음</p>
 </div>
 <div id="map" class="w-full h-full"></div>
 </div>
@@ -165,7 +165,8 @@ details[open]>summary::before{content:'📂 '}
 const t="mJJ00gscCg39Y6nR0LhUw2yzrIfr7arY65OwUZYk",e={TEAM_KILL_METERS:50,SEARCH_RADIUS_MAX:2200,FLOW_MATCH_RADIUS:13,SEGMENT_NODE_SPACING:9,SEGMENT_CLUSTER_RADIUS:14,
 SEGMENT_BEARING_TOLERANCE:24,TOP_SEGMENT_MIN_DISTANCE:55,SAME_CORRIDOR_MAX_DISTANCE:170,JUNCTION_SCAN_RADIUS:22,ARM_LOOKAHEAD_METERS:28,MAX_TMAP_ROUTES_PER_SCAN:14,
 REQUEST_TIMEOUT_MS:12e3,MIN_RECOMMEND_SCORE:50,MIN_RECOMMEND_ROUTES:3,MIN_RECOMMEND_TARGETS:2,MAX_GATES:7,MAX_DESTINATIONS:10,TMAP_DELAY_MS:110,KAKAO_PAGE_DELAY_MS:45,
-ANALYSIS_MAX_PAGES:3,MAP_MAX_PAGES:2,DEMAND_RADIUS:140,COMPETITION_RADIUS:160,ACCESS_NEAR_GATE_MIN:18,ACCESS_NEAR_GATE_MAX:220,HEATMAP_MAX_SEGMENTS:500,
+ANALYSIS_MAX_PAGES:3,MAP_MAX_PAGES:2,DEMAND_RADIUS:140,COMPETITION_RADIUS:160,ACCESS_NEAR_GATE_MIN:18,ACCESS_NEAR_GATE_MAX:220,HEATMAP_MAX_SEGMENTS:2200,
+OSM_ROAD_SEGMENT_SPACING:12,OSM_MAX_SEGMENTS:2200,OSM_FETCH_TIMEOUT_MS:15000,COVERAGE_EXTRA_TMAP_ROUTES:4,COVERAGE_GAP_METERS:18,TOP3_MIN_CONFIDENCE:45,
 TOP3_MIN_SEPARATION_METERS:50,TOP3_WINDOW_METERS:28,TOP3_MIN_SCORE:52,TOP3_MIN_ROUTES:2,ROAD_SNAP_MAX_METERS:18,ENTRY_CLUSTER_RADIUS:48,ENTRY_IDEAL_MIN:22,ENTRY_IDEAL_MAX:70,STRUCTURE_MARKER_MIN_SEPARATION:45,CROSSWALK_TRANSIT_RADIUS:65,CROSSWALK_ROUTE_RADIUS:18,CROSSWALK_ENTRY_MAX_ROUTE_METERS:140,CROSSWALK_AFTER_ENTRY_MAX_METERS:170,CROSSWALK_MAX_EFFECTIVE:3,COMMERCIAL_RADIUS:80,COMMERCIAL_HOTSPOT_RADIUS:90,COMMERCIAL_HOTSPOT_SEPARATION:130,AUTO_AREA_RADIUS:1800,
 AUTO_AREA_MAX_NAMED:6,AUTO_AREA_MAX_CLUSTERS:3,AUTO_AREA_POI_PAGES:2,AUTO_AREA_CLUSTER_EPS:85,AUTO_AREA_CLUSTER_MIN_POINTS:7,AUTO_AREA_HULL_BUFFER:24,AUTO_AREA_MIN_POIS:6,
 AUTO_GRAPH_RADIUS:1500,AUTO_GRAPH_MAX_ROUTES:18,AUTO_GRAPH_ROUTE_DELAY_MS:90,AUTO_GRAPH_ACTIVE_MIN:.3,AUTO_GRAPH_CONNECT_ENDPOINT:20,AUTO_GRAPH_CONNECT_PARALLEL:15,
@@ -176,7 +177,7 @@ if(!window.kakao?.maps?.services||!window.kakao?.maps?.drawing)throw document.ge
 new Error("Kakao SDK unavailable");
 let n="new",a="",o=null,r=null,s=[],i=null,l="",c=null,d=0,u=document.getElementById("map"),m=new kakao.maps.LatLng(37.498095,127.02761),g=m,f=new kakao.maps.Map(u,{center:m,
 level:3}),h=new kakao.maps.services.Places,p=new kakao.maps.services.Geocoder,y=[],_=[],A=new Map,E=new Map,M=new kakao.maps.CustomOverlay({xAnchor:.5,yAnchor:1.5,zIndex:150
-}),w=null,b=null,k={},x={},I=!1,S=null,T=!1,O=0,v=[],L={},C={},R=null,P=[],N=[],analysisLines=[],rankOverlays=[],inflowOverlays=[],flowLines=[],expandedSavedAreaId=null,lastAnalyzedSavedId=null,lastAnalyzedFenceKey="";
+}),w=null,b=null,k={},x={},I=!1,S=null,T=!1,O=0,v=[],L={},C={},R=null,P=[],N=[],analysisLines=[],rankOverlays=[],inflowOverlays=[],flowLines=[],expandedSavedAreaId=null,lastAnalyzedSavedId=null,lastAnalyzedFenceKey="",savedAreaAnalysisCache=new Map;
 
 function D(t){return String(t.id||`${t.place_name}|${t.x}|${t.y}`)}
 function v564FenceKey(path){return(Array.isArray(path)?path:[]).map(p=>`${Number(p.lat).toFixed(6)},${Number(p.lng).toFixed(6)}`).join("|")}
@@ -215,8 +216,16 @@ return n.geometry=e.geometry,n}
 function j(t){if(!t||!["Polygon","MultiPolygon"].includes(t.geometry?.type))return!1;
 const e="Polygon"===t.geometry.type?[t.geometry.coordinates]:t.geometry.coordinates;
 return!!e.length&&e.every((t=>Array.isArray(t)&&t.length&&t.every((t=>Array.isArray(t)&&t.length>=4&&t.every((t=>Array.isArray(t)&&Number.isFinite(t[0])&&Number.isFinite(t[1])&&Math.abs(t[0])<=180&&Math.abs(t[1])<=90))&&t[0][0]===t.at(-1)[0]&&t[0][1]===t.at(-1)[1]))))}
-function K(t){try{const e=turf.pointOnFeature(H(t)).geometry.coordinates;return{lat:e[1],lng:e[0]}}
-catch(e){return function(t){let e=0,n=0;return t.forEach((t=>{e+=t.lat,n+=t.lng})),t.length?{lat:e/t.length,lng:n/t.length}:{lat:0,lng:0}}(t)}}
+function K(t){
+try{
+const a=H(t);if(!a)throw new Error("invalid polygon");
+let p=null;
+if(window.turf?.centerOfMass){const c=turf.centerOfMass(a);if(c?.geometry?.coordinates?.length){const q=c.geometry.coordinates,inside=window.turf?.booleanPointInPolygon?turf.booleanPointInPolygon(c,a):!0;if(inside)p=q}}
+if(!p&&window.turf?.pointOnFeature)p=turf.pointOnFeature(a).geometry.coordinates;
+if(p)return{lat:p[1],lng:p[0]}
+}catch(e){}
+return function(t){let e=0,n=0;const a=F(t);return a.forEach((t=>{e+=t.lat,n+=t.lng})),a.length?{lat:e/a.length,lng:n/a.length}:{lat:0,lng:0}}(t)
+}
 function W(t,e={},n=null){
 const a=H(t),o=("MultiPolygon"===a.geometry.type?a.geometry.coordinates:[a.geometry.coordinates]).map((t=>new kakao.maps.Polygon({...e,
 path:t.map((t=>t.map((t=>new kakao.maps.LatLng(t[1],t[0])))))})));
@@ -618,12 +627,13 @@ si:region.si||old?.si||"직접 등록",gu:region.gu||old?.gu||"전체",dong:regi
 reviewStatus:"사용자 직접 작성",savedAt:(new Date).toISOString()};
 const next=old?[...Lt.filter(t=>t.id!==old.id),r]:[...Lt,r];
 if(X(next)){
-const sameFence=lastAnalyzedFenceKey&&lastAnalyzedFenceKey===v564FenceKey(S)&&i?.topSegments?.length&&_.length;
+const sameFence=lastAnalyzedFenceKey&&lastAnalyzedFenceKey===v564FenceKey(S)&&i?.topSegments?.length;
+if(sameFence)savedAreaAnalysisCache.set(o,{fenceKey:lastAnalyzedFenceKey,analysis:i,html:document.getElementById("rankingResultText")?.innerHTML||""});
 lastAnalyzedSavedId=sameFence?o:null;expandedSavedAreaId=null;b=null;w=null;R=null;
 redrawTarget=null,vt.clear(),I=!1,S=null,setDrawUi(!1),v564HideAnalysis(),Ct();
 document.getElementById("targetLocationInput").innerText=`저장됨 · ${n.trim()}`;
 document.getElementById("btnClearPolygon").classList.add("hidden");
-document.getElementById("statusMessage").innerText=`✅ ${n.trim()} 저장 완료 · 지도 말풍선을 누르면 TOP3와 유입방향이 펼쳐집니다.`
+document.getElementById("statusMessage").innerText=`✅ ${n.trim()} 저장 완료 · 지도 말풍선을 누르면 TOP3와 메인/보조 유입이 펼쳐집니다.`
 }}
 
 function renamePolygon(id){
@@ -657,13 +667,14 @@ for(const area of grouped[city][dong].sort((a,b)=>String(a.name).localeCompare(S
 const active=expandedSavedAreaId===area.id,row=document.createElement("div");row.className=`flex items-center gap-1 py-1.5 px-1 rounded-lg border-b border-slate-100 last:border-0 ${active?"bg-rose-50":""}`;
 row.innerHTML=`<button class="min-w-0 flex-1 text-left font-extrabold ${active?"text-rose-700":"text-slate-700"} hover:text-rose-600 truncate" onclick="selectSavedPolygon('${area.id}')">${active?"●":"○"} ${V(area.name)}</button><button onclick="renamePolygon('${area.id}')" title="이름 변경" class="text-[10px] px-1.5 py-1 rounded bg-slate-50 text-slate-500">이름</button><button onclick="redrawPolygon('${area.id}')" title="경계 수정" class="text-[10px] px-1.5 py-1 rounded bg-slate-50 text-slate-500">수정</button><button onclick="deletePolygon('${area.id}')" title="삭제" class="text-[10px] px-1.5 py-1 rounded bg-slate-50 text-slate-400">×</button>`;dongBody.appendChild(row);
 const poly=W(area.geometry||area.path,{strokeWeight:active?4:2,strokeColor:active?"#be123c":"#e11d48",strokeOpacity:active?.95:.65,fillOpacity:active?.22:.075,fillColor:active?"#e11d48":"#f43f5e"},(()=>selectSavedPolygon(area.id)));poly.setMap(f);k[area.id]=poly;
-const tag=`<div style="position:relative;z-index:110;transform:translateY(-14px)"><button type="button" class="poly-nametag ${active?"active":""}" onclick="event.stopPropagation();selectSavedPolygon('${area.id}')"><span class="poly-nametag-dot"></span><span class="poly-nametag-text">${V(area.name)}</span><span class="poly-nametag-arrow">${active?"−":"›"}</span></button></div>`;
-const ov=new kakao.maps.CustomOverlay({position:new kakao.maps.LatLng(area.centerLat,area.centerLng),content:tag,xAnchor:.5,yAnchor:.5,zIndex:110});ov.setMap(f);x[area.id]=ov
+const bubbleCenter=K(area.geometry||area.path);
+const tag=`<div class="poly-nametag-wrap"><button type="button" class="poly-nametag ${active?"active":""}" onclick="event.stopPropagation();selectSavedPolygon('${area.id}')"><span class="poly-nametag-pin">📍</span><span class="poly-nametag-text">${V(area.name)}</span></button></div>`;
+const ov=new kakao.maps.CustomOverlay({position:new kakao.maps.LatLng(bubbleCenter.lat,bubbleCenter.lng),content:tag,xAnchor:.5,yAnchor:1,zIndex:110});ov.setMap(f);x[area.id]=ov
 }cityBody.appendChild(dongEl)}root.appendChild(cityEl)}
 applyMapDisplayFilters()
 }
 
-function deletePolygon(t){if(confirm("이 상권 경계를 삭제하시겠습니까?"))return T?alert("분석 종료 후 삭제해주세요."):void(X(Lt.filter((e=>e.id!==t)))&&(b===t&&clearActivePolygon(),Ct()))}
+function deletePolygon(t){if(confirm("이 상권 경계를 삭제하시겠습니까?"))return T?alert("분석 종료 후 삭제해주세요."):void(X(Lt.filter((e=>e.id!==t)))&&(savedAreaAnalysisCache.delete(t),b===t&&clearActivePolygon(),Ct()))}
 function selectSavedPolygon(t){
 if(T)return alert("현재 분석이 진행 중입니다. 분석이 끝난 뒤 다시 눌러주세요.");
 const area=Lt.find(e=>e.id===t);if(!area)return;
@@ -674,9 +685,11 @@ document.getElementById("statusMessage").innerText=`${area.name} 분석을 접�
 expandedSavedAreaId=t;b=t;w=F(area.geometry||area.path);R=null;
 document.getElementById("targetLocationInput").innerText=area.name;document.getElementById("btnClearPolygon").classList.remove("hidden");
 let bounds=new kakao.maps.LatLngBounds;w.forEach(p=>bounds.extend(new kakao.maps.LatLng(p.lat,p.lng)));f.setBounds(bounds);g=bounds.getCenter();Ct();v564SetSavedAreaVisual(t);
-const sameAnalysis=lastAnalyzedSavedId===t&&lastAnalyzedFenceKey===v564FenceKey(w)&&i?.topSegments?.length&&_.length;
-if(sameAnalysis){v564ShowAnalysis();document.getElementById("statusMessage").innerText=`${area.name} · 저장된 TOP3 분석을 펼쳤습니다.`}
-else ce(w)
+const fenceKey=v564FenceKey(w),cached=savedAreaAnalysisCache.get(t);
+if(cached?.fenceKey===fenceKey&&cached?.analysis?.topSegments?.length){v566RestoreCachedAnalysis(cached,w,t);document.getElementById("statusMessage").innerText=`${area.name} · 저장된 TOP3·유입방향을 펼쳤습니다.`}
+else{const sameAnalysis=lastAnalyzedSavedId===t&&lastAnalyzedFenceKey===fenceKey&&i?.topSegments?.length&&rankOverlays.length;
+if(sameAnalysis){v564ShowAnalysis();document.getElementById("statusMessage").innerText=`${area.name} · TOP3·유입방향을 펼쳤습니다.`}
+else ce(w)}
 }
 function clearActivePolygon(t=!1){
 if(T)return alert("분석이 끝난 후 해제하거나 먼저 취소해주세요.");
@@ -854,6 +867,7 @@ for(const p of forward){if(!path.length||Pt(path.at(-1).lat,path.at(-1).lng,p.la
 if(path.length>=2){let len=0;for(let i=0;i<path.length-1;i++)len+=Pt(path[i].lat,path[i].lng,path[i+1].lat,path[i+1].lng);
 return{a:path[0],b:path.at(-1),path,length:len,center:{...snap.point},snapDistance:snap.distance,route}}
 }
+if(t.osmWayId&&t.a&&t.b){const len=Pt(t.a.lat,t.a.lng,t.b.lat,t.b.lng);return{a:{...t.a},b:{...t.b},path:[{...t.a},{...t.b}],length:len,center:{...t.mid},snapDistance:null,route:null}}
 const a=n/2,o=t.bearing||Ut(t.a.lat,t.a.lng,t.b.lat,t.b.lng),r=pe(t.mid,a,(o+180)%360),s=pe(t.mid,a,o);
 return{a:r,b:s,path:[r,s],length:n,center:{...t.mid},snapDistance:null,route:null}}
 
@@ -875,18 +889,20 @@ const z=t?.candidateType||"flow";return z==="entry"?"진입부형":z==="commerci
 function ye(t,n,a=3){
 const eligible=[];
 for(const r of t){
-if(r.excluded||r.competition.teamKill||r.score<e.TOP3_MIN_SCORE||r.routeHitIds.length<e.TOP3_MIN_ROUTES)continue;
-if((r.demand.targetCount||0)+(r.commercial?.count60||0)<2)continue;
+if(r.excluded||r.competition.teamKill||r.score<e.TOP3_MIN_SCORE||r.siteFeasible===false||(r.confidence||0)<e.TOP3_MIN_CONFIDENCE)continue;
+const support=(r.demand?.targetCount||0)+(r.commercial?.count60||0),direct=(r.routeHitIds||[]).length;
+if(support<2&&direct<1)continue;
+if(direct<1&&((r.confidence||0)<55||support<3))continue;
 const s=he(r,e.TOP3_WINDOW_METERS),p=s.center||r.mid;if(!Nt(s.a.lat,s.a.lng,n)||!Nt(s.b.lat,s.b.lng,n)||!Nt(p.lat,p.lng,n))continue;
 if(Number.isFinite(s.snapDistance)&&s.snapDistance>e.ROAD_SNAP_MAX_METERS)continue;
-r.recommendationWindow=s,r.displayPoint={...p},r.roadSnapDistance=s.snapDistance,r.roadRouteName=s.route?.name||"",eligible.push(r)}
-const picked=[],usedTypes=new Set,usedZones=new Set;
+r.recommendationWindow=s,r.displayPoint={...p},r.roadSnapDistance=s.snapDistance,r.roadRouteName=s.route?.name||r.roadName||"",eligible.push(r)}
+const picked=[],usedTypes=new Set,usedZones=new Set,usedRoads=new Set;
 while(picked.length<a){let best=null,bestUtility=-1e9;
 for(const r of eligible){if(picked.includes(r))continue;const p=r.displayPoint||r.mid;
 if(picked.some(q=>{const x=q.displayPoint||q.mid;return Pt(p.lat,p.lng,x.lat,x.lng)<e.TOP3_MIN_SEPARATION_METERS}))continue;
-const noveltyType=usedTypes.has(r.candidateType)?0:4.5,noveltyZone=usedZones.has(r.zone)?0:3.0;
-const utility=r.score+noveltyType+noveltyZone;if(utility>bestUtility){bestUtility=utility;best=r}}
-if(!best)break;picked.push(best);usedTypes.add(best.candidateType);usedZones.add(best.zone)}
+const noveltyType=usedTypes.has(r.candidateType)?0:4.5,noveltyZone=usedZones.has(r.zone)?0:3.0,roadNovelty=r.osmWayId&&usedRoads.has(r.osmWayId)?-2.5:0;
+const utility=r.score+noveltyType+noveltyZone+roadNovelty+Math.min(3,(r.confidence||0)*.03);if(utility>bestUtility){bestUtility=utility;best=r}}
+if(!best)break;picked.push(best);usedTypes.add(best.candidateType);usedZones.add(best.zone);best.osmWayId&&usedRoads.add(best.osmWayId)}
 return picked}
 function focusTopCandidate(t){const e=i?.topSegments?.[t];if(!e)return;const n=e.displayPoint||e.recommendationWindow?.center||e.mid;f.panTo(new kakao.maps.LatLng(n.lat,n.lng)),f.setLevel(Math.min(f.getLevel(),2))}
 function re(t,n){
@@ -905,7 +921,11 @@ position:new kakao.maps.LatLng(p.lat,p.lng),
 content:`<div style="position:relative;z-index:999;text-align:center;pointer-events:none"><div style="background:${a};color:white;padding:5px 10px;border-radius:9px;font-weight:900;font-size:12px;border:2px solid white;box-shadow:0 3px 7px rgba(0,0,0,.35);white-space:nowrap;margin-bottom:3px">${i}</div><div style="width:12px;height:12px;border-radius:50%;background:#fff;border:4px solid ${a};box-shadow:0 1px 4px rgba(0,0,0,.4);margin:0 auto"></div></div>`,
 xAnchor:.5,yAnchor:1});return l.setMap(f),_.push(l),rankOverlays.push(l),applyMapDisplayFilters(),i}
 function le(t,e){
-return e?`${tradeZoneLabel(t)}의 ${candidateTypeLabel(t)}입니다. ${t.routeHitIds.length>=5?"여러 핵심 시설 간 보행경로가 겹치고":t.routeHitIds.length>=3?"복수 보행경로가 겹치며":"주요 보행경로가 통과하며"} 주변 60m 상업시설 표본 ${t.commercial?.count60||0}곳을 함께 반영했습니다. ${t.transportLink?.routeCount?`역출구·버스와 가까운 유효 횡단지점을 거쳐 이 길목으로 이어지는 보행경로 ${t.transportLink.routeCount}개가 확인됩니다. `:""}${t.entryIndex>=75?"상권 진입 흐름과도 강하게 연결됩니다. ":""}${t.competition.competitorCount80>0?`80m 내 경쟁 렌즈샵 ${t.competition.competitorCount80}곳이 있으나 TOP3 점수에는 반영하지 않습니다.`:"80m 내 주요 경쟁 렌즈샵은 없으며 경쟁사 유무는 TOP3 점수에 반영하지 않습니다."} 1층 여부·전면폭·간판 가시성·임대료는 현장에서 최종 확인하세요.`:"길찾기 경로가 확보되지 않아 추천구간 분석을 수행하지 못했습니다."}
+if(!e)return "길찾기 경로가 확보되지 않아 추천구간 분석을 수행하지 못했습니다.";
+const direct=(t.routeHitIds||[]).length;
+const flowText=direct>=5?"여러 핵심 시설 간 보행경로가 겹치고":direct>=3?"복수 보행경로가 겹치며":direct>=1?"주요 보행경로가 직접 통과하며":"전체 보행도로망에서 상업·교통 근거가 확인되며";
+const verifyText=direct?`TMAP 직접 검증 ${direct}경로 · 신뢰도 ${Math.round(t.confidence||0)}점. `:`TMAP 직접 통과경로는 없지만 도로망·상업·교통 근거로 보완 추정했으며 신뢰도 ${Math.round(t.confidence||0)}점입니다. `;
+return `${tradeZoneLabel(t)}의 ${candidateTypeLabel(t)}입니다. ${flowText} 주변 60m 상업시설 표본 ${t.commercial?.count60||0}곳을 함께 반영했습니다. ${verifyText}${t.transportLink?.routeCount?`역출구·버스와 가까운 유효 횡단지점을 거쳐 이 길목으로 이어지는 보행경로 ${t.transportLink.routeCount}개가 확인됩니다. `:""}${t.entryIndex>=75?"상권 진입 흐름과도 강하게 연결됩니다. ":""}${t.competition.competitorCount80>0?`80m 내 경쟁 렌즈샵 ${t.competition.competitorCount80}곳이 있으나 TOP3 점수에는 반영하지 않습니다.`:"80m 내 주요 경쟁 렌즈샵은 없으며 경쟁사 유무는 TOP3 점수에 반영하지 않습니다."} 1층 여부·전면폭·간판 가시성·임대료는 현장에서 최종 확인하세요.`}
 
 function v56Clamp(t,n=0,a=100){return Math.max(n,Math.min(a,t))}
 function v56Sat(t,n){return 100*(1-Math.exp(-Math.max(0,t)/Math.max(.001,n)))}
@@ -925,7 +945,7 @@ let i=0,l=0,d=0;s.members.forEach(m=>{const w=m.weight||1;i+=m.point.lat*w;l+=m.
 o.sort((r,s)=>(s.weight+.35*s.members.length)-(r.weight+.35*r.members.length));const r=o[0]||null;
 let s=null;if(r?.members?.length){s=[...r.members].sort((x,y)=>y.weight-x.weight)[0];let best=1e9;for(const m of r.members){const d=Pt(m.point.lat,m.point.lng,r.center.lat,r.center.lng);if(d<best){best=d;s=m}}}
 const i=new Map;a.forEach(x=>i.set(x.route.id,x));const l=a.reduce((q,x)=>q+(x.weight||1),0),d=r?.weight||0;
-return{entries:a,clusters:o,primary:s,routeEntries:i,crossingRouteCount:a.length,topShare:l?d/l:0}}
+return{entries:a,clusters:o,primary:s,routeEntries:i,crossingRouteCount:a.length,topShare:l?d/l:0,routes:t||[]}}
 function v56AlongDistance(t,n,a){
 if(!t?.coords?.length||!n||!a)return Infinity;if(a.segmentIndex<n.segmentIndex)return Infinity;
 if(a.segmentIndex===n.segmentIndex)return Pt(n.point.lat,n.point.lng,a.point.lat,a.point.lng);
@@ -1021,19 +1041,79 @@ function v564SecondaryEntry(entryModel){
 const clusters=entryModel?.clusters||[],main=clusters[0];if(!main)return null;const mainScore=(main.weight||0)+.35*(main.members?.length||0);
 for(const cluster of clusters.slice(1)){
 const score=(cluster.weight||0)+.35*(cluster.members?.length||0),dist=Pt(main.center.lat,main.center.lng,cluster.center.lat,cluster.center.lng);
-if(score>=Math.max(1.2,mainScore*.30)&&dist>=55)return v564ClusterRepresentative(cluster)}return null}
+if(score>=Math.max(.8,mainScore*.18)&&dist>=45)return v564ClusterRepresentative(cluster)}return null}
 function v564InsideEntryPath(entry,isMain,fencePath){
-const after=v563WalkAfterEntry(entry,isMain?92:72);if(after.length<2)return[];const path=[after[0]];
-for(let j=1;j<after.length;j++){const p=after[j];if(fencePath&&fencePath.length>=3&&!Nt(p.lat,p.lng,fencePath))break;path.push(p)}
+const after=v563WalkAfterEntry(entry,isMain?96:78);if(after.length<2)return[];const path=[];
+for(let j=0;j<after.length;j++){
+ const p=after[j],inside=!fencePath||fencePath.length<3||Nt(p.lat,p.lng,fencePath);
+ if(!inside){if(path.length)break;continue}
+ path.push(p)
+}
 return path
 }
+function v566PseudoEntryFromRoute(route,fencePath){
+const pts=route?.coords||[];if(pts.length<2)return null;
+for(let j=0;j<pts.length-1;j++){
+ const p=pts[j],q=pts[j+1];
+ if(Nt(p.lat,p.lng,fencePath)&&Nt(q.lat,q.lng,fencePath))return{point:{...p},segmentIndex:j,fraction:0,route,weight:route.weight||1,pseudo:true}
+}
+return null}
+function v566PathLength(path){let d=0;for(let j=0;j<path.length-1;j++)d+=Pt(path[j].lat,path[j].lng,path[j+1].lat,path[j+1].lng);return d}
+function v566InflowCandidates(entryModel,fencePath){
+const out=[],clusters=entryModel?.clusters||[];
+for(const cluster of clusters){const rep=v564ClusterRepresentative(cluster);if(!rep)continue;const path=v564InsideEntryPath(rep,out.length===0,fencePath);if(path.length<2||v566PathLength(path)<12)continue;
+ if(out.some(x=>Pt(x.entry.point.lat,x.entry.point.lng,rep.point.lat,rep.point.lng)<42))continue;
+ out.push({entry:rep,strength:(cluster.weight||0)+.35*(cluster.members?.length||0)});if(out.length>=2)break}
+if(out.length<2){
+ const routes=[...(entryModel?.routes||[])].sort((a,b)=>(b.weight||1)-(a.weight||1));
+ for(const route of routes){const rep=v566PseudoEntryFromRoute(route,fencePath);if(!rep)continue;const path=v564InsideEntryPath(rep,out.length===0,fencePath);if(path.length<2||v566PathLength(path)<14)continue;
+  if(out.some(x=>Pt(x.entry.point.lat,x.entry.point.lng,rep.point.lat,rep.point.lng)<45))continue;
+  out.push({entry:rep,strength:(route.weight||1)*.75});if(out.length>=2)break}
+}
+return out}
 function v564RenderInflowEntry(entry,labelText,isMain,fencePath){
-if(!entry?.route?.coords?.length||!entry.point)return;const path=v564InsideEntryPath(entry,isMain,fencePath);if(path.length<2||At([{a:path[0],b:path[path.length-1]}])<12)return;
-const color=isMain?"#b91c1c":"#ef4444",line=new kakao.maps.Polyline({path:path.map(p=>new kakao.maps.LatLng(p.lat,p.lng)),strokeWeight:isMain?5:3,strokeColor:color,strokeOpacity:isMain?.96:.68,strokeStyle:"solid",endArrow:true,zIndex:isMain?132:128});line.setMap(f);_.push(line);inflowOverlays.push(line);
-const lp=path[Math.min(path.length-1,1)],label=new kakao.maps.CustomOverlay({position:new kakao.maps.LatLng(lp.lat,lp.lng),xAnchor:.5,yAnchor:1.35,zIndex:isMain?136:131,content:`<div style="pointer-events:none;background:${isMain?"#fff1f2":"rgba(255,255,255,.94)"};border:${isMain?2:1}px solid ${color};color:${isMain?"#991b1b":"#dc2626"};font-size:${isMain?9:8}px;font-weight:900;border-radius:999px;padding:${isMain?"3px 7px":"2px 6px"};box-shadow:0 3px 8px rgba(127,29,29,.15);white-space:nowrap">${labelText}</div>`});label.setMap(f);_.push(label);inflowOverlays.push(label)
+if(!entry?.route?.coords?.length||!entry.point)return;const path=v564InsideEntryPath(entry,isMain,fencePath);if(path.length<2||v566PathLength(path)<12)return;
+const color=isMain?"#b91c1c":"#ef4444",line=new kakao.maps.Polyline({path:path.map(p=>new kakao.maps.LatLng(p.lat,p.lng)),strokeWeight:isMain?5:3,strokeColor:color,strokeOpacity:isMain?.96:.74,strokeStyle:"solid",endArrow:true,zIndex:isMain?132:128});line.setMap(f);_.push(line);inflowOverlays.push(line);
+const li=Math.min(path.length-1,Math.max(1,Math.floor(path.length*.28))),lp=path[li],label=new kakao.maps.CustomOverlay({position:new kakao.maps.LatLng(lp.lat,lp.lng),xAnchor:.5,yAnchor:1.45,zIndex:isMain?136:131,content:`<div style="pointer-events:none;background:${isMain?"#fff1f2":"rgba(255,255,255,.95)"};border:${isMain?2:1}px solid ${color};color:${isMain?"#991b1b":"#dc2626"};font-size:${isMain?9:8}px;font-weight:900;border-radius:999px;padding:${isMain?"3px 7px":"2px 6px"};box-shadow:0 3px 8px rgba(127,29,29,.15);white-space:nowrap">${labelText}</div>`});label.setMap(f);_.push(label);inflowOverlays.push(label);
+const last=path.at(-1),prev=path.at(-2),bearing=Ut(prev.lat,prev.lng,last.lat,last.lng),arrow=new kakao.maps.CustomOverlay({position:new kakao.maps.LatLng(last.lat,last.lng),xAnchor:.5,yAnchor:.5,zIndex:isMain?138:133,content:`<div style="pointer-events:none;color:${color};font-size:${isMain?24:19}px;font-weight:900;line-height:1;text-shadow:0 2px 4px rgba(255,255,255,.95),0 1px 5px rgba(127,29,29,.25);transform:rotate(${bearing-90}deg)">➤</div>`});arrow.setMap(f);_.push(arrow);inflowOverlays.push(arrow)
 }
 function v564RenderInflows(entryModel,fencePath){
-const main=entryModel?.primary;if(main)v564RenderInflowEntry(main,"메인 유입",true,fencePath);const secondary=v564SecondaryEntry(entryModel);if(secondary)v564RenderInflowEntry(secondary,"보조 유입",false,fencePath);applyMapDisplayFilters()}
+const candidates=v566InflowCandidates(entryModel,fencePath);if(candidates[0])v564RenderInflowEntry(candidates[0].entry,"메인 유입",true,fencePath);if(candidates[1])v564RenderInflowEntry(candidates[1].entry,"보조 유입",false,fencePath);applyMapDisplayFilters()}
+
+
+function v568RoadBBox(path){let south=90,north=-90,west=180,east=-180;(path||[]).forEach(p=>{south=Math.min(south,p.lat);north=Math.max(north,p.lat);west=Math.min(west,p.lng);east=Math.max(east,p.lng)});return{south,west,north,east}}
+function v568RoadAllowed(tags={}){const h=tags.highway||"";if(!h)return false;if(["motorway","motorway_link","trunk","trunk_link","raceway","construction","proposed","steps","cycleway","bridleway","track"].includes(h))return false;if(tags.access==="private"||tags.access==="no"||tags.foot==="no")return false;if(h==="service"&&["parking_aisle","driveway"].includes(tags.service))return false;return true}
+function v568RoadSiteFeasible(seg){const t=seg.osmTags||{},h=t.highway||"";if(t.access==="private"||t.access==="no"||t.foot==="no")return false;if(["motorway","motorway_link","trunk","trunk_link","steps","cycleway","bridleway","track"].includes(h))return false;if(t.footway==="crossing"||t.crossing||t.service==="parking_aisle"||t.service==="driveway")return false;const support=(seg.commercial?.count60||0)+(seg.demand?.targetCount||0);return support>=1||(seg.routeHitIds||[]).length>=1}
+function v568WayPriority(tags={}){const h=tags.highway||"";return h==="pedestrian"?6:h==="living_street"?5.5:h==="footway"?5:h==="primary"||h==="secondary"||h==="tertiary"?4.6:h==="residential"||h==="unclassified"?4.2:h==="service"?3.2:4}
+async function v568FetchOsmWays(fencePath,statusEl){
+const b=v568RoadBBox(fencePath);if(!Number.isFinite(b.south))return[];
+const query=`[out:json][timeout:15];way["highway"](${b.south},${b.west},${b.north},${b.east});out tags geom;`;
+const endpoints=["https://overpass-api.de/api/interpreter","https://overpass.kumi.systems/api/interpreter"];
+for(const url of endpoints){const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),e.OSM_FETCH_TIMEOUT_MS);try{statusEl&&(statusEl.innerText="🛣️ 펜스 내부 전체 보행도로망 수집 중...");const res=await fetch(url,{method:"POST",headers:{"Content-Type":"application/x-www-form-urlencoded;charset=UTF-8"},body:"data="+encodeURIComponent(query),signal:controller.signal});if(!res.ok)continue;const data=await res.json();const ways=(data.elements||[]).filter(x=>x.type==="way"&&Array.isArray(x.geometry)&&x.geometry.length>=2&&v568RoadAllowed(x.tags||{}));if(ways.length)return ways}catch(err){console.warn("OSM road fetch failed",url,err)}finally{clearTimeout(timer)}}return[]}
+function v568OsmSegments(ways,fencePath){const out=[];for(const way of ways||[]){const tags=way.tags||{},pts=way.geometry.map(g=>({lat:+g.lat,lng:+g.lon})).filter(p=>Number.isFinite(p.lat)&&Number.isFinite(p.lng));for(let i=0;i<pts.length-1;i++){const dense=Zt(pts[i],pts[i+1],e.OSM_ROAD_SEGMENT_SPACING);for(let j=0;j<dense.length-1;j++){const a=dense[j],b=dense[j+1],mid={lat:(a.lat+b.lat)/2,lng:(a.lng+b.lng)/2};if(!Nt(mid.lat,mid.lng,fencePath))continue;const len=Pt(a.lat,a.lng,b.lat,b.lng);if(len<2)continue;out.push({id:`O${way.id}_${i}_${j}`,a,b,mid,bearing:Ut(a.lat,a.lng,b.lat,b.lng)%180,microCount:1,routeMap:new Map,representativeWeight:0,source:"osm",osmWayId:String(way.id),osmTags:tags,highway:tags.highway||"",roadName:tags.name||tags["name:ko"]||"",roadPriority:v568WayPriority(tags)})}}}
+const kept=[],buckets=new Map;for(const seg of out){const key=`${Math.round(seg.mid.lat*10000)}:${Math.round(seg.mid.lng*10000)}`;const near=[key];let dup=false;for(const k of near){for(const q of buckets.get(k)||[]){if(Pt(seg.mid.lat,seg.mid.lng,q.mid.lat,q.mid.lng)<=4&&Bt(seg.bearing,q.bearing)<=18){dup=true;break}}if(dup)break}if(dup)continue;kept.push(seg);(buckets.get(key)||buckets.set(key,[]).get(key)).push(seg);if(kept.length>=e.OSM_MAX_SEGMENTS)break}return kept}
+function v568DistanceToRoute(seg,route){let best=Infinity;const c=route?.coords||[];for(let i=0;i<c.length-1;i++){const d=Dt(seg.mid.lng,seg.mid.lat,c[i].lng,c[i].lat,c[i+1].lng,c[i+1].lat);if(d<best)best=d;if(best<=4)break}return best}
+function v568NearestRouteDistance(seg,routes){let best=Infinity;for(const r of routes||[]){const d=v568DistanceToRoute(seg,r);if(d<best)best=d;if(best<=4)break}return best}
+function v568MergeRoadSegments(osmSegments,routeSegments){if(!(osmSegments||[]).length)return routeSegments||[];const master=[...osmSegments];for(const r of routeSegments||[]){let matched=false;for(const o of osmSegments){if(Pt(r.mid.lat,r.mid.lng,o.mid.lat,o.mid.lng)<=9&&Bt(r.bearing,o.bearing)<=28){matched=true;break}}if(!matched){r.source="tmap_fallback";r.roadName=r.roadName||r.routeMap?.values?.().next?.().value?.route?.name||"";master.push(r)}}return master}
+function v568Opportunity(seg,targets,gates,commercePlaces){const c=ge(seg,commercePlaces),nearTargets=(targets||[]).reduce((n,q)=>n+(Pt(seg.mid.lat,seg.mid.lng,+q.y,+q.x)<=110?1:0),0),nearGate=(gates||[]).reduce((best,g)=>Math.min(best,Pt(seg.mid.lat,seg.mid.lng,g.lat,g.lng)),Infinity);return c.raw*1.8+Math.min(5,nearTargets)*.65+(nearGate<=140?1.2:nearGate<=220?.5:0)+(seg.roadPriority||3)*.12}
+async function v568CoverageRoutes(osmSegments,routes,gates,targets,commercePlaces,fencePath,statusEl){if(!(osmSegments||[]).length||!(gates||[]).length)return[];const candidates=osmSegments.map(seg=>({seg,gap:v568NearestRouteDistance(seg,routes),op:v568Opportunity(seg,targets,gates,commercePlaces)})).filter(x=>x.gap>e.COVERAGE_GAP_METERS&&x.op>=2.2).sort((a,b)=>b.op-a.op),picked=[];for(const c of candidates){if(picked.some(x=>Pt(c.seg.mid.lat,c.seg.mid.lng,x.seg.mid.lat,x.seg.mid.lng)<85))continue;picked.push(c);if(picked.length>=e.COVERAGE_EXTRA_TMAP_ROUTES)break}const extra=[];let id=1;for(const c of picked){let source=null,best=-Infinity;for(const g of gates){const d=Pt(g.lat,g.lng,c.seg.mid.lat,c.seg.mid.lng);if(d<35||d>1800)continue;const rank=Yt(g.type)/(1+d/350);if(rank>best){best=rank;source=g}}if(!source)continue;statusEl&&(statusEl.innerText=`🧭 누락 핵심길 TMAP 추가 검증 중... (${id}/${picked.length})`);const coords=Xt(await Wt(source.lng,source.lat,c.seg.mid.lng,c.seg.mid.lat));if(coords.length>=2&&coords.reduce((n,p)=>n+(Nt(p.lat,p.lng,fencePath)?1:0),0)>=2){extra.push({id:`V${id}`,gate:source,dest:{lat:c.seg.mid.lat,lng:c.seg.mid.lng,kind:"coverage",name:"내부 누락길 검증"},coords,samples:Gt(coords,e.SEGMENT_NODE_SPACING),weight:Math.max(.72,Yt(source.type)*.75),name:`${source.name} → 내부 누락길`,kind:"coverage"})}id++;await z(e.TMAP_DELAY_MS)}return extra}
+function v568ApplyEvidence(segments){for(const seg of segments||[]){const direct=(seg.routeHitIds||[]).length,commerce=seg.commercial?.count60||0,demand=seg.demand?.targetCount||0,access=seg.accessIndex||0;let conf=(seg.osmWayId?20:12)+Math.min(45,direct*18)+Math.min(18,commerce*3)+Math.min(10,demand*3)+(access>=50?7:access>=25?4:0);seg.confidence=Math.round(v56Clamp(conf));seg.siteFeasible=v568RoadSiteFeasible(seg);seg.roadEvidence=direct>=2?"TMAP 다중검증":direct===1?"TMAP 직접검증":seg.osmWayId?"도로망 기반추정":"경로 기반추정"}}
+function v568FlowEstimate(seg){return Math.round(v56Clamp(.38*(seg.flowIndex||0)+.22*(seg.commercialIndex||0)+.10*(seg.demandIndex||0)+.10*(seg.accessIndex||0)+.07*(seg.transportLinkIndex||0)+.07*(seg.entryIndex||0)+.06*(seg.captureIndex||0)))}
+
+function v566RenderFlowLinesFromSegments(segments,fencePath){
+[...(segments||[])].slice(0,e.HEATMAP_MAX_SEGMENTS).forEach(seg=>{
+ if(fencePath?.length>=3&&!Nt(seg.mid.lat,seg.mid.lng,fencePath))return;
+ const flowEstimate=Number.isFinite(seg.flowEstimate)?seg.flowEstimate:v568FlowEstimate(seg);seg.flowEstimate=flowEstimate;
+ const color=flowEstimate>=80?"#dc2626":flowEstimate>=65?"#f97316":flowEstimate>=50?"#eab308":flowEstimate>=35?"#16a34a":"#2563eb",confidence=seg.confidence||35;
+ const line=new kakao.maps.Polyline({path:[new kakao.maps.LatLng(seg.a.lat,seg.a.lng),new kakao.maps.LatLng(seg.b.lat,seg.b.lng)],strokeWeight:flowEstimate>=80?7:flowEstimate>=65?6:5,strokeColor:color,strokeOpacity:confidence>=70?.74:confidence>=50?.62:.43,strokeStyle:"solid",zIndex:72});analysisLines.push(line);flowLines.push(line);_.push(line)
+});applyMapDisplayFilters()}
+function v566RestoreCachedAnalysis(cache,fencePath,areaId){
+if(!cache?.analysis)return false;Rt();i=cache.analysis;
+const txt=document.getElementById("rankingResultText");if(txt)txt.innerHTML=cache.html||"";
+v566RenderFlowLinesFromSegments(i.segments||[],fencePath);v564RenderInflows(i.entryModel,fencePath);(i.topSegments||[]).forEach((seg,idx)=>ie(seg,idx));
+lastAnalyzedFenceKey=cache.fenceKey||v564FenceKey(fencePath);lastAnalyzedSavedId=areaId||null;applyMapDisplayFilters();
+const box=document.getElementById("rankingResultBox");if(box&&(txt?.innerHTML||"").trim())box.classList.remove("hidden");return true}
+
 function v56ProfileTop(t){const m={mainFlow:"메인동선",commercial:"상가밀집",transport:"교통접근",transportLink:"교통연계",entry:"진입효과",destination:"목적시설"};return Object.entries(t).filter(([k,v])=>m[k]&&Number.isFinite(v)).sort((a,b)=>b[1]-a[1]).slice(0,3).map(([k,v])=>`${m[k]} ${v}`).join(" · ")}
 
 
@@ -1127,11 +1207,14 @@ await z(e.TMAP_DELAY_MS)}return l}(L,C,r,c,t,m);
 U(u),R.failedCount&&l.push(`길찾기 ${R.failedCount}건 실패`);
 
 const P=document.getElementById("rankingResultText");
-if(!R.length)return P.innerHTML='<div class="text-xs text-rose-600 font-bold">⚠️ TMAP 길찾기 경로를 확보하지 못해 Segment 분석을 중단했습니다. API 키·호출 제한·네트워크 상태를 확인하세요.</div>',
-document.getElementById("rankingResultBox").classList.remove("hidden"),void(m.innerText="⚠️ 길찾기 경로가 없어 도로 Segment 분석을 만들 수 없습니다.");
+const osmWays=await v568FetchOsmWays(t,m);U(u);const osmSegments=v568OsmSegments(osmWays,t);
+if(!osmSegments.length)l.push("전체 도로망 수집 실패 · TMAP 경로 기반 fallback");
+const coverageRoutes=await v568CoverageRoutes(osmSegments,R,L,T,commerceRaw,t,m);U(u);coverageRoutes.length&&R.push(...coverageRoutes);
+if(coverageRoutes.length)l.push(`누락 핵심길 ${coverageRoutes.length}개 TMAP 추가검증`);
+if(!R.length&&!osmSegments.length)return P.innerHTML='<div class="text-xs text-rose-600 font-bold">⚠️ TMAP 경로와 전체 도로망을 모두 확보하지 못했습니다. 네트워크/API 상태를 확인하세요.</div>',document.getElementById("rankingResultBox").classList.remove("hidden"),void(m.innerText="⚠️ 분석용 도로망을 확보하지 못했습니다.");
 
-m.innerText=`🧩 길찾기 경로 ${R.length}개를 도로 Segment로 분해 중...`;
-let N=ee(te(R,t));if(!N.length)throw new Error("펜스 내부 Segment 생성 실패");
+m.innerText=`🧩 전체 도로망 ${osmSegments.length}구간 + TMAP ${R.length}경로를 결합 중...`;
+const routeSegments=R.length?ee(te(R,t)):[];let N=v568MergeRoadSegments(osmSegments,routeSegments);if(!N.length)throw new Error("펜스 내부 Segment 생성 실패");
 const entryModel=v56BuildEntryModel(R,t);
 const transportCrosswalkModel=v562BuildTransportCrosswalkModel(R,L,crosswalks,t,entryModel);
 m.innerText=`🧠 도로구간 ${N.length}개 동선·상가·교통·횡단연계 분석 중...`;
@@ -1226,6 +1309,7 @@ t.excluded&&(t.score=0)}));
 N.forEach(seg=>{const em=v56EntryMetric(seg,entryModel,t);seg.entryDistance=em.distance;seg.entryIndex=em.index;seg.entryRouteHits=em.routeHits;seg.transportLink=v562TransportLinkMetric(seg,transportCrosswalkModel,entryModel)});
 const tlRaw=N.map(x=>x.transportLink?.raw||0);
 N.forEach(seg=>{seg.transportLinkIndex=transportCrosswalkModel.validCount?Math.round(100*oe(tlRaw,seg.transportLink?.raw||0)):0});
+v568ApplyEvidence(N);
 const structure=v56Structure(N,entryModel,t);
 const profile=v56Profile(t,N,L,T,commerceRaw,{length:R.length,entryModel});profile.entry=v56CompleteProfile(entryModel,R.length);profile.transportLink=v562TransportLinkProfile(transportCrosswalkModel,N);profile.transportLinkAvailable=transportCrosswalkModel.validCount>0;
 const weights=v56Weights(profile);
@@ -1236,17 +1320,11 @@ seg.compositeContrib={flow:weights.flow*seg.flowIndex/100,demand:weights.demand*
 seg.candidateType=v56CandidateType(seg);seg.competition.teamKill&&(score=0);seg.excluded&&(score=0);seg.score=v56Clamp(score)});
 const $=N.filter((t=>!t.excluded)).map((t=>t.score)).sort(((t,e)=>t-e));
 N.forEach((t=>{t.topPercent=Math.max(1,101-Math.round(100*ae($,t.score)))})),
-function(t){
-[...t].slice(0,e.HEATMAP_MAX_SEGMENTS).forEach(seg=>{
-if(w?.length>=3&&(!Nt(seg.a.lat,seg.a.lng,w)||!Nt(seg.b.lat,seg.b.lng,w)))return;
-const flowEstimate=Math.round(v56Clamp(.42*(seg.flowIndex||0)+.20*(seg.commercialIndex||0)+.10*(seg.accessIndex||0)+.10*(seg.transportLinkIndex||0)+.10*(seg.entryIndex||0)+.08*(seg.captureIndex||0)));seg.flowEstimate=flowEstimate;
-const color=flowEstimate>=80?"#dc2626":flowEstimate>=65?"#f97316":flowEstimate>=50?"#eab308":flowEstimate>=35?"#16a34a":"#2563eb";
-const line=new kakao.maps.Polyline({path:[new kakao.maps.LatLng(seg.a.lat,seg.a.lng),new kakao.maps.LatLng(seg.b.lat,seg.b.lng)],strokeWeight:flowEstimate>=80?7:flowEstimate>=65?6:5,strokeColor:color,strokeOpacity:.70,strokeStyle:"solid",zIndex:72});
-analysisLines.push(line);flowLines.push(line);_.push(line)});applyMapDisplayFilters()}(N);
+v566RenderFlowLinesFromSegments(N,w||t);
 
 v564RenderInflows(entryModel,t);
 const H=ye(N,t,3);
-i={context:s,qualityIssues:l,segments:N,topSegments:H,routeCount:R.length,profile,weights,structure,entryModel,transportCrosswalkModel};
+i={context:s,qualityIssues:l,segments:N,topSegments:H,routeCount:R.length,roadSegmentCount:osmSegments.length,coverageRouteCount:coverageRoutes.length,profile,weights,structure,entryModel,transportCrosswalkModel};
 const F=H.length?Math.round(H.reduce(((t,e)=>t+e.score),0)/H.length):0;
 
 let j=`
@@ -1264,7 +1342,7 @@ let j=`
 <div class="rounded bg-pink-50 px-1 py-1"><span class="block text-slate-400">목적</span><b class="text-pink-700">${profile.destination}</b></div>
 </div>
 <div class="mt-2 rounded-lg bg-white/80 border border-indigo-100 px-2 py-1.5 text-[9.5px] text-slate-600 font-bold">지도 표시 필터에서 순위·유입 화살표·유동인구를 필요한 것만 켜서 볼 수 있습니다.</div>
-<p class="text-[9px] text-slate-400 mt-1.5">가중치는 상권 성격에 따라 제한적으로 조정됩니다. 추가 TMAP 호출 없이 기존 경로를 재사용합니다.</p>
+<p class="text-[9px] text-slate-400 mt-1.5">가중치는 상권 성격에 따라 제한적으로 조정됩니다. 전체 도로망을 기본 후보로 사용하고, 누락 핵심길만 최대 4개 TMAP 경로로 추가 검증합니다.</p>
 ${l.length?`<p class="text-[9.5px] text-amber-700 mt-1"><b>데이터 주의:</b> ${V([...new Set(l)].join(" · "))}</p>`:""}
 </div>`;
 
@@ -1292,13 +1370,15 @@ j+=`
 </div>
 <div class="bg-slate-50 border border-slate-100 rounded-lg p-2 text-[10px] space-y-1 mb-2">
 <div class="flex justify-between"><span>주요 보행경로 중첩</span><b>${e.routeHitIds.length}개</b></div>
+<div class="flex justify-between"><span>도로망 근거</span><b>${V(e.roadEvidence||"-")}</b></div>
+<div class="flex justify-between"><span>분석 신뢰도</span><b class="${(e.confidence||0)>=70?"text-emerald-700":(e.confidence||0)>=50?"text-amber-700":"text-slate-500"}">${Math.round(e.confidence||0)}점</b></div>
 <div class="flex justify-between"><span>관련시설 표본</span><b>${e.demand.targetCount}곳</b></div>
 <div class="flex justify-between"><span>60m 상업시설 표본</span><b>${e.commercial?.count60||0}곳</b></div>
 <div class="flex justify-between"><span>경쟁 렌즈샵 참고</span><b>${V(i)}</b></div>
 <div class="flex justify-between"><span>보행 분기방향</span><b>${e.junction.armCount}방향</b></div>
 <div class="flex justify-between"><span>대표 진입부부터</span><b>${Number.isFinite(e.entryDistance)?Math.round(e.entryDistance)+"m":"-"}</b></div>
 <div class="flex justify-between"><span>교통-횡단 연계</span><b class="text-teal-700">${e.transportLink?.routeCount?`${e.transportLink.routeCount}경로 · 유효횡단 ${e.transportLink.crosswalkCount}곳`:"없음"}</b></div>
-<div class="flex justify-between"><span>표시 위치</span><b class="text-emerald-700">TMAP 보행선 위</b></div>
+<div class="flex justify-between"><span>표시 위치</span><b class="text-emerald-700">${e.routeHitIds.length?"도로망 + TMAP 검증":"전체 도로망 기반"}</b></div>
 <div class="flex justify-between"><span>경쟁 환경</span><b>${i}</b></div>
 </div>
 ${s?`<div class="bg-blue-50/70 rounded-lg p-2 text-[9.5px] text-blue-700 mb-2"><b>주요 통과경로</b><br>${s}</div>`:""}
@@ -1310,10 +1390,11 @@ ${s?`<div class="bg-blue-50/70 rounded-lg p-2 text-[9.5px] text-blue-700 mb-2"><
 </div></div>
 </div>`}
 
-H.length||(j+=`<div class="text-xs text-rose-600 font-bold">TOP 후보를 만들 수 없습니다. 렌즈미 50m 제외, 최소 보행경로 ${e.TOP3_MIN_ROUTES}개, 점수 ${e.TOP3_MIN_SCORE}점 기준을 통과한 서로 다른 구간이 없습니다. 낮은 점수 후보를 억지로 TOP3에 채우지 않습니다.</div>`),
+H.length||(j+=`<div class="text-xs text-rose-600 font-bold">TOP 후보를 만들 수 없습니다. 렌즈미 50m 제외, 입점가능성·신뢰도 ${e.TOP3_MIN_CONFIDENCE}점·종합점수 ${e.TOP3_MIN_SCORE}점 기준을 통과한 서로 다른 구간이 없습니다. 낮은 근거 후보를 억지로 TOP3에 채우지 않습니다.</div>`),
 U(u),P.innerHTML=j,document.getElementById("rankingResultBox").classList.remove("hidden"),applyMapDisplayFilters(),
-lastAnalyzedFenceKey=analysisFenceKey,lastAnalyzedSavedId=expandedSavedAreaId||b||null,
-m.innerText=`적응형 TOP3 완료 · ${v56ProfileTop(profile)} · 유효 교통-횡단 ${transportCrosswalkModel.validCount}곳 · 보행경로 ${R.length}개 · 후보 ${H.length}곳`;
+lastAnalyzedFenceKey=analysisFenceKey,lastAnalyzedSavedId=expandedSavedAreaId||b||null;
+if(lastAnalyzedSavedId)savedAreaAnalysisCache.set(lastAnalyzedSavedId,{fenceKey:analysisFenceKey,analysis:i,html:P.innerHTML});
+m.innerText=`TOP3 완료 · 전체도로 ${osmSegments.length}구간 · TMAP ${R.length}경로${coverageRoutes.length?`(보완 ${coverageRoutes.length})`:""} · 유효 교통-횡단 ${transportCrosswalkModel.validCount}곳 · 후보 ${H.length}곳`;
 }catch(t){
 if("AbortError"===t.name)return void(m.textContent="입지 분석을 취소했습니다.");
 console.error("V45 분석 에러:",t),m.innerText="⚠️ 분석 중 에러가 발생했습니다. 개발자도구 Console을 확인하세요."}
