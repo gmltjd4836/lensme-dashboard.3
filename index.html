@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>렌즈미 상권 분석 대시보드 V56.4 저장상권 말풍선 UI</title>
+<title>렌즈미 상권 분석 대시보드 V56.5 지도 레이어·유동인구</title>
 <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css" rel="stylesheet">
 <script src="https://cdn.tailwindcss.com"></script>
 <style>
@@ -27,6 +27,13 @@ input[type=checkbox]{width:1.1rem;height:1.1rem;cursor:pointer}
 .poly-nametag-dot{width:8px;height:8px;border-radius:50%;background:#fb7185;box-shadow:0 0 0 4px rgba(251,113,133,.14);position:relative;z-index:1}
 .poly-nametag.active .poly-nametag-dot{background:#fff;box-shadow:0 0 0 4px rgba(255,255,255,.18)}
 .poly-nametag-text,.poly-nametag-arrow{position:relative;z-index:1}.poly-nametag-arrow{font-size:15px;line-height:1;opacity:.8}
+.map-layer-btn{background:rgba(255,255,255,.96);border:1px solid #e2e8f0;border-radius:12px;padding:7px 10px;font-size:11px;font-weight:900;color:#334155;box-shadow:0 5px 16px rgba(15,23,42,.14);backdrop-filter:blur(10px);transition:.15s;display:flex;align-items:center;gap:5px}
+.map-layer-btn:hover{transform:translateY(-1px);box-shadow:0 7px 18px rgba(15,23,42,.18)}
+.map-layer-menu{width:158px;background:rgba(255,255,255,.97);border:1px solid #e2e8f0;border-radius:14px;padding:8px;box-shadow:0 12px 30px rgba(15,23,42,.18);backdrop-filter:blur(12px)}
+.map-layer-row{display:flex;align-items:center;gap:7px;padding:6px 7px;border-radius:9px;font-size:11px;font-weight:800;color:#475569;cursor:pointer}
+.map-layer-row:hover{background:#f8fafc}.map-layer-row input{width:14px;height:14px}
+.flow-legend{background:rgba(255,255,255,.94);border:1px solid #e2e8f0;border-radius:12px;padding:9px 10px;box-shadow:0 6px 18px rgba(15,23,42,.14);backdrop-filter:blur(10px);min-width:116px}
+
 details>summary{list-style:none;cursor:pointer;font-weight:800;color:#334155;padding:4px 0;font-size:14px}
 details>summary::-webkit-details-marker{display:none}
 details>summary::before{content:'📁 '}
@@ -38,7 +45,7 @@ details[open]>summary::before{content:'📂 '}
 <div class="w-full md:w-1/4 bg-white border-r border-gray-200 p-6 flex flex-col shadow-lg z-20 overflow-y-auto">
 <h1 class="text-xl font-extrabold text-slate-800 border-b-4 border-indigo-500 pb-3 mb-4 flex justify-between items-center">
 <span>🗺️ 전국 상권 관제탑</span>
-<span class="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded-full font-bold">V56.4</span>
+<span class="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded-full font-bold">V56.5</span>
 </h1>
 
 <div class="mb-3">
@@ -106,6 +113,16 @@ details[open]>summary::before{content:'📂 '}
 상권을 그리면 TOP3를 확인할 수 있고, 저장 후에는 상권명 말풍선을 눌러 분석을 펼치거나 접을 수 있습니다.
 </div>
 
+<div id="mapLayerControl" class="absolute top-4 right-4 z-20 flex flex-col items-end gap-2">
+<button type="button" class="map-layer-btn" onclick="toggleMapLayerMenu(event)"><span>⚙</span><span>표시</span></button>
+<div id="mapLayerMenu" class="map-layer-menu hidden" onclick="event.stopPropagation()">
+<label class="map-layer-row"><input id="layer_rank" type="checkbox" checked onchange="applyMapDisplayFilters()"><span>순위</span></label>
+<label class="map-layer-row"><input id="layer_inflow" type="checkbox" checked onchange="applyMapDisplayFilters()"><span>유입 화살표</span></label>
+<label class="map-layer-row"><input id="layer_flow" type="checkbox" onchange="applyMapDisplayFilters()"><span>유동인구</span></label>
+<label class="map-layer-row"><input id="layer_names" type="checkbox" checked onchange="applyMapDisplayFilters()"><span>상권명</span></label>
+</div>
+</div>
+
 <div class="absolute top-16 left-4 z-10 bg-white/95 backdrop-blur-sm p-4 rounded-xl shadow-lg border border-slate-200 w-64 max-h-[80vh] overflow-y-auto hidden md:block">
 <p class="text-xs font-extrabold text-slate-800 mb-2.5 border-b pb-1 flex justify-between"><span>🎯 렌즈 전문 브랜드</span><span class="text-[10px] text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded">참고 수치</span></p>
 <div class="space-y-2 mb-4">
@@ -126,16 +143,16 @@ details[open]>summary::before{content:'📂 '}
 </div>
 </div>
 
-<div id="heatLegend" class="hidden">
-<p class="text-[11px] font-extrabold text-slate-700 mb-2">세부 분석선 · 조사 참고</p>
-<div class="space-y-1 text-[10px] font-bold text-slate-600">
-<div><span class="inline-block w-5 h-2 rounded mr-2" style="background:#2563eb"></span>낮음</div>
-<div><span class="inline-block w-5 h-2 rounded mr-2" style="background:#16a34a"></span>보통</div>
-<div><span class="inline-block w-5 h-2 rounded mr-2" style="background:#eab308"></span>상대적으로 높음</div>
-<div><span class="inline-block w-5 h-2 rounded mr-2" style="background:#f97316"></span>높음</div>
-<div><span class="inline-block w-5 h-2 rounded mr-2" style="background:#dc2626"></span>매우 높음</div>
+<div id="heatLegend" class="hidden absolute bottom-4 right-4 z-20 flow-legend">
+<p class="text-[10px] font-black text-slate-700 mb-1.5">유동인구</p>
+<div class="space-y-1 text-[9px] font-bold text-slate-600">
+<div><span class="inline-block w-4 h-1.5 rounded mr-1.5" style="background:#2563eb"></span>낮음</div>
+<div><span class="inline-block w-4 h-1.5 rounded mr-1.5" style="background:#16a34a"></span>보통</div>
+<div><span class="inline-block w-4 h-1.5 rounded mr-1.5" style="background:#eab308"></span>높은 편</div>
+<div><span class="inline-block w-4 h-1.5 rounded mr-1.5" style="background:#f97316"></span>높음</div>
+<div><span class="inline-block w-4 h-1.5 rounded mr-1.5" style="background:#dc2626"></span>매우 높음</div>
 </div>
-<p class="text-[9px] text-slate-400 mt-2 leading-tight">체크 시 전체 후보구간 표시 · 회색 점선: 렌즈미 50m 제외<br>※ 실제 통신 유동인구가 아닌 길찾기·시설 기반 상대평가</p>
+<p class="text-[8px] text-slate-400 mt-1.5">길찾기·시설 기반 추정지수</p>
 </div>
 <div id="map" class="w-full h-full"></div>
 </div>
@@ -159,12 +176,18 @@ if(!window.kakao?.maps?.services||!window.kakao?.maps?.drawing)throw document.ge
 new Error("Kakao SDK unavailable");
 let n="new",a="",o=null,r=null,s=[],i=null,l="",c=null,d=0,u=document.getElementById("map"),m=new kakao.maps.LatLng(37.498095,127.02761),g=m,f=new kakao.maps.Map(u,{center:m,
 level:3}),h=new kakao.maps.services.Places,p=new kakao.maps.services.Geocoder,y=[],_=[],A=new Map,E=new Map,M=new kakao.maps.CustomOverlay({xAnchor:.5,yAnchor:1.5,zIndex:150
-}),w=null,b=null,k={},x={},I=!1,S=null,T=!1,O=0,v=[],L={},C={},R=null,P=[],N=[],analysisLines=[],expandedSavedAreaId=null,lastAnalyzedSavedId=null,lastAnalyzedFenceKey="";
+}),w=null,b=null,k={},x={},I=!1,S=null,T=!1,O=0,v=[],L={},C={},R=null,P=[],N=[],analysisLines=[],rankOverlays=[],inflowOverlays=[],flowLines=[],expandedSavedAreaId=null,lastAnalyzedSavedId=null,lastAnalyzedFenceKey="";
 
 function D(t){return String(t.id||`${t.place_name}|${t.x}|${t.y}`)}
 function v564FenceKey(path){return(Array.isArray(path)?path:[]).map(p=>`${Number(p.lat).toFixed(6)},${Number(p.lng).toFixed(6)}`).join("|")}
-function v564HideAnalysis(){_.forEach(o=>{try{o.setMap(null)}catch(e){}});document.getElementById("rankingResultBox")?.classList.add("hidden")}
-function v564ShowAnalysis(){const showLines=!!document.getElementById("showAnalysisLines")?.checked;_.forEach(o=>{try{analysisLines.includes(o)&&!showLines?o.setMap(null):o.setMap(f)}catch(e){}});const box=document.getElementById("rankingResultBox"),txt=document.getElementById("rankingResultText");if(box&&txt?.innerHTML.trim())box.classList.remove("hidden")}
+function layerChecked(id,defaultValue=true){const el=document.getElementById(id);return el?!!el.checked:defaultValue}
+function toggleMapLayerMenu(ev){ev?.stopPropagation?.();document.getElementById("mapLayerMenu")?.classList.toggle("hidden")}
+function applyMapDisplayFilters(){
+const expanded=!!expandedSavedAreaId||(!b&&!!w),showRank=expanded&&layerChecked("layer_rank",true),showInflow=expanded&&layerChecked("layer_inflow",true),showFlow=expanded&&layerChecked("layer_flow",false),showNames=layerChecked("layer_names",true);
+rankOverlays.forEach(o=>{try{o.setMap(showRank?f:null)}catch(e){}});inflowOverlays.forEach(o=>{try{o.setMap(showInflow?f:null)}catch(e){}});flowLines.forEach(o=>{try{o.setMap(showFlow?f:null)}catch(e){}});Object.values(x).forEach(o=>{try{o.setMap(showNames?f:null)}catch(e){}});document.getElementById("heatLegend")?.classList.toggle("hidden",!showFlow);
+}
+function v564HideAnalysis(){_.forEach(o=>{try{o.setMap(null)}catch(e){}});flowLines.forEach(o=>{try{o.setMap(null)}catch(e){}});document.getElementById("heatLegend")?.classList.add("hidden");document.getElementById("rankingResultBox")?.classList.add("hidden")}
+function v564ShowAnalysis(){_.forEach(o=>{try{o.setMap(f)}catch(e){}});applyMapDisplayFilters();const box=document.getElementById("rankingResultBox"),txt=document.getElementById("rankingResultText");if(box&&txt?.innerHTML.trim())box.classList.remove("hidden")}
 function v564SetSavedAreaVisual(activeId=null){Object.entries(k).forEach(([id,poly])=>{const active=id===activeId;poly.setOptions({fillColor:active?"#e11d48":"#f43f5e",fillOpacity:active?.22:.075,strokeColor:active?"#be123c":"#e11d48",strokeOpacity:active?.95:.65,strokeWeight:active?4:2})})}
 function isRelocationStore(t,ctx){return !!(ctx&&ctx.mode==="reloc"&&Array.isArray(ctx.relocationStoreIds)&&ctx.relocationStoreIds.includes(D(t)))}
 function U(t){if(t!==O||r?.signal.aborted)throw new DOMException("분석 취소","AbortError")}
@@ -637,6 +660,7 @@ const poly=W(area.geometry||area.path,{strokeWeight:active?4:2,strokeColor:activ
 const tag=`<div style="position:relative;z-index:110;transform:translateY(-14px)"><button type="button" class="poly-nametag ${active?"active":""}" onclick="event.stopPropagation();selectSavedPolygon('${area.id}')"><span class="poly-nametag-dot"></span><span class="poly-nametag-text">${V(area.name)}</span><span class="poly-nametag-arrow">${active?"−":"›"}</span></button></div>`;
 const ov=new kakao.maps.CustomOverlay({position:new kakao.maps.LatLng(area.centerLat,area.centerLng),content:tag,xAnchor:.5,yAnchor:.5,zIndex:110});ov.setMap(f);x[area.id]=ov
 }cityBody.appendChild(dongEl)}root.appendChild(cityEl)}
+applyMapDisplayFilters()
 }
 
 function deletePolygon(t){if(confirm("이 상권 경계를 삭제하시겠습니까?"))return T?alert("분석 종료 후 삭제해주세요."):void(X(Lt.filter((e=>e.id!==t)))&&(b===t&&clearActivePolygon(),Ct()))}
@@ -660,10 +684,8 @@ expandedSavedAreaId=null;b=null,R=null,w=null,S=null,v564HideAnalysis(),
 document.getElementById("targetLocationInput").innerText="선택 없음",document.getElementById("btnClearPolygon").classList.add("hidden"),
 document.getElementById("comp_count").innerText="-개",document.getElementById("anchor_count").innerText="-개",document.getElementById("rankingResultText").innerHTML="",v564SetSavedAreaVisual(null),Ct(),
 v.forEach((t=>{const n=L[t.id];if(n){const a=kt(t);n.setOptions({strokeWeight:3,fillColor:a.fill,fillOpacity:e.AUTO_AREA_FILL_OPACITY})}})),Rt(),t||I||Ft()}
-function Rt(){_.forEach((t=>t.setMap(null))),_=[],analysisLines=[]}
-function toggleAnalysisLines(){
-const t=!!document.getElementById("showAnalysisLines")?.checked;
-analysisLines.forEach((e=>e.setMap(t?f:null))),document.getElementById("heatLegend")?.classList.toggle("hidden",!t)}
+function Rt(){_.forEach((t=>{try{t.setMap(null)}catch(e){}})),flowLines.forEach((t=>{try{t.setMap(null)}catch(e){}})),_=[],analysisLines=[],rankOverlays=[],inflowOverlays=[],flowLines=[],document.getElementById("heatLegend")?.classList.add("hidden")}
+function toggleAnalysisLines(){applyMapDisplayFilters()}
 
 function Pt(t,e,n,a){
 const o=(n-t)*Math.PI/180,r=(a-e)*Math.PI/180,s=Math.sin(o/2)**2+Math.cos(t*Math.PI/180)*Math.cos(n*Math.PI/180)*Math.sin(r/2)**2;
@@ -877,11 +899,11 @@ function ie(t,rankIdx,n){
 const a=["#7f1d1d","#1d4ed8","#047857"][rankIdx]||"#334155",o=t.recommendationWindow||he(t,28),p=t.displayPoint||o.center||t.mid;
 t.recommendationWindow=o,t.displayPoint={...p};
 const r=new kakao.maps.Polyline({path:o.path.map((t=>new kakao.maps.LatLng(t.lat,t.lng))),strokeWeight:9,strokeColor:a,strokeOpacity:.96,strokeStyle:"solid"});
-r.setMap(f),_.push(r);
+r.setMap(f),_.push(r),rankOverlays.push(r);
 const s=rankIdx+1,i=`${s}위`,l=new kakao.maps.CustomOverlay({
 position:new kakao.maps.LatLng(p.lat,p.lng),
 content:`<div style="position:relative;z-index:999;text-align:center;pointer-events:none"><div style="background:${a};color:white;padding:5px 10px;border-radius:9px;font-weight:900;font-size:12px;border:2px solid white;box-shadow:0 3px 7px rgba(0,0,0,.35);white-space:nowrap;margin-bottom:3px">${i}</div><div style="width:12px;height:12px;border-radius:50%;background:#fff;border:4px solid ${a};box-shadow:0 1px 4px rgba(0,0,0,.4);margin:0 auto"></div></div>`,
-xAnchor:.5,yAnchor:1});return l.setMap(f),_.push(l),i}
+xAnchor:.5,yAnchor:1});return l.setMap(f),_.push(l),rankOverlays.push(l),applyMapDisplayFilters(),i}
 function le(t,e){
 return e?`${tradeZoneLabel(t)}의 ${candidateTypeLabel(t)}입니다. ${t.routeHitIds.length>=5?"여러 핵심 시설 간 보행경로가 겹치고":t.routeHitIds.length>=3?"복수 보행경로가 겹치며":"주요 보행경로가 통과하며"} 주변 60m 상업시설 표본 ${t.commercial?.count60||0}곳을 함께 반영했습니다. ${t.transportLink?.routeCount?`역출구·버스와 가까운 유효 횡단지점을 거쳐 이 길목으로 이어지는 보행경로 ${t.transportLink.routeCount}개가 확인됩니다. `:""}${t.entryIndex>=75?"상권 진입 흐름과도 강하게 연결됩니다. ":""}${t.competition.competitorCount80>0?`80m 내 경쟁 렌즈샵 ${t.competition.competitorCount80}곳이 있으나 TOP3 점수에는 반영하지 않습니다.`:"80m 내 주요 경쟁 렌즈샵은 없으며 경쟁사 유무는 TOP3 점수에 반영하지 않습니다."} 1층 여부·전면폭·간판 가시성·임대료는 현장에서 최종 확인하세요.`:"길찾기 경로가 확보되지 않아 추천구간 분석을 수행하지 못했습니다."}
 
@@ -1000,12 +1022,18 @@ const clusters=entryModel?.clusters||[],main=clusters[0];if(!main)return null;co
 for(const cluster of clusters.slice(1)){
 const score=(cluster.weight||0)+.35*(cluster.members?.length||0),dist=Pt(main.center.lat,main.center.lng,cluster.center.lat,cluster.center.lng);
 if(score>=Math.max(1.2,mainScore*.30)&&dist>=55)return v564ClusterRepresentative(cluster)}return null}
-function v564RenderInflowEntry(entry,labelText,isMain){
-if(!entry?.route?.coords?.length||!entry.point)return;const before=v563WalkBeforeEntry(entry,isMain?58:48),after=v563WalkAfterEntry(entry,isMain?36:28),path=[...before.slice(0,-1),...after];if(path.length<2)return;
-const color=isMain?"#b91c1c":"#ef4444",line=new kakao.maps.Polyline({path:path.map(p=>new kakao.maps.LatLng(p.lat,p.lng)),strokeWeight:isMain?5:4,strokeColor:color,strokeOpacity:isMain?.96:.76,strokeStyle:"solid",endArrow:true,zIndex:isMain?132:128});line.setMap(f);_.push(line);
-const start=path[0],label=new kakao.maps.CustomOverlay({position:new kakao.maps.LatLng(start.lat,start.lng),xAnchor:.5,yAnchor:1.25,zIndex:isMain?136:131,content:`<div style="pointer-events:none;background:${isMain?"#fff1f2":"rgba(255,255,255,.96)"};border:${isMain?2:1}px solid ${color};color:${isMain?"#991b1b":"#dc2626"};font-size:${isMain?10:9}px;font-weight:900;border-radius:999px;padding:${isMain?"4px 9px":"3px 8px"};box-shadow:0 3px 9px rgba(127,29,29,.18);white-space:nowrap">${labelText}</div>`});label.setMap(f);_.push(label)}
-function v564RenderInflows(entryModel){
-const main=entryModel?.primary;if(main)v564RenderInflowEntry(main,"메인 유입",true);const secondary=v564SecondaryEntry(entryModel);if(secondary)v564RenderInflowEntry(secondary,"보조 유입",false)}
+function v564InsideEntryPath(entry,isMain,fencePath){
+const after=v563WalkAfterEntry(entry,isMain?92:72);if(after.length<2)return[];const path=[after[0]];
+for(let j=1;j<after.length;j++){const p=after[j];if(fencePath&&fencePath.length>=3&&!Nt(p.lat,p.lng,fencePath))break;path.push(p)}
+return path
+}
+function v564RenderInflowEntry(entry,labelText,isMain,fencePath){
+if(!entry?.route?.coords?.length||!entry.point)return;const path=v564InsideEntryPath(entry,isMain,fencePath);if(path.length<2||At([{a:path[0],b:path[path.length-1]}])<12)return;
+const color=isMain?"#b91c1c":"#ef4444",line=new kakao.maps.Polyline({path:path.map(p=>new kakao.maps.LatLng(p.lat,p.lng)),strokeWeight:isMain?5:3,strokeColor:color,strokeOpacity:isMain?.96:.68,strokeStyle:"solid",endArrow:true,zIndex:isMain?132:128});line.setMap(f);_.push(line);inflowOverlays.push(line);
+const lp=path[Math.min(path.length-1,1)],label=new kakao.maps.CustomOverlay({position:new kakao.maps.LatLng(lp.lat,lp.lng),xAnchor:.5,yAnchor:1.35,zIndex:isMain?136:131,content:`<div style="pointer-events:none;background:${isMain?"#fff1f2":"rgba(255,255,255,.94)"};border:${isMain?2:1}px solid ${color};color:${isMain?"#991b1b":"#dc2626"};font-size:${isMain?9:8}px;font-weight:900;border-radius:999px;padding:${isMain?"3px 7px":"2px 6px"};box-shadow:0 3px 8px rgba(127,29,29,.15);white-space:nowrap">${labelText}</div>`});label.setMap(f);_.push(label);inflowOverlays.push(label)
+}
+function v564RenderInflows(entryModel,fencePath){
+const main=entryModel?.primary;if(main)v564RenderInflowEntry(main,"메인 유입",true,fencePath);const secondary=v564SecondaryEntry(entryModel);if(secondary)v564RenderInflowEntry(secondary,"보조 유입",false,fencePath);applyMapDisplayFilters()}
 function v56ProfileTop(t){const m={mainFlow:"메인동선",commercial:"상가밀집",transport:"교통접근",transportLink:"교통연계",entry:"진입효과",destination:"목적시설"};return Object.entries(t).filter(([k,v])=>m[k]&&Number.isFinite(v)).sort((a,b)=>b[1]-a[1]).slice(0,3).map(([k,v])=>`${m[k]} ${v}`).join(" · ")}
 
 
@@ -1209,14 +1237,14 @@ seg.candidateType=v56CandidateType(seg);seg.competition.teamKill&&(score=0);seg.
 const $=N.filter((t=>!t.excluded)).map((t=>t.score)).sort(((t,e)=>t-e));
 N.forEach((t=>{t.topPercent=Math.max(1,101-Math.round(100*ae($,t.score)))})),
 function(t){
-[...t].sort(((t,e)=>e.score-t.score)).slice(0,e.HEATMAP_MAX_SEGMENTS).forEach((t=>{
-const e=new kakao.maps.Polyline({
-path:[new kakao.maps.LatLng(t.a.lat,t.a.lng),new kakao.maps.LatLng(t.b.lat,t.b.lng)],strokeWeight:t.score>=80?9:7,
-strokeColor:t.excluded?"#64748b":(n=t.score,n>=80?"#dc2626":n>=65?"#f97316":n>=50?"#eab308":n>=35?"#16a34a":"#2563eb"),
-strokeOpacity:.72,strokeStyle:t.excluded?"shortdash":"solid"});
-var n;analysisLines.push(e),document.getElementById("showAnalysisLines")?.checked&&e.setMap(f),_.push(e)}))}(N);
+[...t].slice(0,e.HEATMAP_MAX_SEGMENTS).forEach(seg=>{
+if(w?.length>=3&&(!Nt(seg.a.lat,seg.a.lng,w)||!Nt(seg.b.lat,seg.b.lng,w)))return;
+const flowEstimate=Math.round(v56Clamp(.42*(seg.flowIndex||0)+.20*(seg.commercialIndex||0)+.10*(seg.accessIndex||0)+.10*(seg.transportLinkIndex||0)+.10*(seg.entryIndex||0)+.08*(seg.captureIndex||0)));seg.flowEstimate=flowEstimate;
+const color=flowEstimate>=80?"#dc2626":flowEstimate>=65?"#f97316":flowEstimate>=50?"#eab308":flowEstimate>=35?"#16a34a":"#2563eb";
+const line=new kakao.maps.Polyline({path:[new kakao.maps.LatLng(seg.a.lat,seg.a.lng),new kakao.maps.LatLng(seg.b.lat,seg.b.lng)],strokeWeight:flowEstimate>=80?7:flowEstimate>=65?6:5,strokeColor:color,strokeOpacity:.70,strokeStyle:"solid",zIndex:72});
+analysisLines.push(line);flowLines.push(line);_.push(line)});applyMapDisplayFilters()}(N);
 
-v564RenderInflows(entryModel);
+v564RenderInflows(entryModel,t);
 const H=ye(N,t,3);
 i={context:s,qualityIssues:l,segments:N,topSegments:H,routeCount:R.length,profile,weights,structure,entryModel,transportCrosswalkModel};
 const F=H.length?Math.round(H.reduce(((t,e)=>t+e.score),0)/H.length):0;
@@ -1235,7 +1263,7 @@ let j=`
 <div class="rounded bg-amber-50 px-1 py-1"><span class="block text-slate-400">진입</span><b class="text-amber-700">${profile.entry}</b></div>
 <div class="rounded bg-pink-50 px-1 py-1"><span class="block text-slate-400">목적</span><b class="text-pink-700">${profile.destination}</b></div>
 </div>
-<div class="mt-2 rounded-lg bg-white/80 border border-indigo-100 px-2 py-1.5 text-[9.5px] text-slate-600 font-bold">지도 표시는 TOP3와 메인·보조 유입 방향만 간단히 표시합니다.</div>
+<div class="mt-2 rounded-lg bg-white/80 border border-indigo-100 px-2 py-1.5 text-[9.5px] text-slate-600 font-bold">지도 표시 필터에서 순위·유입 화살표·유동인구를 필요한 것만 켜서 볼 수 있습니다.</div>
 <p class="text-[9px] text-slate-400 mt-1.5">가중치는 상권 성격에 따라 제한적으로 조정됩니다. 추가 TMAP 호출 없이 기존 경로를 재사용합니다.</p>
 ${l.length?`<p class="text-[9.5px] text-amber-700 mt-1"><b>데이터 주의:</b> ${V([...new Set(l)].join(" · "))}</p>`:""}
 </div>`;
@@ -1283,7 +1311,7 @@ ${s?`<div class="bg-blue-50/70 rounded-lg p-2 text-[9.5px] text-blue-700 mb-2"><
 </div>`}
 
 H.length||(j+=`<div class="text-xs text-rose-600 font-bold">TOP 후보를 만들 수 없습니다. 렌즈미 50m 제외, 최소 보행경로 ${e.TOP3_MIN_ROUTES}개, 점수 ${e.TOP3_MIN_SCORE}점 기준을 통과한 서로 다른 구간이 없습니다. 낮은 점수 후보를 억지로 TOP3에 채우지 않습니다.</div>`),
-U(u),P.innerHTML=j,document.getElementById("rankingResultBox").classList.remove("hidden"),
+U(u),P.innerHTML=j,document.getElementById("rankingResultBox").classList.remove("hidden"),applyMapDisplayFilters(),
 lastAnalyzedFenceKey=analysisFenceKey,lastAnalyzedSavedId=expandedSavedAreaId||b||null,
 m.innerText=`적응형 TOP3 완료 · ${v56ProfileTop(profile)} · 유효 교통-횡단 ${transportCrosswalkModel.validCount}곳 · 보행경로 ${R.length}개 · 후보 ${H.length}곳`;
 }catch(t){
