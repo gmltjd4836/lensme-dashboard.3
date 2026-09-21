@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>렌즈미 상권 분석 대시보드 V56.3 교통-횡단 연계 TOP3</title>
+<title>렌즈미 상권 분석 대시보드 V56.4 저장상권 말풍선 UI</title>
 <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css" rel="stylesheet">
 <script src="https://cdn.tailwindcss.com"></script>
 <style>
@@ -19,7 +19,14 @@ input[type=checkbox]{width:1.1rem;height:1.1rem;cursor:pointer}
 .chk-blue{accent-color:#3b82f6}.chk-emerald{accent-color:#059669}
 .store-tooltip{background:#fff;border:2px solid #334155;border-radius:8px;padding:6px 12px;font-size:13px;font-weight:800;color:#0f172a;box-shadow:0 4px 10px rgba(0,0,0,.2);white-space:nowrap;transform:translateY(-10px);z-index:200}
 .store-tooltip::after{content:'';position:absolute;bottom:-6px;left:50%;transform:translateX(-50%);border-width:6px 6px 0;border-style:solid;border-color:#334155 transparent transparent transparent}
-.poly-nametag{background:rgba(255,255,255,.95);border:2px solid #be185d;border-radius:8px;padding:4px 10px;color:#be185d;font-size:13px;font-weight:900;box-shadow:0 4px 8px rgba(0,0,0,.2);cursor:pointer;white-space:nowrap;pointer-events:none;margin-top:-15px;margin-left:-50%}
+.poly-nametag{background:rgba(255,255,255,.96);border:1px solid rgba(225,29,72,.22);border-radius:999px;padding:8px 12px;color:#9f1239;font-size:12px;font-weight:900;box-shadow:0 8px 22px rgba(15,23,42,.16);cursor:pointer;white-space:nowrap;pointer-events:auto;backdrop-filter:blur(10px);transition:.18s ease;display:flex;align-items:center;gap:7px;position:relative}
+.poly-nametag:hover{transform:translateY(-2px);box-shadow:0 11px 26px rgba(15,23,42,.22);border-color:rgba(225,29,72,.45)}
+.poly-nametag::after{content:'';position:absolute;left:50%;bottom:-7px;transform:translateX(-50%);width:12px;height:12px;background:inherit;border-right:1px solid rgba(225,29,72,.22);border-bottom:1px solid rgba(225,29,72,.22);rotate:45deg;border-radius:2px}
+.poly-nametag.active{background:linear-gradient(135deg,#e11d48,#be123c);color:#fff;border-color:#be123c;box-shadow:0 10px 28px rgba(190,18,60,.28)}
+.poly-nametag.active::after{border-color:#be123c}
+.poly-nametag-dot{width:8px;height:8px;border-radius:50%;background:#fb7185;box-shadow:0 0 0 4px rgba(251,113,133,.14);position:relative;z-index:1}
+.poly-nametag.active .poly-nametag-dot{background:#fff;box-shadow:0 0 0 4px rgba(255,255,255,.18)}
+.poly-nametag-text,.poly-nametag-arrow{position:relative;z-index:1}.poly-nametag-arrow{font-size:15px;line-height:1;opacity:.8}
 details>summary{list-style:none;cursor:pointer;font-weight:800;color:#334155;padding:4px 0;font-size:14px}
 details>summary::-webkit-details-marker{display:none}
 details>summary::before{content:'📁 '}
@@ -31,7 +38,7 @@ details[open]>summary::before{content:'📂 '}
 <div class="w-full md:w-1/4 bg-white border-r border-gray-200 p-6 flex flex-col shadow-lg z-20 overflow-y-auto">
 <h1 class="text-xl font-extrabold text-slate-800 border-b-4 border-indigo-500 pb-3 mb-4 flex justify-between items-center">
 <span>🗺️ 전국 상권 관제탑</span>
-<span class="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded-full font-bold">V56.3</span>
+<span class="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded-full font-bold">V56.4</span>
 </h1>
 
 <div class="mb-3">
@@ -66,7 +73,7 @@ details[open]>summary::before{content:'📂 '}
 <label class="underline cursor-pointer">복원<input type="file" accept=".json" class="hidden" onchange="importAreas(this)"></label>
 </div>
 </div>
-<div id="savedPolygonTree" class="max-h-52 overflow-y-auto space-y-1 text-sm"></div>
+<div id="savedPolygonTree" class="max-h-52 overflow-y-auto space-y-1 text-sm"></div><p class="text-[9.5px] text-slate-400 mt-2">지도 말풍선을 누르면 TOP3·유입방향이 펼쳐지고, 다시 누르면 접힙니다.</p>
 </div>
 
 <div class="mb-2 bg-white p-3 rounded-xl border border-indigo-200 shadow-sm">
@@ -96,7 +103,7 @@ details[open]>summary::before{content:'📂 '}
 </div>
 <div id="tab-map" class="flex-grow w-full h-full relative">
 <div id="statusMessage" class="absolute top-4 left-1/2 transform -translate-x-1/2 z-10 bg-white/95 backdrop-blur-sm px-6 py-2 rounded-full shadow-md text-sm font-bold text-slate-700 border border-slate-200 text-center transition-all">
-지역 검색 → 상권 경계를 직접 그리면 상권 성격·진입부·중간·안쪽을 파악한 뒤 TOP3를 자동 분석합니다.
+상권을 그리면 TOP3를 확인할 수 있고, 저장 후에는 상권명 말풍선을 눌러 분석을 펼치거나 접을 수 있습니다.
 </div>
 
 <div class="absolute top-16 left-4 z-10 bg-white/95 backdrop-blur-sm p-4 rounded-xl shadow-lg border border-slate-200 w-64 max-h-[80vh] overflow-y-auto hidden md:block">
@@ -152,9 +159,13 @@ if(!window.kakao?.maps?.services||!window.kakao?.maps?.drawing)throw document.ge
 new Error("Kakao SDK unavailable");
 let n="new",a="",o=null,r=null,s=[],i=null,l="",c=null,d=0,u=document.getElementById("map"),m=new kakao.maps.LatLng(37.498095,127.02761),g=m,f=new kakao.maps.Map(u,{center:m,
 level:3}),h=new kakao.maps.services.Places,p=new kakao.maps.services.Geocoder,y=[],_=[],A=new Map,E=new Map,M=new kakao.maps.CustomOverlay({xAnchor:.5,yAnchor:1.5,zIndex:150
-}),w=null,b=null,k={},x={},I=!1,S=null,T=!1,O=0,v=[],L={},C={},R=null,P=[],N=[],analysisLines=[];
+}),w=null,b=null,k={},x={},I=!1,S=null,T=!1,O=0,v=[],L={},C={},R=null,P=[],N=[],analysisLines=[],expandedSavedAreaId=null,lastAnalyzedSavedId=null,lastAnalyzedFenceKey="";
 
 function D(t){return String(t.id||`${t.place_name}|${t.x}|${t.y}`)}
+function v564FenceKey(path){return(Array.isArray(path)?path:[]).map(p=>`${Number(p.lat).toFixed(6)},${Number(p.lng).toFixed(6)}`).join("|")}
+function v564HideAnalysis(){_.forEach(o=>{try{o.setMap(null)}catch(e){}});document.getElementById("rankingResultBox")?.classList.add("hidden")}
+function v564ShowAnalysis(){const showLines=!!document.getElementById("showAnalysisLines")?.checked;_.forEach(o=>{try{analysisLines.includes(o)&&!showLines?o.setMap(null):o.setMap(f)}catch(e){}});const box=document.getElementById("rankingResultBox"),txt=document.getElementById("rankingResultText");if(box&&txt?.innerHTML.trim())box.classList.remove("hidden")}
+function v564SetSavedAreaVisual(activeId=null){Object.entries(k).forEach(([id,poly])=>{const active=id===activeId;poly.setOptions({fillColor:active?"#e11d48":"#f43f5e",fillOpacity:active?.22:.075,strokeColor:active?"#be123c":"#e11d48",strokeOpacity:active?.95:.65,strokeWeight:active?4:2})})}
 function isRelocationStore(t,ctx){return !!(ctx&&ctx.mode==="reloc"&&Array.isArray(ctx.relocationStoreIds)&&ctx.relocationStoreIds.includes(D(t)))}
 function U(t){if(t!==O||r?.signal.aborted)throw new DOMException("분석 취소","AbortError")}
 function $(t){T=t;const b=document.getElementById("cancelAnalysisBtn");b&&b.classList.toggle("hidden",!t)}
@@ -583,9 +594,14 @@ const a=K(e),region=await dt(a.lng,a.lat),o=old?.id||("poly_"+Date.now()),r={...
 si:region.si||old?.si||"직접 등록",gu:region.gu||old?.gu||"전체",dong:region.dong||old?.dong||"거리 상권",centerLat:a.lat,centerLng:a.lng,
 reviewStatus:"사용자 직접 작성",savedAt:(new Date).toISOString()};
 const next=old?[...Lt.filter(t=>t.id!==old.id),r]:[...Lt,r];
-X(next)&&(redrawTarget=null,vt.clear(),I=!1,S=null,setDrawUi(!1),Ct(),selectSavedPolygon(o),
-document.getElementById("statusMessage").innerText=`✅ ${n.trim()} 경계를 저장했습니다. 이 상권 안에서 분석합니다.`)
-}
+if(X(next)){
+const sameFence=lastAnalyzedFenceKey&&lastAnalyzedFenceKey===v564FenceKey(S)&&i?.topSegments?.length&&_.length;
+lastAnalyzedSavedId=sameFence?o:null;expandedSavedAreaId=null;b=null;w=null;R=null;
+redrawTarget=null,vt.clear(),I=!1,S=null,setDrawUi(!1),v564HideAnalysis(),Ct();
+document.getElementById("targetLocationInput").innerText=`저장됨 · ${n.trim()}`;
+document.getElementById("btnClearPolygon").classList.add("hidden");
+document.getElementById("statusMessage").innerText=`✅ ${n.trim()} 저장 완료 · 지도 말풍선을 누르면 TOP3와 유입방향이 펼쳐집니다.`
+}}
 
 function renamePolygon(id){
 if(T)return alert("분석 종료 후 이름을 변경해주세요.");
@@ -615,30 +631,34 @@ const cityEl=document.createElement("details");cityEl.open=!0;cityEl.innerHTML=`
 for(const dong of Object.keys(grouped[city]).sort((a,b)=>a.localeCompare(b,"ko"))){
 const dongEl=document.createElement("details");dongEl.open=!0;dongEl.innerHTML=`<summary>${V(dong)}</summary><div class="tree-indent"></div>`;const dongBody=dongEl.querySelector(".tree-indent");
 for(const area of grouped[city][dong].sort((a,b)=>String(a.name).localeCompare(String(b.name),"ko"))){
-const row=document.createElement("div");row.className="flex items-center gap-1 py-1.5 border-b border-slate-100 last:border-0";
-row.innerHTML=`<button class="min-w-0 flex-1 text-left font-extrabold text-rose-600 hover:underline truncate" onclick="selectSavedPolygon('${area.id}')">📍 ${V(area.name)}</button><button onclick="renamePolygon('${area.id}')" title="이름 변경" class="text-[10px] px-1.5 py-1 rounded bg-slate-50 text-slate-500">이름</button><button onclick="redrawPolygon('${area.id}')" title="경계 수정" class="text-[10px] px-1.5 py-1 rounded bg-slate-50 text-slate-500">수정</button><button onclick="deletePolygon('${area.id}')" title="삭제" class="text-[10px] px-1.5 py-1 rounded bg-slate-50 text-slate-400">×</button>`;dongBody.appendChild(row);
-const poly=W(area.geometry||area.path,{strokeWeight:2,strokeColor:"#be185d",strokeOpacity:.8,fillOpacity:.1,fillColor:"#f43f5e"},(()=>selectSavedPolygon(area.id)));poly.setMap(f);k[area.id]=poly;
-const tag=`<div style="position:relative;z-index:80"><div class="poly-nametag">${V(area.name)}</div></div>`;const ov=new kakao.maps.CustomOverlay({position:new kakao.maps.LatLng(area.centerLat,area.centerLng),content:tag,xAnchor:.5,yAnchor:.5});ov.setMap(f);x[area.id]=ov
+const active=expandedSavedAreaId===area.id,row=document.createElement("div");row.className=`flex items-center gap-1 py-1.5 px-1 rounded-lg border-b border-slate-100 last:border-0 ${active?"bg-rose-50":""}`;
+row.innerHTML=`<button class="min-w-0 flex-1 text-left font-extrabold ${active?"text-rose-700":"text-slate-700"} hover:text-rose-600 truncate" onclick="selectSavedPolygon('${area.id}')">${active?"●":"○"} ${V(area.name)}</button><button onclick="renamePolygon('${area.id}')" title="이름 변경" class="text-[10px] px-1.5 py-1 rounded bg-slate-50 text-slate-500">이름</button><button onclick="redrawPolygon('${area.id}')" title="경계 수정" class="text-[10px] px-1.5 py-1 rounded bg-slate-50 text-slate-500">수정</button><button onclick="deletePolygon('${area.id}')" title="삭제" class="text-[10px] px-1.5 py-1 rounded bg-slate-50 text-slate-400">×</button>`;dongBody.appendChild(row);
+const poly=W(area.geometry||area.path,{strokeWeight:active?4:2,strokeColor:active?"#be123c":"#e11d48",strokeOpacity:active?.95:.65,fillOpacity:active?.22:.075,fillColor:active?"#e11d48":"#f43f5e"},(()=>selectSavedPolygon(area.id)));poly.setMap(f);k[area.id]=poly;
+const tag=`<div style="position:relative;z-index:110;transform:translateY(-14px)"><button type="button" class="poly-nametag ${active?"active":""}" onclick="event.stopPropagation();selectSavedPolygon('${area.id}')"><span class="poly-nametag-dot"></span><span class="poly-nametag-text">${V(area.name)}</span><span class="poly-nametag-arrow">${active?"−":"›"}</span></button></div>`;
+const ov=new kakao.maps.CustomOverlay({position:new kakao.maps.LatLng(area.centerLat,area.centerLng),content:tag,xAnchor:.5,yAnchor:.5,zIndex:110});ov.setMap(f);x[area.id]=ov
 }cityBody.appendChild(dongEl)}root.appendChild(cityEl)}
 }
 
 function deletePolygon(t){if(confirm("이 상권 경계를 삭제하시겠습니까?"))return T?alert("분석 종료 후 삭제해주세요."):void(X(Lt.filter((e=>e.id!==t)))&&(b===t&&clearActivePolygon(),Ct()))}
 function selectSavedPolygon(t){
 if(T)return alert("현재 분석이 진행 중입니다. 분석이 끝난 뒤 다시 눌러주세요.");
-let n=Lt.find((e=>e.id===t));if(!n)return;
-R=null,b=t,w=F(n.geometry||n.path),v.forEach((t=>{const n=L[t.id];if(n){const a=kt(t);n.setOptions({strokeWeight:3,fillColor:a.fill,fillOpacity:e.AUTO_AREA_FILL_OPACITY})}})),
-document.getElementById("targetLocationInput").innerText=n.name,document.getElementById("btnClearPolygon").classList.remove("hidden");
-let a=new kakao.maps.LatLngBounds;
-w.forEach((t=>a.extend(new kakao.maps.LatLng(t.lat,t.lng)))),f.setBounds(a),g=a.getCenter(),
-Object.values(k).forEach((t=>t.setOptions({fillColor:"#f43f5e",fillOpacity:.1,strokeWeight:2}))),
-k[t]&&k[t].setOptions({fillColor:"#ec4899",fillOpacity:.25,strokeWeight:4}),ce(w)}
+const area=Lt.find(e=>e.id===t);if(!area)return;
+if(expandedSavedAreaId===t){
+expandedSavedAreaId=null;b=null;w=null;R=null;v564HideAnalysis();v564SetSavedAreaVisual(null);Ct();
+document.getElementById("targetLocationInput").innerText="선택 없음";document.getElementById("btnClearPolygon").classList.add("hidden");
+document.getElementById("statusMessage").innerText=`${area.name} 분석을 접었습니다. 말풍선을 다시 누르면 펼쳐집니다.`;return}
+expandedSavedAreaId=t;b=t;w=F(area.geometry||area.path);R=null;
+document.getElementById("targetLocationInput").innerText=area.name;document.getElementById("btnClearPolygon").classList.remove("hidden");
+let bounds=new kakao.maps.LatLngBounds;w.forEach(p=>bounds.extend(new kakao.maps.LatLng(p.lat,p.lng)));f.setBounds(bounds);g=bounds.getCenter();Ct();v564SetSavedAreaVisual(t);
+const sameAnalysis=lastAnalyzedSavedId===t&&lastAnalyzedFenceKey===v564FenceKey(w)&&i?.topSegments?.length&&_.length;
+if(sameAnalysis){v564ShowAnalysis();document.getElementById("statusMessage").innerText=`${area.name} · 저장된 TOP3 분석을 펼쳤습니다.`}
+else ce(w)
+}
 function clearActivePolygon(t=!1){
 if(T)return alert("분석이 끝난 후 해제하거나 먼저 취소해주세요.");
-b=null,R=null,w=null,S=null,
+expandedSavedAreaId=null;b=null,R=null,w=null,S=null,v564HideAnalysis(),
 document.getElementById("targetLocationInput").innerText="선택 없음",document.getElementById("btnClearPolygon").classList.add("hidden"),
-document.getElementById("comp_count").innerText="-개",document.getElementById("anchor_count").innerText="-개",document.getElementById("rankingResultBox").classList.add("hidden"),
-document.getElementById("rankingResultText").innerHTML="",
-Object.values(k).forEach((t=>t.setOptions({fillColor:"#f43f5e",fillOpacity:.1,strokeWeight:2}))),
+document.getElementById("comp_count").innerText="-개",document.getElementById("anchor_count").innerText="-개",document.getElementById("rankingResultText").innerHTML="",v564SetSavedAreaVisual(null),Ct(),
 v.forEach((t=>{const n=L[t.id];if(n){const a=kt(t);n.setOptions({strokeWeight:3,fillColor:a.fill,fillOpacity:e.AUTO_AREA_FILL_OPACITY})}})),Rt(),t||I||Ft()}
 function Rt(){_.forEach((t=>t.setMap(null))),_=[],analysisLines=[]}
 function toggleAnalysisLines(){
@@ -858,7 +878,7 @@ const a=["#7f1d1d","#1d4ed8","#047857"][rankIdx]||"#334155",o=t.recommendationWi
 t.recommendationWindow=o,t.displayPoint={...p};
 const r=new kakao.maps.Polyline({path:o.path.map((t=>new kakao.maps.LatLng(t.lat,t.lng))),strokeWeight:9,strokeColor:a,strokeOpacity:.96,strokeStyle:"solid"});
 r.setMap(f),_.push(r);
-const s=rankIdx+1,i=`${1===s?"🥇":2===s?"🥈":"🥉"} ${s}위`,l=new kakao.maps.CustomOverlay({
+const s=rankIdx+1,i=`${s}위`,l=new kakao.maps.CustomOverlay({
 position:new kakao.maps.LatLng(p.lat,p.lng),
 content:`<div style="position:relative;z-index:999;text-align:center;pointer-events:none"><div style="background:${a};color:white;padding:5px 10px;border-radius:9px;font-weight:900;font-size:12px;border:2px solid white;box-shadow:0 3px 7px rgba(0,0,0,.35);white-space:nowrap;margin-bottom:3px">${i}</div><div style="width:12px;height:12px;border-radius:50%;background:#fff;border:4px solid ${a};box-shadow:0 1px 4px rgba(0,0,0,.4);margin:0 auto"></div></div>`,
 xAnchor:.5,yAnchor:1});return l.setMap(f),_.push(l),i}
@@ -971,16 +991,27 @@ let target=coords[idx+1],d=Pt(cur.lat,cur.lng,target.lat,target.lng);
 if(d>0){if(d>=remain){const q=remain/d;arr.push({lat:cur.lat+(target.lat-cur.lat)*q,lng:cur.lng+(target.lng-cur.lng)*q});return arr}arr.push({...target});remain-=d}
 for(let j=idx+1;j<coords.length-1&&remain>0;j++){const from=coords[j],to=coords[j+1],dd=Pt(from.lat,from.lng,to.lat,to.lng);if(dd>=remain&&dd>0){const q=remain/dd;arr.push({lat:from.lat+(to.lat-from.lat)*q,lng:from.lng+(to.lng-from.lng)*q});remain=0;break}arr.push({...to});remain-=dd}
 return arr}
-function v563RenderMainInflow(entryModel){
-const entry=entryModel?.primary;if(!entry?.route?.coords?.length||!entry.point)return;
-const before=v563WalkBeforeEntry(entry,55),after=v563WalkAfterEntry(entry,35),path=[...before.slice(0,-1),...after];if(path.length<2)return;
-const line=new kakao.maps.Polyline({path:path.map(p=>new kakao.maps.LatLng(p.lat,p.lng)),strokeWeight:5,strokeColor:"#f97316",strokeOpacity:.95,strokeStyle:"solid",endArrow:true,zIndex:130});line.setMap(f);_.push(line);
-const start=path[0],label=new kakao.maps.CustomOverlay({position:new kakao.maps.LatLng(start.lat,start.lng),xAnchor:.5,yAnchor:1.25,zIndex:135,content:`<div style="pointer-events:none;background:#fff7ed;border:2px solid #f97316;color:#c2410c;font-size:10px;font-weight:900;border-radius:999px;padding:3px 8px;box-shadow:0 2px 6px rgba(0,0,0,.18);white-space:nowrap">메인 유입</div>`});label.setMap(f);_.push(label)}
+function v564ClusterRepresentative(cluster){
+if(!cluster?.members?.length)return null;let best=cluster.members[0],bestD=Infinity;
+for(const m of cluster.members){const d=Pt(m.point.lat,m.point.lng,cluster.center.lat,cluster.center.lng);if(d<bestD){bestD=d;best=m}}
+return best}
+function v564SecondaryEntry(entryModel){
+const clusters=entryModel?.clusters||[],main=clusters[0];if(!main)return null;const mainScore=(main.weight||0)+.35*(main.members?.length||0);
+for(const cluster of clusters.slice(1)){
+const score=(cluster.weight||0)+.35*(cluster.members?.length||0),dist=Pt(main.center.lat,main.center.lng,cluster.center.lat,cluster.center.lng);
+if(score>=Math.max(1.2,mainScore*.30)&&dist>=55)return v564ClusterRepresentative(cluster)}return null}
+function v564RenderInflowEntry(entry,labelText,isMain){
+if(!entry?.route?.coords?.length||!entry.point)return;const before=v563WalkBeforeEntry(entry,isMain?58:48),after=v563WalkAfterEntry(entry,isMain?36:28),path=[...before.slice(0,-1),...after];if(path.length<2)return;
+const color=isMain?"#b91c1c":"#ef4444",line=new kakao.maps.Polyline({path:path.map(p=>new kakao.maps.LatLng(p.lat,p.lng)),strokeWeight:isMain?5:4,strokeColor:color,strokeOpacity:isMain?.96:.76,strokeStyle:"solid",endArrow:true,zIndex:isMain?132:128});line.setMap(f);_.push(line);
+const start=path[0],label=new kakao.maps.CustomOverlay({position:new kakao.maps.LatLng(start.lat,start.lng),xAnchor:.5,yAnchor:1.25,zIndex:isMain?136:131,content:`<div style="pointer-events:none;background:${isMain?"#fff1f2":"rgba(255,255,255,.96)"};border:${isMain?2:1}px solid ${color};color:${isMain?"#991b1b":"#dc2626"};font-size:${isMain?10:9}px;font-weight:900;border-radius:999px;padding:${isMain?"4px 9px":"3px 8px"};box-shadow:0 3px 9px rgba(127,29,29,.18);white-space:nowrap">${labelText}</div>`});label.setMap(f);_.push(label)}
+function v564RenderInflows(entryModel){
+const main=entryModel?.primary;if(main)v564RenderInflowEntry(main,"메인 유입",true);const secondary=v564SecondaryEntry(entryModel);if(secondary)v564RenderInflowEntry(secondary,"보조 유입",false)}
 function v56ProfileTop(t){const m={mainFlow:"메인동선",commercial:"상가밀집",transport:"교통접근",transportLink:"교통연계",entry:"진입효과",destination:"목적시설"};return Object.entries(t).filter(([k,v])=>m[k]&&Number.isFinite(v)).sort((a,b)=>b[1]-a[1]).slice(0,3).map(([k,v])=>`${m[k]} ${v}`).join(" · ")}
 
 
 async function ce(t){
 if(T||!t||t.length<3)return;
+const analysisFenceKey=v564FenceKey(t);
 let s=Object.freeze({mode:n,relocationStoreIds:[]});o=s;const l=[];let d=!1;
 c=l,i=null,$(!0);const u=++O;r=new AbortController,Rt(),
 document.getElementById("rankingResultBox").classList.add("hidden"),document.getElementById("rankingResultText").innerHTML="";
@@ -1185,7 +1216,7 @@ strokeColor:t.excluded?"#64748b":(n=t.score,n>=80?"#dc2626":n>=65?"#f97316":n>=5
 strokeOpacity:.72,strokeStyle:t.excluded?"shortdash":"solid"});
 var n;analysisLines.push(e),document.getElementById("showAnalysisLines")?.checked&&e.setMap(f),_.push(e)}))}(N);
 
-v563RenderMainInflow(entryModel);
+v564RenderInflows(entryModel);
 const H=ye(N,t,3);
 i={context:s,qualityIssues:l,segments:N,topSegments:H,routeCount:R.length,profile,weights,structure,entryModel,transportCrosswalkModel};
 const F=H.length?Math.round(H.reduce(((t,e)=>t+e.score),0)/H.length):0;
@@ -1204,7 +1235,7 @@ let j=`
 <div class="rounded bg-amber-50 px-1 py-1"><span class="block text-slate-400">진입</span><b class="text-amber-700">${profile.entry}</b></div>
 <div class="rounded bg-pink-50 px-1 py-1"><span class="block text-slate-400">목적</span><b class="text-pink-700">${profile.destination}</b></div>
 </div>
-<div class="mt-2 rounded-lg bg-white/80 border border-indigo-100 px-2 py-1.5 text-[9.5px] text-slate-600 font-bold">지도 표시는 TOP3와 가장 강한 메인 유입 방향만 표시합니다.</div>
+<div class="mt-2 rounded-lg bg-white/80 border border-indigo-100 px-2 py-1.5 text-[9.5px] text-slate-600 font-bold">지도 표시는 TOP3와 메인·보조 유입 방향만 간단히 표시합니다.</div>
 <p class="text-[9px] text-slate-400 mt-1.5">가중치는 상권 성격에 따라 제한적으로 조정됩니다. 추가 TMAP 호출 없이 기존 경로를 재사용합니다.</p>
 ${l.length?`<p class="text-[9.5px] text-amber-700 mt-1"><b>데이터 주의:</b> ${V([...new Set(l)].join(" · "))}</p>`:""}
 </div>`;
@@ -1253,6 +1284,7 @@ ${s?`<div class="bg-blue-50/70 rounded-lg p-2 text-[9.5px] text-blue-700 mb-2"><
 
 H.length||(j+=`<div class="text-xs text-rose-600 font-bold">TOP 후보를 만들 수 없습니다. 렌즈미 50m 제외, 최소 보행경로 ${e.TOP3_MIN_ROUTES}개, 점수 ${e.TOP3_MIN_SCORE}점 기준을 통과한 서로 다른 구간이 없습니다. 낮은 점수 후보를 억지로 TOP3에 채우지 않습니다.</div>`),
 U(u),P.innerHTML=j,document.getElementById("rankingResultBox").classList.remove("hidden"),
+lastAnalyzedFenceKey=analysisFenceKey,lastAnalyzedSavedId=expandedSavedAreaId||b||null,
 m.innerText=`적응형 TOP3 완료 · ${v56ProfileTop(profile)} · 유효 교통-횡단 ${transportCrosswalkModel.validCount}곳 · 보행경로 ${R.length}개 · 후보 ${H.length}곳`;
 }catch(t){
 if("AbortError"===t.name)return void(m.textContent="입지 분석을 취소했습니다.");
