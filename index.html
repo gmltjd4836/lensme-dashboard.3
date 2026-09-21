@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>렌즈미 상권 분석 대시보드 V56.8 전체 도로망·유동인구</title>
+<title>렌즈미 상권 분석 대시보드 V56.9 공백도로 복구·자동지역분류</title>
 <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css" rel="stylesheet">
 <script src="https://cdn.tailwindcss.com"></script>
 <style>
@@ -25,8 +25,10 @@ input[type=checkbox]{width:1.1rem;height:1.1rem;cursor:pointer}
 .poly-nametag::after{content:'';position:absolute;left:50%;bottom:-6px;width:11px;height:11px;background:inherit;border-right:1px solid rgba(148,163,184,.34);border-bottom:1px solid rgba(148,163,184,.34);transform:translateX(-50%) rotate(45deg);border-radius:0 0 3px 0}
 .poly-nametag.active{background:linear-gradient(135deg,#e11d48 0%,#be123c 100%);color:#fff;border-color:#be123c;box-shadow:0 10px 28px rgba(190,18,60,.30),0 2px 5px rgba(127,29,29,.14)}
 .poly-nametag.active::after{border-color:#be123c}
-.poly-nametag-pin{position:relative;z-index:1;font-size:14px;line-height:1;filter:drop-shadow(0 1px 1px rgba(15,23,42,.12))}
+.poly-nametag-pin,.poly-nametag-check{position:relative;z-index:1;font-size:14px;line-height:1;filter:drop-shadow(0 1px 1px rgba(15,23,42,.12))}
+.poly-nametag-check{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:999px;background:rgba(255,255,255,.20);font-size:12px;font-weight:1000}
 .poly-nametag-text{position:relative;z-index:1;line-height:1.15}
+.poly-nametag.active .poly-nametag-text::after{content:' · 선택됨';font-size:9px;font-weight:800;opacity:.78;margin-left:4px;vertical-align:1px}
 .map-layer-btn{background:rgba(255,255,255,.96);border:1px solid #e2e8f0;border-radius:12px;padding:7px 10px;font-size:11px;font-weight:900;color:#334155;box-shadow:0 5px 16px rgba(15,23,42,.14);backdrop-filter:blur(10px);transition:.15s;display:flex;align-items:center;gap:5px}
 .map-layer-btn:hover{transform:translateY(-1px);box-shadow:0 7px 18px rgba(15,23,42,.18)}
 .map-layer-menu{width:158px;background:rgba(255,255,255,.97);border:1px solid #e2e8f0;border-radius:14px;padding:8px;box-shadow:0 12px 30px rgba(15,23,42,.18);backdrop-filter:blur(12px)}
@@ -45,7 +47,7 @@ details[open]>summary::before{content:'📂 '}
 <div class="w-full md:w-1/4 bg-white border-r border-gray-200 p-6 flex flex-col shadow-lg z-20 overflow-y-auto">
 <h1 class="text-xl font-extrabold text-slate-800 border-b-4 border-indigo-500 pb-3 mb-4 flex justify-between items-center">
 <span>🗺️ 전국 상권 관제탑</span>
-<span class="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded-full font-bold">V56.8</span>
+<span class="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded-full font-bold">V56.9</span>
 </h1>
 
 <div class="mb-3">
@@ -166,7 +168,7 @@ const t="mJJ00gscCg39Y6nR0LhUw2yzrIfr7arY65OwUZYk",e={TEAM_KILL_METERS:50,SEARCH
 SEGMENT_BEARING_TOLERANCE:24,TOP_SEGMENT_MIN_DISTANCE:55,SAME_CORRIDOR_MAX_DISTANCE:170,JUNCTION_SCAN_RADIUS:22,ARM_LOOKAHEAD_METERS:28,MAX_TMAP_ROUTES_PER_SCAN:14,
 REQUEST_TIMEOUT_MS:12e3,MIN_RECOMMEND_SCORE:50,MIN_RECOMMEND_ROUTES:3,MIN_RECOMMEND_TARGETS:2,MAX_GATES:7,MAX_DESTINATIONS:10,TMAP_DELAY_MS:110,KAKAO_PAGE_DELAY_MS:45,
 ANALYSIS_MAX_PAGES:3,MAP_MAX_PAGES:2,DEMAND_RADIUS:140,COMPETITION_RADIUS:160,ACCESS_NEAR_GATE_MIN:18,ACCESS_NEAR_GATE_MAX:220,HEATMAP_MAX_SEGMENTS:2200,
-OSM_ROAD_SEGMENT_SPACING:12,OSM_MAX_SEGMENTS:2200,OSM_FETCH_TIMEOUT_MS:15000,COVERAGE_EXTRA_TMAP_ROUTES:4,COVERAGE_GAP_METERS:18,TOP3_MIN_CONFIDENCE:45,
+OSM_ROAD_SEGMENT_SPACING:12,OSM_MAX_SEGMENTS:3200,OSM_FETCH_TIMEOUT_MS:15000,COVERAGE_EXTRA_TMAP_ROUTES:3,COVERAGE_GAP_METERS:18,GAP_GRID_SPACING_METERS:42,GAP_EMPTY_RADIUS_METERS:28,GAP_TARGET_SEPARATION_METERS:72,GAP_RECOVERY_MAX_CALLS:4,GAP_ENDPOINT_MAX_METERS:65,GAP_MIN_INSIDE_LENGTH:24,TOP3_MIN_CONFIDENCE:45,
 TOP3_MIN_SEPARATION_METERS:50,TOP3_WINDOW_METERS:28,TOP3_MIN_SCORE:52,TOP3_MIN_ROUTES:2,ROAD_SNAP_MAX_METERS:18,ENTRY_CLUSTER_RADIUS:48,ENTRY_IDEAL_MIN:22,ENTRY_IDEAL_MAX:70,STRUCTURE_MARKER_MIN_SEPARATION:45,CROSSWALK_TRANSIT_RADIUS:65,CROSSWALK_ROUTE_RADIUS:18,CROSSWALK_ENTRY_MAX_ROUTE_METERS:140,CROSSWALK_AFTER_ENTRY_MAX_METERS:170,CROSSWALK_MAX_EFFECTIVE:3,COMMERCIAL_RADIUS:80,COMMERCIAL_HOTSPOT_RADIUS:90,COMMERCIAL_HOTSPOT_SEPARATION:130,AUTO_AREA_RADIUS:1800,
 AUTO_AREA_MAX_NAMED:6,AUTO_AREA_MAX_CLUSTERS:3,AUTO_AREA_POI_PAGES:2,AUTO_AREA_CLUSTER_EPS:85,AUTO_AREA_CLUSTER_MIN_POINTS:7,AUTO_AREA_HULL_BUFFER:24,AUTO_AREA_MIN_POIS:6,
 AUTO_GRAPH_RADIUS:1500,AUTO_GRAPH_MAX_ROUTES:18,AUTO_GRAPH_ROUTE_DELAY_MS:90,AUTO_GRAPH_ACTIVE_MIN:.3,AUTO_GRAPH_CONNECT_ENDPOINT:20,AUTO_GRAPH_CONNECT_PARALLEL:15,
@@ -302,8 +304,8 @@ function lt(t){return String(t||"").replace(/\s+/g,"").replace(/[()\[\]{}]/g,"")
 function ct(t){return F(t)}
 function dt(t,e){return new Promise((n=>{
 let a=!1;const o=t=>{a||(a=!0,clearTimeout(r),n(t))},r=setTimeout((()=>o({si:"",gu:"",dong:""})),6e3);
-p.coord2RegionCode(e,t,((t,e)=>{
-if(e===kakao.maps.services.Status.OK&&t?.length){const e=t.find((t=>"B"===t.region_type))||t[0];o({si:e.region_1depth_name||"",gu:e.region_2depth_name||"",dong:e.region_3depth_name||""})}
+p.coord2RegionCode(t,e,((t,e)=>{
+if(e===kakao.maps.services.Status.OK&&t?.length){const e=t.find((t=>"B"===t.region_type))||t.find((t=>"H"===t.region_type))||t[0];o({si:e.region_1depth_name||"",gu:e.region_2depth_name||"",dong:e.region_3depth_name||""})}
 else o({si:"",gu:"",dong:""})}))}))}
 
 async function ut(t,n,a,o=e.AUTO_AREA_POI_PAGES){const r=new kakao.maps.LatLng(t,n),s=[];
@@ -624,7 +626,7 @@ if(window.turf?.kinks&&turf.kinks(e).features.length)return alert("경계선이 
 const old=redrawTarget,defaultName=old?.name||"새 상권",n=prompt("상권 이름을 입력하세요:",defaultName);if(!n?.trim())return;
 const a=K(e),region=await dt(a.lng,a.lat),o=old?.id||("poly_"+Date.now()),r={...(old||{}),id:o,name:n.trim(),path:S,geometry:e.geometry,
 si:region.si||old?.si||"직접 등록",gu:region.gu||old?.gu||"전체",dong:region.dong||old?.dong||"거리 상권",centerLat:a.lat,centerLng:a.lng,
-reviewStatus:"사용자 직접 작성",savedAt:(new Date).toISOString()};
+regionResolved:!!(region.si&&region.dong),reviewStatus:"사용자 직접 작성",savedAt:(new Date).toISOString()};
 const next=old?[...Lt.filter(t=>t.id!==old.id),r]:[...Lt,r];
 if(X(next)){
 const sameFence=lastAnalyzedFenceKey&&lastAnalyzedFenceKey===v564FenceKey(S)&&i?.topSegments?.length;
@@ -668,10 +670,20 @@ const active=expandedSavedAreaId===area.id,row=document.createElement("div");row
 row.innerHTML=`<button class="min-w-0 flex-1 text-left font-extrabold ${active?"text-rose-700":"text-slate-700"} hover:text-rose-600 truncate" onclick="selectSavedPolygon('${area.id}')">${active?"●":"○"} ${V(area.name)}</button><button onclick="renamePolygon('${area.id}')" title="이름 변경" class="text-[10px] px-1.5 py-1 rounded bg-slate-50 text-slate-500">이름</button><button onclick="redrawPolygon('${area.id}')" title="경계 수정" class="text-[10px] px-1.5 py-1 rounded bg-slate-50 text-slate-500">수정</button><button onclick="deletePolygon('${area.id}')" title="삭제" class="text-[10px] px-1.5 py-1 rounded bg-slate-50 text-slate-400">×</button>`;dongBody.appendChild(row);
 const poly=W(area.geometry||area.path,{strokeWeight:active?4:2,strokeColor:active?"#be123c":"#e11d48",strokeOpacity:active?.95:.65,fillOpacity:active?.22:.075,fillColor:active?"#e11d48":"#f43f5e"},(()=>selectSavedPolygon(area.id)));poly.setMap(f);k[area.id]=poly;
 const bubbleCenter=K(area.geometry||area.path);
-const tag=`<div class="poly-nametag-wrap"><button type="button" class="poly-nametag ${active?"active":""}" onclick="event.stopPropagation();selectSavedPolygon('${area.id}')"><span class="poly-nametag-pin">📍</span><span class="poly-nametag-text">${V(area.name)}</span></button></div>`;
+const tag=`<div class="poly-nametag-wrap"><button type="button" class="poly-nametag ${active?"active":""}" onclick="event.stopPropagation();selectSavedPolygon('${area.id}')">${active?'<span class="poly-nametag-check">✓</span>':'<span class="poly-nametag-pin">📍</span>'}<span class="poly-nametag-text">${V(area.name)}</span></button></div>`;
 const ov=new kakao.maps.CustomOverlay({position:new kakao.maps.LatLng(bubbleCenter.lat,bubbleCenter.lng),content:tag,xAnchor:.5,yAnchor:1,zIndex:110});ov.setMap(f);x[area.id]=ov
 }cityBody.appendChild(dongEl)}root.appendChild(cityEl)}
 applyMapDisplayFilters()
+}
+
+async function v569NormalizeSavedRegions(){
+if(T||!Lt?.length)return;let changed=false,next=[...Lt];
+for(let idx=0;idx<next.length;idx++){const area=next[idx],badSi=!area.si||["직접 등록","가져온 상권","미분류"].includes(area.si),badDong=!area.dong||["거리 상권","미분류"].includes(area.dong);
+if(area.regionResolved&&!badSi&&!badDong)continue;if(!badSi&&!badDong)continue;
+const center=K(area.geometry||area.path);if(!center?.lat||!center?.lng)continue;const region=await dt(center.lng,center.lat);
+if(region.si&&region.dong){next[idx]={...area,si:region.si,gu:region.gu||area.gu||"",dong:region.dong,centerLat:center.lat,centerLng:center.lng,regionResolved:true};changed=true}
+await z(55)}
+if(changed&&X(next))Ct()
 }
 
 function deletePolygon(t){if(confirm("이 상권 경계를 삭제하시겠습니까?"))return T?alert("분석 종료 후 삭제해주세요."):void(X(Lt.filter((e=>e.id!==t)))&&(savedAreaAnalysisCache.delete(t),b===t&&clearActivePolygon(),Ct()))}
@@ -1097,6 +1109,19 @@ function v568NearestRouteDistance(seg,routes){let best=Infinity;for(const r of r
 function v568MergeRoadSegments(osmSegments,routeSegments){if(!(osmSegments||[]).length)return routeSegments||[];const master=[...osmSegments];for(const r of routeSegments||[]){let matched=false;for(const o of osmSegments){if(Pt(r.mid.lat,r.mid.lng,o.mid.lat,o.mid.lng)<=9&&Bt(r.bearing,o.bearing)<=28){matched=true;break}}if(!matched){r.source="tmap_fallback";r.roadName=r.roadName||r.routeMap?.values?.().next?.().value?.route?.name||"";master.push(r)}}return master}
 function v568Opportunity(seg,targets,gates,commercePlaces){const c=ge(seg,commercePlaces),nearTargets=(targets||[]).reduce((n,q)=>n+(Pt(seg.mid.lat,seg.mid.lng,+q.y,+q.x)<=110?1:0),0),nearGate=(gates||[]).reduce((best,g)=>Math.min(best,Pt(seg.mid.lat,seg.mid.lng,g.lat,g.lng)),Infinity);return c.raw*1.8+Math.min(5,nearTargets)*.65+(nearGate<=140?1.2:nearGate<=220?.5:0)+(seg.roadPriority||3)*.12}
 async function v568CoverageRoutes(osmSegments,routes,gates,targets,commercePlaces,fencePath,statusEl){if(!(osmSegments||[]).length||!(gates||[]).length)return[];const candidates=osmSegments.map(seg=>({seg,gap:v568NearestRouteDistance(seg,routes),op:v568Opportunity(seg,targets,gates,commercePlaces)})).filter(x=>x.gap>e.COVERAGE_GAP_METERS&&x.op>=2.2).sort((a,b)=>b.op-a.op),picked=[];for(const c of candidates){if(picked.some(x=>Pt(c.seg.mid.lat,c.seg.mid.lng,x.seg.mid.lat,x.seg.mid.lng)<85))continue;picked.push(c);if(picked.length>=e.COVERAGE_EXTRA_TMAP_ROUTES)break}const extra=[];let id=1;for(const c of picked){let source=null,best=-Infinity;for(const g of gates){const d=Pt(g.lat,g.lng,c.seg.mid.lat,c.seg.mid.lng);if(d<35||d>1800)continue;const rank=Yt(g.type)/(1+d/350);if(rank>best){best=rank;source=g}}if(!source)continue;statusEl&&(statusEl.innerText=`🧭 누락 핵심길 TMAP 추가 검증 중... (${id}/${picked.length})`);const coords=Xt(await Wt(source.lng,source.lat,c.seg.mid.lng,c.seg.mid.lat));if(coords.length>=2&&coords.reduce((n,p)=>n+(Nt(p.lat,p.lng,fencePath)?1:0),0)>=2){extra.push({id:`V${id}`,gate:source,dest:{lat:c.seg.mid.lat,lng:c.seg.mid.lng,kind:"coverage",name:"내부 누락길 검증"},coords,samples:Gt(coords,e.SEGMENT_NODE_SPACING),weight:Math.max(.72,Yt(source.type)*.75),name:`${source.name} → 내부 누락길`,kind:"coverage"})}id++;await z(e.TMAP_DELAY_MS)}return extra}
+function v569PointToSegmentsDistance(point,segments){let best=Infinity;for(const seg of segments||[]){const d=Dt(point.lng,point.lat,seg.a.lng,seg.a.lat,seg.b.lng,seg.b.lat);if(d<best)best=d;if(best<=6)break}return best}
+function v569InsideRouteLength(coords,fencePath){let len=0;for(let i=0;i<(coords||[]).length-1;i++){const a=coords[i],b=coords[i+1],mid={lat:(a.lat+b.lat)/2,lng:(a.lng+b.lng)/2};if(Nt(mid.lat,mid.lng,fencePath))len+=Pt(a.lat,a.lng,b.lat,b.lng)}return len}
+function v569GapTargets(fencePath,knownSegments,gates,targets,commercePlaces){
+const b=v568RoadBBox(fencePath),midLat=(b.south+b.north)/2,latStep=e.GAP_GRID_SPACING_METERS/110540,lngStep=e.GAP_GRID_SPACING_METERS/(111320*Math.max(.2,Math.cos(midLat*Math.PI/180))),raw=[];
+let guard=0;for(let lat=b.south+latStep*.45;lat<=b.north-latStep*.25;lat+=latStep){for(let lng=b.west+lngStep*.45;lng<=b.east-lngStep*.25;lng+=lngStep){if(++guard>1800)break;const pt={lat,lng};if(!Nt(lat,lng,fencePath))continue;const gap=v569PointToSegmentsDistance(pt,knownSegments);if(gap<e.GAP_EMPTY_RADIUS_METERS)continue;const bd=v56BoundaryDistance(pt,fencePath);if(bd<12)continue;const pseudo={mid:pt},com=ge(pseudo,commercePlaces),nearTarget=(targets||[]).reduce((n,q)=>{const qlat=Number(q.lat??q.y),qlng=Number(q.lng??q.x);return n+(Number.isFinite(qlat)&&Number.isFinite(qlng)&&Pt(lat,lng,qlat,qlng)<=105?1:0)},0),gateDist=(gates||[]).reduce((d,g)=>Math.min(d,Pt(lat,lng,g.lat,g.lng)),Infinity),gateBoost=gateDist<=140?1.4:gateDist<=240?.8:gateDist<=380?.35:0,score=com.raw*1.9+Math.min(4,nearTarget)*.75+gateBoost+Math.min(1.4,gap/55);
+if(score<2.0&&com.count60<1&&nearTarget<1)continue;raw.push({point:pt,gap,score,commerce:com,nearTarget,gateDist})}if(guard>1800)break}
+raw.sort((a,b)=>b.score-a.score);const picked=[];for(const c of raw){if(picked.some(x=>Pt(c.point.lat,c.point.lng,x.point.lat,x.point.lng)<e.GAP_TARGET_SEPARATION_METERS))continue;picked.push(c);if(picked.length>=e.GAP_RECOVERY_MAX_CALLS)break}return picked}
+async function v569RecoverBlindGaps(fencePath,knownSegments,routes,gates,targets,commercePlaces,statusEl){
+if(!(gates||[]).length)return{routes:[],targets:[],attempted:0};const gaps=v569GapTargets(fencePath,knownSegments,gates,targets,commercePlaces),recovered=[];let attempted=0,id=1;
+for(const gap of gaps){let source=null,best=-Infinity;for(const g of gates){const d=Pt(g.lat,g.lng,gap.point.lat,gap.point.lng);if(d<45||d>1800)continue;const rail=["subway_exit","subway"].includes(g.type)?1.16:1,rank=(Yt(g.type)||1)*rail/(1+d/420);if(rank>best){best=rank;source=g}}if(!source)continue;attempted++;statusEl&&(statusEl.innerText=`🧭 OSM에 없는 내부 공백 TMAP 직접검증 중... (${attempted}/${gaps.length})`);const coords=Xt(await Wt(source.lng,source.lat,gap.point.lng,gap.point.lat));
+if(coords.length>=2){const end=coords.at(-1),endDist=Pt(end.lat,end.lng,gap.point.lat,gap.point.lng),insideLen=v569InsideRouteLength(coords,fencePath),touchGap=coords.some(p=>Pt(p.lat,p.lng,gap.point.lat,gap.point.lng)<=e.GAP_EMPTY_RADIUS_METERS+14);if(endDist<=e.GAP_ENDPOINT_MAX_METERS&&insideLen>=e.GAP_MIN_INSIDE_LENGTH&&touchGap){recovered.push({id:`G${id++}`,gate:source,dest:{lat:gap.point.lat,lng:gap.point.lng,kind:"gap_recovery",name:"내부 공백길 직접검증"},coords,samples:Gt(coords,e.SEGMENT_NODE_SPACING),weight:Math.max(.82,(Yt(source.type)||1)*.82),name:`${source.name} → 내부 공백길`,kind:"gap_recovery",gapScore:gap.score})}}
+await z(e.TMAP_DELAY_MS)}return{routes:recovered,targets:gaps,attempted}}
+
 function v568ApplyEvidence(segments){for(const seg of segments||[]){const direct=(seg.routeHitIds||[]).length,commerce=seg.commercial?.count60||0,demand=seg.demand?.targetCount||0,access=seg.accessIndex||0;let conf=(seg.osmWayId?20:12)+Math.min(45,direct*18)+Math.min(18,commerce*3)+Math.min(10,demand*3)+(access>=50?7:access>=25?4:0);seg.confidence=Math.round(v56Clamp(conf));seg.siteFeasible=v568RoadSiteFeasible(seg);seg.roadEvidence=direct>=2?"TMAP 다중검증":direct===1?"TMAP 직접검증":seg.osmWayId?"도로망 기반추정":"경로 기반추정"}}
 function v568FlowEstimate(seg){return Math.round(v56Clamp(.38*(seg.flowIndex||0)+.22*(seg.commercialIndex||0)+.10*(seg.demandIndex||0)+.10*(seg.accessIndex||0)+.07*(seg.transportLinkIndex||0)+.07*(seg.entryIndex||0)+.06*(seg.captureIndex||0)))}
 
@@ -1208,9 +1233,13 @@ U(u),R.failedCount&&l.push(`길찾기 ${R.failedCount}건 실패`);
 
 const P=document.getElementById("rankingResultText");
 const osmWays=await v568FetchOsmWays(t,m);U(u);const osmSegments=v568OsmSegments(osmWays,t);
-if(!osmSegments.length)l.push("전체 도로망 수집 실패 · TMAP 경로 기반 fallback");
+if(!osmSegments.length)l.push("OSM 전체 도로망 미확보 · TMAP+공백복구 방식 사용");
 const coverageRoutes=await v568CoverageRoutes(osmSegments,R,L,T,commerceRaw,t,m);U(u);coverageRoutes.length&&R.push(...coverageRoutes);
-if(coverageRoutes.length)l.push(`누락 핵심길 ${coverageRoutes.length}개 TMAP 추가검증`);
+if(coverageRoutes.length)l.push(`OSM 누락핵심길 ${coverageRoutes.length}개 TMAP 추가검증`);
+let preliminaryRouteSegments=R.length?ee(te(R,t)):[];
+const gapRecovery=await v569RecoverBlindGaps(t,[...osmSegments,...preliminaryRouteSegments],R,L,T,commerceRaw,m);U(u);
+if(gapRecovery.routes.length){R.push(...gapRecovery.routes);l.push(`내부 공백 ${gapRecovery.routes.length}개 TMAP 직접복구`)}
+else if(gapRecovery.targets.length)l.push(`내부 공백 ${gapRecovery.targets.length}곳 직접검증 · 추가 보행경로 미확보`);
 if(!R.length&&!osmSegments.length)return P.innerHTML='<div class="text-xs text-rose-600 font-bold">⚠️ TMAP 경로와 전체 도로망을 모두 확보하지 못했습니다. 네트워크/API 상태를 확인하세요.</div>',document.getElementById("rankingResultBox").classList.remove("hidden"),void(m.innerText="⚠️ 분석용 도로망을 확보하지 못했습니다.");
 
 m.innerText=`🧩 전체 도로망 ${osmSegments.length}구간 + TMAP ${R.length}경로를 결합 중...`;
@@ -1324,7 +1353,7 @@ v566RenderFlowLinesFromSegments(N,w||t);
 
 v564RenderInflows(entryModel,t);
 const H=ye(N,t,3);
-i={context:s,qualityIssues:l,segments:N,topSegments:H,routeCount:R.length,roadSegmentCount:osmSegments.length,coverageRouteCount:coverageRoutes.length,profile,weights,structure,entryModel,transportCrosswalkModel};
+i={context:s,qualityIssues:l,segments:N,topSegments:H,routeCount:R.length,roadSegmentCount:osmSegments.length,coverageRouteCount:coverageRoutes.length,gapRecoveryCount:gapRecovery.routes.length,gapTargetCount:gapRecovery.targets.length,profile,weights,structure,entryModel,transportCrosswalkModel};
 const F=H.length?Math.round(H.reduce(((t,e)=>t+e.score),0)/H.length):0;
 
 let j=`
@@ -1342,7 +1371,7 @@ let j=`
 <div class="rounded bg-pink-50 px-1 py-1"><span class="block text-slate-400">목적</span><b class="text-pink-700">${profile.destination}</b></div>
 </div>
 <div class="mt-2 rounded-lg bg-white/80 border border-indigo-100 px-2 py-1.5 text-[9.5px] text-slate-600 font-bold">지도 표시 필터에서 순위·유입 화살표·유동인구를 필요한 것만 켜서 볼 수 있습니다.</div>
-<p class="text-[9px] text-slate-400 mt-1.5">가중치는 상권 성격에 따라 제한적으로 조정됩니다. 전체 도로망을 기본 후보로 사용하고, 누락 핵심길만 최대 4개 TMAP 경로로 추가 검증합니다.</p>
+<p class="text-[9px] text-slate-400 mt-1.5">가중치는 상권 성격에 따라 제한적으로 조정됩니다. 전체 도로망을 기본 후보로 사용하고, OSM에 없는 내부 공백도 자동 탐지해 최대 4곳을 TMAP으로 직접 검증합니다.</p>
 ${l.length?`<p class="text-[9.5px] text-amber-700 mt-1"><b>데이터 주의:</b> ${V([...new Set(l)].join(" · "))}</p>`:""}
 </div>`;
 
@@ -1394,7 +1423,7 @@ H.length||(j+=`<div class="text-xs text-rose-600 font-bold">TOP 후보를 만들
 U(u),P.innerHTML=j,document.getElementById("rankingResultBox").classList.remove("hidden"),applyMapDisplayFilters(),
 lastAnalyzedFenceKey=analysisFenceKey,lastAnalyzedSavedId=expandedSavedAreaId||b||null;
 if(lastAnalyzedSavedId)savedAreaAnalysisCache.set(lastAnalyzedSavedId,{fenceKey:analysisFenceKey,analysis:i,html:P.innerHTML});
-m.innerText=`TOP3 완료 · 전체도로 ${osmSegments.length}구간 · TMAP ${R.length}경로${coverageRoutes.length?`(보완 ${coverageRoutes.length})`:""} · 유효 교통-횡단 ${transportCrosswalkModel.validCount}곳 · 후보 ${H.length}곳`;
+m.innerText=`TOP3 완료 · 전체도로 ${osmSegments.length}구간 · TMAP ${R.length}경로 · 공백검증 ${gapRecovery.targets.length}곳/복구 ${gapRecovery.routes.length}경로 · 유효 교통-횡단 ${transportCrosswalkModel.validCount}곳 · 후보 ${H.length}곳`;
 }catch(t){
 if("AbortError"===t.name)return void(m.textContent="입지 분석을 취소했습니다.");
 console.error("V45 분석 에러:",t),m.innerText="⚠️ 분석 중 에러가 발생했습니다. 개발자도구 Console을 확인하세요."}
@@ -1420,6 +1449,7 @@ setTimeout((()=>{T||ce(w)}),60)}));
 kakao.maps.event.addListener(f,"idle",(async function(){I||w||T||await Ht()}));
 Ct();
 Ft();
+setTimeout(()=>{v569NormalizeSavedRegions().catch(err=>console.warn("saved region normalize failed",err))},350);
 </script>
 </body>
 </html>
