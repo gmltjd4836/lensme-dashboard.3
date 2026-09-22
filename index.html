@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>렌즈미 상권 분석 대시보드 V57.5 전국 시군구 펼침·하파 올영 매칭</title>
+<title>렌즈미 상권 분석 대시보드 V57.6 단계형 지역탐색·전국 새로고침</title>
 <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css" rel="stylesheet">
 <script src="https://cdn.tailwindcss.com"></script>
 <style>
@@ -96,7 +96,7 @@ details[open]>summary::before{content:'▾';color:#e11d48}
 <div class="w-full md:w-1/4 bg-white border-r border-gray-200 p-6 flex flex-col shadow-lg z-20 overflow-y-auto">
 <h1 class="text-xl font-extrabold text-slate-800 border-b-4 border-indigo-500 pb-3 mb-4 flex justify-between items-center">
 <span>🗺️ 전국 상권 관제탑</span>
-<span class="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded-full font-bold">V57.5</span>
+<span class="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded-full font-bold">V57.6</span>
 </h1>
 
 <div class="mb-3">
@@ -234,8 +234,8 @@ AUTO_AREA_POI_ASSIGN_MAX:125,AUTO_AREA_HULL_MAX_EDGE_METERS:155,AUTO_AREA_FULL_B
 AUTO_AREA_ACTIVE_FILL_OPACITY:.34};
 if(!window.kakao?.maps?.services||!window.kakao?.maps?.drawing)throw document.getElementById("statusMessage").textContent="지도를 불러오지 못했습니다. 기존 등록 도메인에서 index.html을 교체하고 카카오 지도 키·네트워크 설정을 확인해주세요.",
 new Error("Kakao SDK unavailable");
-let n="new",a="",o=null,r=null,s=[],i=null,l="",c=null,d=0,u=document.getElementById("map"),m=new kakao.maps.LatLng(37.59970,127.13015),g=m,f=new kakao.maps.Map(u,{center:m,
-level:3}),h=new kakao.maps.services.Places,p=new kakao.maps.services.Geocoder,y=[],_=[],A=new Map,E=new Map,M=new kakao.maps.CustomOverlay({xAnchor:.5,yAnchor:1.5,zIndex:150
+let n="new",a="",o=null,r=null,s=[],i=null,l="",c=null,d=0,u=document.getElementById("map"),m=new kakao.maps.LatLng(36.15,127.75),g=m,f=new kakao.maps.Map(u,{center:m,
+level:12}),h=new kakao.maps.services.Places,p=new kakao.maps.services.Geocoder,y=[],_=[],A=new Map,E=new Map,M=new kakao.maps.CustomOverlay({xAnchor:.5,yAnchor:1.5,zIndex:150
 }),w=null,b=null,k={},x={},I=!1,S=null,T=!1,O=0,v=[],L={},C={},R=null,P=[],N=[],analysisLines=[],rankOverlays=[],inflowOverlays=[],flowLines=[],expandedSavedAreaId=null,focusedSavedAreaId=null,lastAnalyzedSavedId=null,lastAnalyzedFenceKey="",savedAreaAnalysisCache=new Map,savedBubbleEls={},provinceLabelOverlays=[],cityLabelOverlays=[],dongLabelOverlays=[],adminFocusOverlay=null,regionLabelTimer=null,regionLabelRequestSeq=0,mapDrillState={level:"national",si:null,gu:null,dong:null},lastAutoRegionKey="",regionFanoutToken=0,municipalityCenterCache=new Map,hapaOlivePlaceCache=new Map;
 
 function D(t){return String(t.id||`${t.place_name}|${t.x}|${t.y}`)}
@@ -254,7 +254,8 @@ return false
 function applyMapDisplayFilters(){
 const analysisOpen=!!expandedSavedAreaId||(!b&&!!w),showRank=analysisOpen&&layerChecked("layer_rank",true),showInflow=analysisOpen&&layerChecked("layer_inflow",true),showFlow=analysisOpen&&layerChecked("layer_flow",false),showNames=layerChecked("layer_names",true),focusedKey=focusedSavedAreaId==null?null:String(focusedSavedAreaId),activeKey=expandedSavedAreaId==null?null:String(expandedSavedAreaId);
 rankOverlays.forEach(o=>{try{o.setMap(showRank?f:null)}catch(e){}});inflowOverlays.forEach(o=>{try{o.setMap(showInflow?f:null)}catch(e){}});flowLines.forEach(o=>{try{o.setMap(showFlow?f:null)}catch(e){}});
-Object.entries(x).forEach(([id,o])=>{try{const area=Lt.find(a=>String(a.id)===String(id)),showByCity=v572AreaMatchesCurrentCity(area),keep=String(id)===focusedKey||String(id)===activeKey||showByCity;o.setMap(showNames&&keep?f:null)}catch(e){}});
+Object.entries(x).forEach(([id,o])=>{try{const area=Lt.find(a=>String(a.id)===String(id)),showByDong=v572AreaMatchesCurrentCity(area),keep=String(id)===focusedKey||String(id)===activeKey||showByDong;o.setMap(showNames&&keep?f:null)}catch(e){}});
+Object.entries(k).forEach(([id,poly])=>{try{const area=Lt.find(a=>String(a.id)===String(id)),showByDong=v572AreaMatchesCurrentCity(area),keep=String(id)===focusedKey||String(id)===activeKey||showByDong;poly.setMap(keep?f:null)}catch(e){}});
 document.getElementById("heatLegend")?.classList.toggle("hidden",!showFlow);
 }
 function v571EnableAnalysisLayers(){["layer_rank","layer_inflow","layer_flow","layer_names"].forEach(id=>{const el=document.getElementById(id);if(el)el.checked=true})}
@@ -470,7 +471,7 @@ function v575GeocodeAdmin(si,name){
  })
 }
 function v572ClearProvinceLabels(){provinceLabelOverlays.forEach(o=>{try{o.setMap(null)}catch(e){}});provinceLabelOverlays=[]}
-function v572ClearCityLabels(){cityLabelOverlays.forEach(o=>{try{o.setMap(null)}catch(e){}});cityLabelOverlays=[]}
+function v572ClearCityLabels(){regionFanoutToken++;cityLabelOverlays.forEach(o=>{try{o.setMap(null)}catch(e){}});cityLabelOverlays=[]}
 function v573ClearDongLabels(){dongLabelOverlays.forEach(o=>{try{o.setMap(null)}catch(e){}});dongLabelOverlays=[]}
 function v572HideAdminFocus(){if(adminFocusOverlay){try{adminFocusOverlay.setMap(null)}catch(e){}}adminFocusOverlay=null}
 function v573ClearRegionLabels(){v572ClearProvinceLabels();v572ClearCityLabels();v573ClearDongLabels()}
@@ -501,12 +502,14 @@ function v572RenderProvinceLabels(){
  }
 }
 async function v572RenderCityLabels(){
- const token=++regionFanoutToken;v572ClearCityLabels();if(mapDrillState.level!=="province"||!mapDrillState.si)return;
+ v572ClearCityLabels();const token=regionFanoutToken;if(mapDrillState.level!=="province"||!mapDrillState.si)return;
  const si=mapDrillState.si,savedGroups=new Map(v572MunicipalityGroups(si).map(g=>[g.name,g])),names=V575_ADMIN_MUNICIPALITIES[si]||[...savedGroups.keys()];
  const meta=document.getElementById("regionNavigatorMeta");if(meta)meta.textContent=`${si} · 시·군·구 ${names.length}곳을 펼치는 중...`;
  for(let idx=0;idx<names.length;idx++){
   if(token!==regionFanoutToken||mapDrillState.level!=="province"||mapDrillState.si!==si)return;
-  const muni=names[idx],saved=savedGroups.get(muni),center=saved?.center||await v575GeocodeAdmin(si,muni);if(!center)continue;
+  const muni=names[idx],saved=savedGroups.get(muni),center=saved?.center||await v575GeocodeAdmin(si,muni);
+  if(token!==regionFanoutToken||mapDrillState.level!=="province"||mapDrillState.si!==si)return;
+  if(!center)continue;
   const areas=saved?.areas||v572AreasFor(si,muni),wrap=document.createElement("div"),btn=document.createElement("button"),dot=document.createElement("span"),txt=document.createElement("span"),name=document.createElement("span"),count=document.createElement("span");
   wrap.className="city-label-wrap";wrap.style.animationDelay=`${Math.min(idx*28,520)}ms`;btn.type="button";btn.className=`region-city-btn ${areas.length?"has-saved":"no-saved"}`;dot.className="region-city-dot";txt.className="region-city-text";name.className="region-city-name";name.textContent=muni;count.className="region-city-count";count.textContent=areas.length?`저장상권 ${areas.length}개`:"상권 탐색";
   txt.append(name,count);btn.append(dot,txt);wrap.appendChild(btn);btn.addEventListener("click",ev=>{ev.stopPropagation();v572GoCity(si,muni,center)});
@@ -549,20 +552,20 @@ function v572GoProvince(si){
 function v572GoCity(si,gu,knownCenter=null){
  v572CloseAnalysisForNavigation();gu=v575NormalizeMuni(si,gu);mapDrillState={level:"city",si,gu,dong:null};lastAutoRegionKey=`city|${si}|${gu}`;v573ClearRegionLabels();v572UpdateBreadcrumb();
  const areas=v572AreasFor(si,gu),center=knownCenter||v572CenterForAreas(areas,null);if(center)v572SmoothMove(center,5);else v575GeocodeAdmin(si,gu).then(c=>c&&v572SmoothMove(c,5));
- setTimeout(()=>v573SyncRegionFromMap(true),360);const label=gu||si;document.getElementById("statusMessage").innerText=areas.length?`${label} · 저장된 읍·면·동과 상권 말풍선이 펼쳐집니다.`:`${label} · 저장 상권은 아직 없지만 지도를 계속 탐색할 수 있습니다.`
+ setTimeout(()=>v573SyncRegionFromMap(true),360);const label=gu||si;document.getElementById("statusMessage").innerText=areas.length?`${label} · 이전 시·군·구 말풍선은 숨기고 읍·면·동만 펼칩니다.`:`${label} · 저장 상권은 아직 없지만 지도를 계속 탐색할 수 있습니다.`
 }
 function v573GoDong(si,gu,dong){
  v572CloseAnalysisForNavigation();mapDrillState={level:"dong",si,gu,dong};lastAutoRegionKey=`dong|${si}|${gu}|${dong}`;v573ClearRegionLabels();v572UpdateBreadcrumb();
  const areas=v572AreasFor(si,gu,dong),center=v572CenterForAreas(areas,null);if(center)v572SmoothMove(center,3);else try{f.setLevel(3)}catch(e){}
- setTimeout(()=>{v573SyncRegionFromMap(true);applyMapDisplayFilters()},340);document.getElementById("statusMessage").innerText=areas.length?`${dong} · 지도 상권 말풍선을 누르면 TOP3·유입·유동인구 분석이 열립니다.`:`${dong} · 저장된 상권이 없습니다.`
+ setTimeout(()=>{v573SyncRegionFromMap(true);applyMapDisplayFilters()},340);document.getElementById("statusMessage").innerText=areas.length?`${dong} · 읍·면·동 말풍선은 숨기고 이 지역의 저장상권만 표시합니다. 상권 말풍선을 누르면 분석이 열립니다.`:`${dong} · 저장된 상권이 없습니다.`
 }
 function v572RegionBack(){const s=mapDrillState;if(s.level==="dong")v572GoCity(s.si,s.gu);else if(s.level==="city")v572GoProvince(s.si);else if(s.level==="province")v572GoNational()}
 function v572RefreshRegionNavigation(){
  v572HideAdminFocus();v572UpdateBreadcrumb();v573ClearRegionLabels();
  if(mapDrillState.level==="national")v572RenderProvinceLabels();
  else if(mapDrillState.level==="province")v572RenderCityLabels().catch(err=>console.warn("municipality fanout failed",err));
- else if(mapDrillState.level==="city"){v573RenderDongLabels();v574RenderContextBubble()}
- else if(mapDrillState.level==="dong")v574RenderContextBubble();
+ else if(mapDrillState.level==="city")v573RenderDongLabels();
+ /* dong 단계에서는 이전 시·군·구/읍·면·동 말풍선을 모두 숨기고 저장상권만 표시 */
  applyMapDisplayFilters()
 }
 async function v573SyncRegionFromMap(force=false){
@@ -1057,7 +1060,7 @@ h.keywordSearch(t,(function(t,n){
 if(e===d&&!T&&n===kakao.maps.services.Status.OK&&t.length){
 clearActivePolygon(!0),It();let e=t[0];g=new kakao.maps.LatLng(e.y,e.x),f.setCenter(g),f.setLevel(3),Ft(),
 document.getElementById("statusMessage").innerText="📍 이동 완료. [상권 경계 직접 그리기]로 경계를 저장한 뒤 선택하면 TOP3를 분석합니다."}}))}
-async function Ft(){I||w||T||(O++,A.clear(),y.forEach((t=>t.setMap(null))),y=[],await Ht())}
+async function Ft(){I||w||T||f.getLevel()>5||(O++,A.clear(),y.forEach((t=>t.setMap(null))),y=[],await Ht())}
 function jt(t,e,n){
 const a=t.id||`${t.place_name}|${t.x}|${t.y}`;if(A.has(a))return!1;let o=!1;
 if(["f_daiso","f_olive","f_olive_hapa","f_davich"].includes(e)||A.forEach((n=>{
@@ -1758,10 +1761,10 @@ document.getElementById("statusMessage").textContent="✅ 펜스 완성 · 상�
 setTimeout((()=>{T||ce(w)}),60)}));
 
 kakao.maps.event.addListener(f,"zoom_changed",(()=>{applyMapDisplayFilters();v571ScheduleRegionLabels()}));
-kakao.maps.event.addListener(f,"idle",(async function(){I||w||T||await Ht();v571ScheduleRegionLabels()}));
-v571InitProvinceLabels();v571ScheduleRegionLabels();
+kakao.maps.event.addListener(f,"idle",(async function(){I||w||T||f.getLevel()>5||await Ht();v571ScheduleRegionLabels()}));
 Ct();
-document.getElementById("statusMessage").innerText="📍 지도를 이동하거나 확대·축소하면 대한민국 → 시·도 → 시·군·구 → 읍·면·동이 자동으로 바뀌고, 시·도 클릭 시 시·군·구가 순차적으로 펼쳐집니다. 상권 말풍선을 눌러 분석을 펼치세요.";
+v572GoNational();
+document.getElementById("statusMessage").innerText="🗺️ 새로고침 시 대한민국 전체 지도부터 시작합니다. 시·도 → 시·군·구 → 읍·면·동 → 저장상권 순서로 들어가며, 다음 단계로 들어가면 이전 단계 말풍선은 전부 사라집니다.";
 Ft();
 setTimeout(()=>{v569NormalizeSavedRegions().catch(err=>console.warn("saved region normalize failed",err))},350);
 </script>
