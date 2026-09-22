@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>렌즈미 상권 분석 대시보드 V57.6 단계형 지역탐색·전국 새로고침</title>
+<title>렌즈미 상권 분석 대시보드 V57.7 동→상권 단계분리</title>
 <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css" rel="stylesheet">
 <script src="https://cdn.tailwindcss.com"></script>
 <style>
@@ -96,7 +96,7 @@ details[open]>summary::before{content:'▾';color:#e11d48}
 <div class="w-full md:w-1/4 bg-white border-r border-gray-200 p-6 flex flex-col shadow-lg z-20 overflow-y-auto">
 <h1 class="text-xl font-extrabold text-slate-800 border-b-4 border-indigo-500 pb-3 mb-4 flex justify-between items-center">
 <span>🗺️ 전국 상권 관제탑</span>
-<span class="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded-full font-bold">V57.6</span>
+<span class="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded-full font-bold">V57.7</span>
 </h1>
 
 <div class="mb-3">
@@ -243,13 +243,14 @@ function v564FenceKey(path){return(Array.isArray(path)?path:[]).map(p=>`${Number
 function layerChecked(id,defaultValue=true){const el=document.getElementById(id);return el?!!el.checked:defaultValue}
 function toggleMapLayerMenu(ev){ev?.stopPropagation?.();document.getElementById("mapLayerMenu")?.classList.toggle("hidden")}
 function v572AreaMatchesCurrentCity(area){
-if(!area)return false;
+/* V57.7: 시·군·구 단계에서는 저장상권을 절대 노출하지 않는다.
+   읍·면·동을 직접 선택해 dong 단계가 된 뒤에만 해당 동의 상권을 표시한다. */
+if(!area||mapDrillState.level!=="dong")return false;
 const sameSi=String(area.si||"")===String(mapDrillState.si||"");
 const areaMuni=v575NormalizeMuni(area.si||"",area.gu||""),stateMuni=v575NormalizeMuni(mapDrillState.si||"",mapDrillState.gu||"");
 const sameGu=String(areaMuni)===String(stateMuni);
-if(mapDrillState.level==="city")return sameSi&&sameGu;
-if(mapDrillState.level==="dong"){const sameDong=String(area.dong||"")===String(mapDrillState.dong||"");return sameSi&&sameGu&&sameDong}
-return false
+const sameDong=String(area.dong||"")===String(mapDrillState.dong||"");
+return sameSi&&sameGu&&sameDong
 }
 function applyMapDisplayFilters(){
 const analysisOpen=!!expandedSavedAreaId||(!b&&!!w),showRank=analysisOpen&&layerChecked("layer_rank",true),showInflow=analysisOpen&&layerChecked("layer_inflow",true),showFlow=analysisOpen&&layerChecked("layer_flow",false),showNames=layerChecked("layer_names",true),focusedKey=focusedSavedAreaId==null?null:String(focusedSavedAreaId),activeKey=expandedSavedAreaId==null?null:String(expandedSavedAreaId);
@@ -564,8 +565,14 @@ function v572RefreshRegionNavigation(){
  v572HideAdminFocus();v572UpdateBreadcrumb();v573ClearRegionLabels();
  if(mapDrillState.level==="national")v572RenderProvinceLabels();
  else if(mapDrillState.level==="province")v572RenderCityLabels().catch(err=>console.warn("municipality fanout failed",err));
- else if(mapDrillState.level==="city")v573RenderDongLabels();
- /* dong 단계에서는 이전 시·군·구/읍·면·동 말풍선을 모두 숨기고 저장상권만 표시 */
+ else if(mapDrillState.level==="city"){
+  /* 시·군·구 클릭 후: 읍·면·동 말풍선만 표시. 저장상권/폴리곤은 applyMapDisplayFilters에서 숨김 */
+  v573RenderDongLabels();
+ }
+ else if(mapDrillState.level==="dong"){
+  /* 읍·면·동 클릭 후: 지역 말풍선은 모두 제거하고 해당 동의 저장상권만 표시 */
+  v573ClearDongLabels();v572HideAdminFocus();
+ }
  applyMapDisplayFilters()
 }
 async function v573SyncRegionFromMap(force=false){
