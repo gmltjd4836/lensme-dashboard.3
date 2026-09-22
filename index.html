@@ -1,9 +1,10 @@
+
 <!DOCTYPE html>
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>렌즈미 상권 분석 대시보드 V57.7 동→상권 단계분리</title>
+<title>렌즈미 상권 분석 대시보드 V57.8 동→상권 단계분리</title>
 <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css" rel="stylesheet">
 <script src="https://cdn.tailwindcss.com"></script>
 <style>
@@ -58,6 +59,10 @@ input[type=checkbox]{width:1.1rem;height:1.1rem;cursor:pointer}
 .region-dong-text{display:flex;flex-direction:column;align-items:flex-start;gap:1px}
 .region-dong-name{font-size:13px;font-weight:1000;letter-spacing:-.45px;line-height:1.05}
 .region-dong-count{font-size:9px;font-weight:900;color:#64748b}
+.region-dong-btn.no-saved{background:#fff;border-color:#cbd5e1}
+.region-dong-btn.no-saved .region-dong-icon{background:#f8fafc;color:#64748b;border-color:#e2e8f0}
+.region-dong-btn.no-saved .region-dong-count{color:#94a3b8}
+.region-dong-btn.has-saved{border-color:#60a5fa;box-shadow:0 7px 18px rgba(37,99,235,.18),0 1px 2px rgba(15,23,42,.06)}
 
 .region-context-wrap{pointer-events:none;white-space:nowrap;transform:translateY(-20px);animation:regionPop .18s ease-out both}
 .region-context-bubble{position:relative;display:flex;align-items:center;gap:9px;padding:10px 14px;background:#0f172a;color:#fff;border:2px solid #fff;border-radius:15px;box-shadow:0 10px 26px rgba(15,23,42,.30),0 0 0 2px rgba(15,23,42,.12);font-weight:1000}
@@ -96,7 +101,7 @@ details[open]>summary::before{content:'▾';color:#e11d48}
 <div class="w-full md:w-1/4 bg-white border-r border-gray-200 p-6 flex flex-col shadow-lg z-20 overflow-y-auto">
 <h1 class="text-xl font-extrabold text-slate-800 border-b-4 border-indigo-500 pb-3 mb-4 flex justify-between items-center">
 <span>🗺️ 전국 상권 관제탑</span>
-<span class="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded-full font-bold">V57.7</span>
+<span class="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded-full font-bold">V57.8</span>
 </h1>
 
 <div class="mb-3">
@@ -236,14 +241,14 @@ if(!window.kakao?.maps?.services||!window.kakao?.maps?.drawing)throw document.ge
 new Error("Kakao SDK unavailable");
 let n="new",a="",o=null,r=null,s=[],i=null,l="",c=null,d=0,u=document.getElementById("map"),m=new kakao.maps.LatLng(36.15,127.75),g=m,f=new kakao.maps.Map(u,{center:m,
 level:12}),h=new kakao.maps.services.Places,p=new kakao.maps.services.Geocoder,y=[],_=[],A=new Map,E=new Map,M=new kakao.maps.CustomOverlay({xAnchor:.5,yAnchor:1.5,zIndex:150
-}),w=null,b=null,k={},x={},I=!1,S=null,T=!1,O=0,v=[],L={},C={},R=null,P=[],N=[],analysisLines=[],rankOverlays=[],inflowOverlays=[],flowLines=[],expandedSavedAreaId=null,focusedSavedAreaId=null,lastAnalyzedSavedId=null,lastAnalyzedFenceKey="",savedAreaAnalysisCache=new Map,savedBubbleEls={},provinceLabelOverlays=[],cityLabelOverlays=[],dongLabelOverlays=[],adminFocusOverlay=null,regionLabelTimer=null,regionLabelRequestSeq=0,mapDrillState={level:"national",si:null,gu:null,dong:null},lastAutoRegionKey="",regionFanoutToken=0,municipalityCenterCache=new Map,hapaOlivePlaceCache=new Map;
+}),w=null,b=null,k={},x={},I=!1,S=null,T=!1,O=0,v=[],L={},C={},R=null,P=[],N=[],analysisLines=[],rankOverlays=[],inflowOverlays=[],flowLines=[],expandedSavedAreaId=null,focusedSavedAreaId=null,lastAnalyzedSavedId=null,lastAnalyzedFenceKey="",savedAreaAnalysisCache=new Map,savedBubbleEls={},provinceLabelOverlays=[],cityLabelOverlays=[],dongLabelOverlays=[],adminFocusOverlay=null,regionLabelTimer=null,regionLabelRequestSeq=0,mapDrillState={level:"national",si:null,gu:null,dong:null},lastAutoRegionKey="",regionFanoutToken=0,municipalityCenterCache=new Map,hapaOlivePlaceCache=new Map,legalDongTreePromise=null,legalDongTreeData=null;
 
 function D(t){return String(t.id||`${t.place_name}|${t.x}|${t.y}`)}
 function v564FenceKey(path){return(Array.isArray(path)?path:[]).map(p=>`${Number(p.lat).toFixed(6)},${Number(p.lng).toFixed(6)}`).join("|")}
 function layerChecked(id,defaultValue=true){const el=document.getElementById(id);return el?!!el.checked:defaultValue}
 function toggleMapLayerMenu(ev){ev?.stopPropagation?.();document.getElementById("mapLayerMenu")?.classList.toggle("hidden")}
 function v572AreaMatchesCurrentCity(area){
-/* V57.7: 시·군·구 단계에서는 저장상권을 절대 노출하지 않는다.
+/* V57.8: 시·군·구 단계에서는 저장상권을 절대 노출하지 않는다.
    읍·면·동을 직접 선택해 dong 단계가 된 뒤에만 해당 동의 상권을 표시한다. */
 if(!area||mapDrillState.level!=="dong")return false;
 const sameSi=String(area.si||"")===String(mapDrillState.si||"");
@@ -462,6 +467,74 @@ function v572BoundsForAreas(areas){const bounds=new kakao.maps.LatLngBounds;let 
 function v572CenterForAreas(areas,fallback=null){let lat=0,lng=0,n=0;for(const area of areas||[]){const c=K(area.geometry||area.path);if(Number.isFinite(c.lat)&&Number.isFinite(c.lng)){lat+=c.lat;lng+=c.lng;n++}}return n?{lat:lat/n,lng:lng/n}:fallback}
 function v572MunicipalityGroups(si){const groups=new Map;for(const area of v572AreasFor(si)){const gu=v573AreaGu(area);if(!groups.has(gu))groups.set(gu,[]);groups.get(gu).push(area)}return [...groups.entries()].map(([gu,areas])=>({gu,name:gu||si||"미분류",areas,center:v572CenterForAreas(areas)})).filter(x=>x.center).sort((a,b)=>a.name.localeCompare(b.name,"ko"))}
 function v573DongGroups(si,gu){const groups=new Map;for(const area of v572AreasFor(si,gu)){const dong=area.dong||"미분류";if(!groups.has(dong))groups.set(dong,[]);groups.get(dong).push(area)}return [...groups.entries()].map(([name,areas])=>({name,areas,center:v572CenterForAreas(areas)})).filter(x=>x.center).sort((a,b)=>a.name.localeCompare(b.name,"ko"))}
+
+/* V57.8: 저장상권이 있는 동만이 아니라 시·군·구의 전체 법정 읍·면·동을 표시한다.
+   행안부 법정동 코드 + 브이월드 중심좌표 기반 공개 JSON을 최초 1회 lazy-load하고 이후 메모리 캐시한다. */
+const V578_LEGAL_DONG_URLS=[
+ "https://cdn.jsdelivr.net/gh/swuhalee/korea-regions-with-coords@main/korea-regions-with-coords.json",
+ "https://raw.githubusercontent.com/swuhalee/korea-regions-with-coords/main/korea-regions-with-coords.json"
+];
+async function v578LoadLegalDongTree(){
+ if(legalDongTreeData)return legalDongTreeData;
+ if(legalDongTreePromise)return legalDongTreePromise;
+ legalDongTreePromise=(async()=>{
+  let lastErr=null;
+  for(const url of V578_LEGAL_DONG_URLS){
+   const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),12000);
+   try{
+    const res=await fetch(url,{cache:"force-cache",signal:controller.signal});
+    if(!res.ok)throw new Error(`HTTP ${res.status}`);
+    const data=await res.json();
+    if(!data||!Array.isArray(data.sido))throw new Error("법정동 데이터 형식 오류");
+    legalDongTreeData=data;return data
+   }catch(err){lastErr=err}finally{clearTimeout(timer)}
+  }
+  throw lastErr||new Error("법정동 데이터를 불러오지 못했습니다.")
+ })();
+ try{return await legalDongTreePromise}finally{if(!legalDongTreeData)legalDongTreePromise=null}
+}
+function v578RegionAlias(name){
+ const s=String(name||"").trim();
+ const aliases={"강원도":"강원특별자치도","전라북도":"전북특별자치도"};
+ return aliases[s]||s
+}
+function v578FindProvinceNode(data,si){
+ const key=v578RegionAlias(si);return (data?.sido||[]).find(n=>v578RegionAlias(n?.name)===key)||null
+}
+function v578FindNodeByName(root,name){
+ if(!root)return null;const target=String(name||"").trim();
+ const q=[...(root.children||[])];
+ while(q.length){const n=q.shift();if(String(n?.name||"").trim()===target)return n;(n?.children||[]).forEach(c=>q.push(c))}
+ return null
+}
+function v578CollectEupMyeonDong(root,out=[]){
+ if(!root)return out;
+ for(const child of root.children||[]){
+  if(["eup","myeon","dong"].includes(child?.kind))out.push(child);
+  else v578CollectEupMyeonDong(child,out)
+ }
+ return out
+}
+function v578SavedAreasByDong(si,gu){
+ const map=new Map;for(const area of v572AreasFor(si,gu)){const d=String(area.dong||"").trim();if(!d)continue;if(!map.has(d))map.set(d,[]);map.get(d).push(area)}return map
+}
+async function v578AllDongGroups(si,gu){
+ const saved=v578SavedAreasByDong(si,gu),fallback=v573DongGroups(si,gu);
+ try{
+  const data=await v578LoadLegalDongTree(),province=v578FindProvinceNode(data,si);if(!province)return fallback;
+  const muni=String(gu||"").trim(),target=(!muni||muni===String(si||"").trim())?province:(v578FindNodeByName(province,muni)||province);
+  let nodes=v578CollectEupMyeonDong(target,[]).filter(n=>Number.isFinite(+n.lat)&&Number.isFinite(+n.lng));
+  if(!nodes.length)return fallback;
+  const dedupe=new Map;
+  for(const n of nodes){
+   const name=String(n.name||"").trim();if(!name)continue;const key=`${name}|${(+n.lat).toFixed(5)}|${(+n.lng).toFixed(5)}`;
+   if(!dedupe.has(key))dedupe.set(key,{name,kind:n.kind||"dong",center:{lat:+n.lat,lng:+n.lng},areas:saved.get(name)||[]})
+  }
+  // 저장상권의 법정동이 외부 데이터에 없더라도 누락하지 않는다.
+  for(const [name,areas] of saved){if(![...dedupe.values()].some(g=>g.name===name)){const center=v572CenterForAreas(areas);if(center)dedupe.set(`saved|${name}`,{name,kind:/읍$/.test(name)?"eup":/면$/.test(name)?"myeon":"dong",center,areas})}}
+  return [...dedupe.values()].sort((a,b)=>a.name.localeCompare(b.name,"ko"))
+ }catch(err){console.warn("전체 법정 읍·면·동 로드 실패, 저장상권 기반 목록으로 대체:",err);return fallback}
+}
 function v575GeocodeAdmin(si,name){
  const key=`${si}|${name}`;if(municipalityCenterCache.has(key))return Promise.resolve(municipalityCenterCache.get(key));
  return new Promise(resolve=>{
@@ -487,7 +560,7 @@ function v572UpdateBreadcrumb(){
  if(meta){
   if(state.level==="national")meta.textContent=`전국 저장상권 ${total}개 · 시·도를 눌러 확대하거나 지도를 이동하세요`;
   else if(state.level==="province"){const groups=v572MunicipalityGroups(state.si);meta.textContent=`${state.si} · 저장상권이 있는 시·군·구 ${groups.length}곳 · 지도 이동 시 자동 변경`}
-  else if(state.level==="city"){const groups=v573DongGroups(state.si,state.gu);meta.textContent=`${state.gu||state.si} · 저장상권이 있는 읍·면·동 ${groups.length}곳 · 한 단계 더 들어가세요`}
+  else if(state.level==="city")meta.textContent=`${state.gu||state.si} · 전체 읍·면·동을 불러오는 중...`
   else meta.textContent=`${state.dong||state.gu||state.si} · 저장상권 ${v572AreasFor(state.si,state.gu,state.dong).length}개 · 상권 말풍선을 눌러 분석`
  }
 }
@@ -519,14 +592,22 @@ async function v572RenderCityLabels(){
  }
  if(token===regionFanoutToken&&meta)meta.textContent=`${si} · 시·군·구 ${names.length}곳 · 원하는 지역을 누르세요`;
 }
-function v573RenderDongLabels(){
- v573ClearDongLabels();if(mapDrillState.level!=="city"||!mapDrillState.si)return;const groups=v573DongGroups(mapDrillState.si,mapDrillState.gu||"");
+async function v573RenderDongLabels(){
+ v573ClearDongLabels();if(mapDrillState.level!=="city"||!mapDrillState.si)return;
+ const si=mapDrillState.si,gu=mapDrillState.gu||"",stateKey=`${si}|${gu}`,meta=document.getElementById("regionNavigatorMeta");
+ if(meta)meta.textContent=`${gu||si} · 전체 읍·면·동을 불러오는 중...`;
+ const groups=await v578AllDongGroups(si,gu);
+ if(mapDrillState.level!=="city"||`${mapDrillState.si}|${mapDrillState.gu||""}`!==stateKey)return;
+ v573ClearDongLabels();
  for(const [idx,group] of groups.entries()){
   const wrap=document.createElement("div"),btn=document.createElement("button"),icon=document.createElement("span"),txt=document.createElement("span"),name=document.createElement("span"),count=document.createElement("span");
-  wrap.className="dong-label-wrap";wrap.style.animationDelay=`${Math.min(idx*35,420)}ms`;btn.type="button";btn.className="region-dong-btn";icon.className="region-dong-icon";icon.textContent=/읍$/.test(group.name)?"읍":/면$/.test(group.name)?"면":"동";txt.className="region-dong-text";name.className="region-dong-name";name.textContent=group.name;count.className="region-dong-count";count.textContent=`상권 ${group.areas.length}개`;
-  txt.append(name,count);btn.append(icon,txt);wrap.appendChild(btn);btn.addEventListener("click",ev=>{ev.stopPropagation();v573GoDong(mapDrillState.si,mapDrillState.gu||"",group.name)});
+  wrap.className="dong-label-wrap";wrap.style.animationDelay=`${Math.min(idx*28,520)}ms`;btn.type="button";btn.className=`region-dong-btn ${group.areas.length?"has-saved":"no-saved"}`;
+  icon.className="region-dong-icon";icon.textContent=group.kind==="eup"||/읍$/.test(group.name)?"읍":group.kind==="myeon"||/면$/.test(group.name)?"면":"동";
+  txt.className="region-dong-text";name.className="region-dong-name";name.textContent=group.name;count.className="region-dong-count";count.textContent=group.areas.length?`상권 ${group.areas.length}개`:"상권 없음";
+  txt.append(name,count);btn.append(icon,txt);wrap.appendChild(btn);btn.addEventListener("click",ev=>{ev.stopPropagation();v573GoDong(si,gu,group.name)});
   const ov=new kakao.maps.CustomOverlay({position:new kakao.maps.LatLng(group.center.lat,group.center.lng),content:wrap,xAnchor:.5,yAnchor:.5,zIndex:9});ov.setMap(f);dongLabelOverlays.push(ov)
  }
+ if(meta)meta.textContent=`${gu||si} · 읍·면·동 ${groups.length}곳 · 동을 누르면 그 동의 저장상권만 표시`;
 }
 function v574RenderContextBubble(){
  v572HideAdminFocus();const state=mapDrillState;if(!state||!["city","dong"].includes(state.level))return;
@@ -553,7 +634,7 @@ function v572GoProvince(si){
 function v572GoCity(si,gu,knownCenter=null){
  v572CloseAnalysisForNavigation();gu=v575NormalizeMuni(si,gu);mapDrillState={level:"city",si,gu,dong:null};lastAutoRegionKey=`city|${si}|${gu}`;v573ClearRegionLabels();v572UpdateBreadcrumb();
  const areas=v572AreasFor(si,gu),center=knownCenter||v572CenterForAreas(areas,null);if(center)v572SmoothMove(center,5);else v575GeocodeAdmin(si,gu).then(c=>c&&v572SmoothMove(c,5));
- setTimeout(()=>v573SyncRegionFromMap(true),360);const label=gu||si;document.getElementById("statusMessage").innerText=areas.length?`${label} · 이전 시·군·구 말풍선은 숨기고 읍·면·동만 펼칩니다.`:`${label} · 저장 상권은 아직 없지만 지도를 계속 탐색할 수 있습니다.`
+ setTimeout(()=>v573SyncRegionFromMap(true),360);const label=gu||si;document.getElementById("statusMessage").innerText=`${label} · 시·군·구 말풍선은 숨기고 전체 법정 읍·면·동을 펼칩니다.`
 }
 function v573GoDong(si,gu,dong){
  v572CloseAnalysisForNavigation();mapDrillState={level:"dong",si,gu,dong};lastAutoRegionKey=`dong|${si}|${gu}|${dong}`;v573ClearRegionLabels();v572UpdateBreadcrumb();
@@ -567,7 +648,7 @@ function v572RefreshRegionNavigation(){
  else if(mapDrillState.level==="province")v572RenderCityLabels().catch(err=>console.warn("municipality fanout failed",err));
  else if(mapDrillState.level==="city"){
   /* 시·군·구 클릭 후: 읍·면·동 말풍선만 표시. 저장상권/폴리곤은 applyMapDisplayFilters에서 숨김 */
-  v573RenderDongLabels();
+  v573RenderDongLabels().catch(err=>{console.warn("동 목록 표시 실패",err);const meta=document.getElementById("regionNavigatorMeta");if(meta)meta.textContent=`${mapDrillState.gu||mapDrillState.si} · 동 목록을 불러오지 못했습니다.`});
  }
  else if(mapDrillState.level==="dong"){
   /* 읍·면·동 클릭 후: 지역 말풍선은 모두 제거하고 해당 동의 저장상권만 표시 */
