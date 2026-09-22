@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>렌즈미 상권 분석 대시보드 V57.4 지역 말풍선·필터 기본OFF</title>
+<title>렌즈미 상권 분석 대시보드 V57.5 전국 시군구 펼침·하파 올영 매칭</title>
 <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css" rel="stylesheet">
 <script src="https://cdn.tailwindcss.com"></script>
 <style>
@@ -32,6 +32,9 @@ input[type=checkbox]{width:1.1rem;height:1.1rem;cursor:pointer}
 
 
 .province-label-wrap,.city-label-wrap,.dong-label-wrap{pointer-events:auto;white-space:nowrap;animation:regionPop .18s ease-out both}
+.city-label-wrap,.dong-label-wrap{opacity:0;animation:regionBurst .34s cubic-bezier(.16,.84,.34,1.18) both}
+.region-city-btn.has-saved{border-color:#fb7185;box-shadow:0 8px 22px rgba(225,29,72,.16),0 1px 2px rgba(15,23,42,.08)}
+.region-city-btn.no-saved{border-color:#cbd5e1;background:#fff;color:#334155}.region-city-btn.no-saved .region-city-dot{background:#64748b;box-shadow:0 0 0 4px #f1f5f9}.region-city-btn.no-saved .region-city-count{color:#94a3b8}
 .region-province-btn,.region-city-btn,.region-dong-btn{appearance:none;-webkit-appearance:none;border:0;cursor:pointer;font-family:inherit;display:flex;align-items:center;white-space:nowrap;user-select:none;transition:transform .14s ease,box-shadow .14s ease,border-color .14s ease;position:relative}
 .region-province-btn{gap:9px;padding:10px 13px;border-radius:14px;background:#ffffff;border:2px solid #cbd5e1;box-shadow:0 8px 20px rgba(15,23,42,.18),0 1px 2px rgba(15,23,42,.08);color:#0f172a}
 .region-province-btn:hover{transform:translateY(-2px) scale(1.03);border-color:#6366f1;box-shadow:0 12px 26px rgba(15,23,42,.22),0 0 0 3px rgba(99,102,241,.12)}
@@ -73,6 +76,7 @@ input[type=checkbox]{width:1.1rem;height:1.1rem;cursor:pointer}
 .region-crumb-sep{color:#94a3b8;font-size:12px;font-weight:1000}
 .region-nav-meta{font-size:9px;font-weight:850;color:#64748b;padding:2px 6px 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 @keyframes regionPop{from{opacity:0;transform:translateY(5px) scale(.96)}to{opacity:1;transform:translateY(0) scale(1)}}
+@keyframes regionBurst{0%{opacity:0;transform:translateY(14px) scale(.55)}58%{opacity:1;transform:translateY(-3px) scale(1.06)}100%{opacity:1;transform:translateY(0) scale(1)}}
 .map-layer-btn{background:rgba(255,255,255,.96);border:1px solid #e2e8f0;border-radius:12px;padding:7px 10px;font-size:11px;font-weight:900;color:#334155;box-shadow:0 5px 16px rgba(15,23,42,.14);backdrop-filter:blur(10px);transition:.15s;display:flex;align-items:center;gap:5px}
 .map-layer-btn:hover{transform:translateY(-1px);box-shadow:0 7px 18px rgba(15,23,42,.18)}
 .map-layer-menu{width:158px;background:rgba(255,255,255,.97);border:1px solid #e2e8f0;border-radius:14px;padding:8px;box-shadow:0 12px 30px rgba(15,23,42,.18);backdrop-filter:blur(12px)}
@@ -92,7 +96,7 @@ details[open]>summary::before{content:'▾';color:#e11d48}
 <div class="w-full md:w-1/4 bg-white border-r border-gray-200 p-6 flex flex-col shadow-lg z-20 overflow-y-auto">
 <h1 class="text-xl font-extrabold text-slate-800 border-b-4 border-indigo-500 pb-3 mb-4 flex justify-between items-center">
 <span>🗺️ 전국 상권 관제탑</span>
-<span class="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded-full font-bold">V57.4</span>
+<span class="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded-full font-bold">V57.5</span>
 </h1>
 
 <div class="mb-3">
@@ -192,7 +196,7 @@ details[open]>summary::before{content:'▾';color:#e11d48}
 <p class="text-xs font-extrabold text-slate-800 mb-2 border-b pb-1 mt-3 flex justify-between"><span>🌿 핵심 집객시설</span><span class="text-[10px] text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded">기본 OFF</span></p>
 <div class="space-y-2">
 <label class="flex items-center space-x-2 cursor-pointer"><input type="checkbox" id="f_olive" onchange="refreshBrandVisibility()" class="chk-green"><span class="text-[13px] font-bold text-green-600 flex-grow">🟩 일반 올리브영</span><span id="cnt_olive" class="text-[12px] font-bold text-slate-500">(-)</span></label>
-<label class="flex items-center space-x-2 cursor-pointer"><input type="checkbox" id="f_olive_hapa" onchange="refreshBrandVisibility()" class="chk-green"><span class="text-[13px] font-bold text-teal-700 flex-grow">🌿 올영(하파크리스틴)</span><span id="cnt_olive_hapa" class="text-[12px] font-bold text-blue-500">로딩중..</span></label>
+<label class="flex items-center space-x-2 cursor-pointer"><input type="checkbox" id="f_olive_hapa" onchange="refreshBrandVisibility()" class="chk-green"><span class="text-[13px] font-bold text-teal-700 flex-grow">🌿 올영(하파크리스틴)</span><span id="cnt_olive_hapa" class="text-[12px] font-bold text-teal-600">확인목록</span></label>
 <label class="flex items-center space-x-2 cursor-pointer"><input type="checkbox" id="f_daiso" onchange="refreshBrandVisibility()" class="chk-red"><span class="text-[13px] font-bold text-rose-600 flex-grow">🟥 다이소</span><span id="cnt_daiso" class="text-[12px] font-bold text-slate-500">(-)</span></label>
 <label class="flex items-center space-x-2 cursor-pointer"><input type="checkbox" id="f_davich" onchange="refreshBrandVisibility()" class="chk-blue"><span class="text-[13px] font-bold text-blue-700 flex-grow">🟦 다비치안경</span><span id="cnt_davich" class="text-[12px] font-bold text-slate-500">(-)</span></label>
 </div>
@@ -232,7 +236,7 @@ if(!window.kakao?.maps?.services||!window.kakao?.maps?.drawing)throw document.ge
 new Error("Kakao SDK unavailable");
 let n="new",a="",o=null,r=null,s=[],i=null,l="",c=null,d=0,u=document.getElementById("map"),m=new kakao.maps.LatLng(37.59970,127.13015),g=m,f=new kakao.maps.Map(u,{center:m,
 level:3}),h=new kakao.maps.services.Places,p=new kakao.maps.services.Geocoder,y=[],_=[],A=new Map,E=new Map,M=new kakao.maps.CustomOverlay({xAnchor:.5,yAnchor:1.5,zIndex:150
-}),w=null,b=null,k={},x={},I=!1,S=null,T=!1,O=0,v=[],L={},C={},R=null,P=[],N=[],analysisLines=[],rankOverlays=[],inflowOverlays=[],flowLines=[],expandedSavedAreaId=null,focusedSavedAreaId=null,lastAnalyzedSavedId=null,lastAnalyzedFenceKey="",savedAreaAnalysisCache=new Map,savedBubbleEls={},provinceLabelOverlays=[],cityLabelOverlays=[],dongLabelOverlays=[],adminFocusOverlay=null,regionLabelTimer=null,regionLabelRequestSeq=0,mapDrillState={level:"national",si:null,gu:null,dong:null},lastAutoRegionKey="";
+}),w=null,b=null,k={},x={},I=!1,S=null,T=!1,O=0,v=[],L={},C={},R=null,P=[],N=[],analysisLines=[],rankOverlays=[],inflowOverlays=[],flowLines=[],expandedSavedAreaId=null,focusedSavedAreaId=null,lastAnalyzedSavedId=null,lastAnalyzedFenceKey="",savedAreaAnalysisCache=new Map,savedBubbleEls={},provinceLabelOverlays=[],cityLabelOverlays=[],dongLabelOverlays=[],adminFocusOverlay=null,regionLabelTimer=null,regionLabelRequestSeq=0,mapDrillState={level:"national",si:null,gu:null,dong:null},lastAutoRegionKey="",regionFanoutToken=0,municipalityCenterCache=new Map,hapaOlivePlaceCache=new Map;
 
 function D(t){return String(t.id||`${t.place_name}|${t.x}|${t.y}`)}
 function v564FenceKey(path){return(Array.isArray(path)?path:[]).map(p=>`${Number(p.lat).toFixed(6)},${Number(p.lng).toFixed(6)}`).join("|")}
@@ -241,7 +245,8 @@ function toggleMapLayerMenu(ev){ev?.stopPropagation?.();document.getElementById(
 function v572AreaMatchesCurrentCity(area){
 if(!area)return false;
 const sameSi=String(area.si||"")===String(mapDrillState.si||"");
-const sameGu=String(area.gu||"")===String(mapDrillState.gu||"");
+const areaMuni=v575NormalizeMuni(area.si||"",area.gu||""),stateMuni=v575NormalizeMuni(mapDrillState.si||"",mapDrillState.gu||"");
+const sameGu=String(areaMuni)===String(stateMuni);
 if(mapDrillState.level==="city")return sameSi&&sameGu;
 if(mapDrillState.level==="dong"){const sameDong=String(area.dong||"")===String(mapDrillState.dong||"");return sameSi&&sameGu&&sameDong}
 return false
@@ -330,7 +335,7 @@ f_winc:{kw:"윙크 렌즈",hex:"%233b82f6",isComp:!0},
 f_withlens:{kw:"위드렌즈",hex:"%23059669",isComp:!0},
 f_lensvery:{kw:"렌즈베리",hex:"%23eab308",isComp:!0},
 f_lenstown:{kw:"렌즈타운",hex:"%23dc2626",isComp:!0},
-f_olive_hapa:{kw:"올리브영 하파크리스틴",hex:"%230f766e",isOlive:!0,isAnchor:!0},
+f_olive_hapa:{kw:null,hex:"%230f766e",isOlive:!0,isAnchor:!0,specialResolver:"hapaOlive"},
 f_olive:{kw:"올리브영",hex:"%2316a34a",isOlive:!0,isAnchor:!0},
 f_daiso:{kw:"다이소",hex:"%23e11d48",isDaiso:!0,isAnchor:!0},
 f_davich:{kw:"다비치안경",hex:"%231d4ed8",isOther:!0}
@@ -351,11 +356,46 @@ function tt(t,n={},a=e.ANALYSIS_MAX_PAGES){return Y("categorySearch",t,n,a)}
 function et(t){const e=new Set;return t.filter((t=>{const n=t.id||`${t.place_name}|${t.x}|${t.y}`;return!e.has(n)&&(e.add(n),!0)}))}
 [
 {id:"hapa",kw:"하파크리스틴"},{id:"winc",kw:"윙크 렌즈"},{id:"withlens",kw:"위드렌즈"},
-{id:"lensvery",kw:"렌즈베리"},{id:"lenstown",kw:"렌즈타운"},{id:"olive_hapa",kw:"올리브영 하파크리스틴"}
+{id:"lensvery",kw:"렌즈베리"},{id:"lenstown",kw:"렌즈타운"}
 ].forEach((t=>{
 (new kakao.maps.services.Places).keywordSearch(t.kw,(function(e,n,a){let o=document.getElementById("cnt_"+t.id);
 n===kakao.maps.services.Status.OK&&o&&a?(o.innerText=`(${a.totalCount.toLocaleString()}개)`,o.classList.remove("text-blue-500"),
 o.classList.add("text-slate-500")):o&&(o.innerText="(0개)",o.classList.remove("text-blue-500"),o.classList.add("text-slate-500"))}))}));
+
+// 하파크리스틴 x 올리브영: 단순 "올리브영 하파크리스틴" 키워드 검색 대신
+// 공개 보도/인허가로 확인된 입점점을 지점별로 조회해 실제 올리브영 좌표와 매칭한다.
+// 확인 기준: 2025-11 전자신문 5개 인샵 + 2026년 공개 확인 지점(명동/동대구/제주/부산 남포).
+const V575_HAPA_OLIVE_BRANCHES=[
+ {id:"seongsu_n",label:"올리브영N 성수점",queries:["하파크리스틴 올리브영N성수점","올리브영N 성수점"]},
+ {id:"hapjeong",label:"올리브영 합정메세나폴리스점",queries:["하파크리스틴 올리브영 합정메세나폴리스점","올리브영 합정메세나폴리스점"]},
+ {id:"gangnam",label:"올리브영 강남타운점",queries:["하파크리스틴 올리브영 강남타운점","하파크리스틴 올리브영 센트럴강남타운점","올리브영 강남타운점"]},
+ {id:"ewha",label:"올리브영 이대중앙점",queries:["하파크리스틴 올리브영 이대중앙점","올리브영 이대중앙점"]},
+ {id:"apgujeong",label:"올리브영 압구정로데오점",queries:["하파크리스틴 올리브영 압구정로데오점","올리브영 압구정로데오점"]},
+ {id:"myeongdong",label:"올리브영 센트럴 명동타운점",queries:["하파크리스틴 올리브영 센트럴 명동타운점","올리브영 센트럴 명동타운"]},
+ {id:"dongdaegu",label:"올리브영 동대구점",queries:["하파크리스틴 올리브영 동대구점","올리브영 동대구점"]},
+ {id:"jeju_cityhall",label:"올리브영 제주시청점",queries:["하파크리스틴 올리브영 제주시청점","올리브영 제주시청점"]},
+ {id:"busan_nampo",label:"올리브영 남포타운",queries:["하파크리스틴 올리브영 남포타운","올리브영 남포타운"]}
+];
+function v575KeywordOne(q){return new Promise(resolve=>{try{h.keywordSearch(q,(rows,status)=>resolve(status===kakao.maps.services.Status.OK&&rows?.length?rows[0]:null),{size:5})}catch(e){resolve(null)}})}
+async function v575ResolveHapaOliveBranches(){
+ const out=[];
+ for(const branch of V575_HAPA_OLIVE_BRANCHES){
+  if(hapaOlivePlaceCache.has(branch.id)){const cached=hapaOlivePlaceCache.get(branch.id);cached&&out.push(cached);continue}
+  let found=null;
+  for(const q of branch.queries){found=await v575KeywordOne(q);if(found)break;await z(18)}
+  if(found){const row={...found,id:`hapaolive_${branch.id}`,place_name:`🌿 하파 입점 · ${branch.label}`,brandKey:"f_olive_hapa",hapaOliveBranch:branch.id};hapaOlivePlaceCache.set(branch.id,row);out.push(row)}
+  else hapaOlivePlaceCache.set(branch.id,null);
+  await z(22)
+ }
+ const el=document.getElementById("cnt_olive_hapa");if(el)el.textContent=`(확인 ${V575_HAPA_OLIVE_BRANCHES.length}곳)`;
+ return out
+}
+async function v575HapaOliveForView({bounds=null,location=null,radius=null}={}){
+ const rows=await v575ResolveHapaOliveBranches();
+ if(bounds)return rows.filter(r=>{try{return bounds.contain(new kakao.maps.LatLng(+r.y,+r.x))}catch(e){return true}});
+ if(location&&Number.isFinite(radius)){const lat=location.getLat?location.getLat():location.lat,lng=location.getLng?location.getLng():location.lng;return rows.filter(r=>Pt(lat,lng,+r.y,+r.x)<=radius)}
+ return rows
+}
 
 const nt=[
 {id:"std_uijeongbu_happyroad",name:"행복로 문화의거리",city:"의정부시",lat:37.73924561,lng:127.0475838,length:607,stores:300,source:"전국지역특화거리 표준데이터",sourceDate:"2026-07-15"},
@@ -380,10 +420,39 @@ const V572_PROVINCES=[
 {name:"전북특별자치도",lat:35.7175,lng:127.1530},{name:"전라남도",lat:34.8679,lng:126.9910},{name:"경상북도",lat:36.4919,lng:128.8889},{name:"경상남도",lat:35.4606,lng:128.2132},
 {name:"제주특별자치도",lat:33.4890,lng:126.4983}
 ];
-function v573AreaGu(area){return String(area?.gu||"").trim()}
+const V575_ADMIN_MUNICIPALITIES={
+"서울특별시":["종로구","중구","용산구","성동구","광진구","동대문구","중랑구","성북구","강북구","도봉구","노원구","은평구","서대문구","마포구","양천구","강서구","구로구","금천구","영등포구","동작구","관악구","서초구","강남구","송파구","강동구"],
+"부산광역시":["중구","서구","동구","영도구","부산진구","동래구","남구","북구","해운대구","사하구","금정구","강서구","연제구","수영구","사상구","기장군"],
+"대구광역시":["중구","동구","서구","남구","북구","수성구","달서구","달성군","군위군"],
+"인천광역시":["중구","동구","미추홀구","연수구","남동구","부평구","계양구","서구","강화군","옹진군"],
+"광주광역시":["동구","서구","남구","북구","광산구"],
+"대전광역시":["동구","중구","서구","유성구","대덕구"],
+"울산광역시":["중구","남구","동구","북구","울주군"],
+"세종특별자치시":["세종특별자치시"],
+"경기도":["수원시","용인시","고양시","화성시","성남시","부천시","남양주시","안산시","평택시","안양시","시흥시","파주시","김포시","의정부시","광주시","하남시","광명시","군포시","양주시","오산시","이천시","안성시","구리시","포천시","의왕시","여주시","동두천시","과천시","가평군","양평군","연천군"],
+"강원특별자치도":["춘천시","원주시","강릉시","동해시","태백시","속초시","삼척시","홍천군","횡성군","영월군","평창군","정선군","철원군","화천군","양구군","인제군","고성군","양양군"],
+"충청북도":["청주시","충주시","제천시","보은군","옥천군","영동군","증평군","진천군","괴산군","음성군","단양군"],
+"충청남도":["천안시","공주시","보령시","아산시","서산시","논산시","계룡시","당진시","금산군","부여군","서천군","청양군","홍성군","예산군","태안군"],
+"전북특별자치도":["전주시","군산시","익산시","정읍시","남원시","김제시","완주군","진안군","무주군","장수군","임실군","순창군","고창군","부안군"],
+"전라남도":["목포시","여수시","순천시","나주시","광양시","담양군","곡성군","구례군","고흥군","보성군","화순군","장흥군","강진군","해남군","영암군","무안군","함평군","영광군","장성군","완도군","진도군","신안군"],
+"경상북도":["포항시","경주시","김천시","안동시","구미시","영주시","영천시","상주시","문경시","경산시","의성군","청송군","영양군","영덕군","청도군","고령군","성주군","칠곡군","예천군","봉화군","울진군","울릉군"],
+"경상남도":["창원시","진주시","통영시","사천시","김해시","밀양시","거제시","양산시","의령군","함안군","창녕군","고성군","남해군","하동군","산청군","함양군","거창군","합천군"],
+"제주특별자치도":["제주시","서귀포시"]
+};
+const V575_PROVINCE_LEVEL={"서울특별시":8,"부산광역시":8,"대구광역시":8,"인천광역시":8,"광주광역시":8,"대전광역시":8,"울산광역시":8,"세종특별자치시":7,"경기도":10,"강원특별자치도":10,"충청북도":9,"충청남도":9,"전북특별자치도":9,"전라남도":10,"경상북도":10,"경상남도":10,"제주특별자치도":9};
+function v575IsProvinceLike(si){return /도$/.test(String(si||""))}
+function v575NormalizeMuni(si,gu){
+ const raw=String(gu||"").trim();if(!raw)return "";
+ if(v575IsProvinceLike(si)){
+  const m=raw.match(/^(.+?시)(?:\s|$)/);if(m)return m[1];
+  const g=raw.match(/^(.+?군)(?:\s|$)/);if(g)return g[1]
+ }
+ return raw
+}
+function v573AreaGu(area){return v575NormalizeMuni(area?.si||"",area?.gu||"")}
 function v572AreasFor(si=null,gu=null,dong=null){return (Lt||[]).filter(a=>{
  if(si!=null&&String(a.si||"")!==String(si))return false;
- if(gu!=null&&String(v573AreaGu(a))!==String(gu||""))return false;
+ if(gu!=null&&String(v573AreaGu(a))!==String(v575NormalizeMuni(si||a.si||"",gu||"")))return false;
  if(dong!=null&&String(a.dong||"")!==String(dong||""))return false;
  return true
 })}
@@ -391,6 +460,15 @@ function v572BoundsForAreas(areas){const bounds=new kakao.maps.LatLngBounds;let 
 function v572CenterForAreas(areas,fallback=null){let lat=0,lng=0,n=0;for(const area of areas||[]){const c=K(area.geometry||area.path);if(Number.isFinite(c.lat)&&Number.isFinite(c.lng)){lat+=c.lat;lng+=c.lng;n++}}return n?{lat:lat/n,lng:lng/n}:fallback}
 function v572MunicipalityGroups(si){const groups=new Map;for(const area of v572AreasFor(si)){const gu=v573AreaGu(area);if(!groups.has(gu))groups.set(gu,[]);groups.get(gu).push(area)}return [...groups.entries()].map(([gu,areas])=>({gu,name:gu||si||"미분류",areas,center:v572CenterForAreas(areas)})).filter(x=>x.center).sort((a,b)=>a.name.localeCompare(b.name,"ko"))}
 function v573DongGroups(si,gu){const groups=new Map;for(const area of v572AreasFor(si,gu)){const dong=area.dong||"미분류";if(!groups.has(dong))groups.set(dong,[]);groups.get(dong).push(area)}return [...groups.entries()].map(([name,areas])=>({name,areas,center:v572CenterForAreas(areas)})).filter(x=>x.center).sort((a,b)=>a.name.localeCompare(b.name,"ko"))}
+function v575GeocodeAdmin(si,name){
+ const key=`${si}|${name}`;if(municipalityCenterCache.has(key))return Promise.resolve(municipalityCenterCache.get(key));
+ return new Promise(resolve=>{
+  const done=v=>{municipalityCenterCache.set(key,v||null);resolve(v||null)};
+  try{p.addressSearch(`${si} ${name}`,(rows,status)=>{if(status===kakao.maps.services.Status.OK&&rows?.length)return done({lat:+rows[0].y,lng:+rows[0].x});
+   const suffix=/시$/.test(name)?`${name}청`:/군$/.test(name)?`${name}청`:/구$/.test(name)?`${name}청`:`${name} 시청`;
+   h.keywordSearch(`${si} ${suffix}`,(r,s)=>done(s===kakao.maps.services.Status.OK&&r?.length?{lat:+r[0].y,lng:+r[0].x}:null),{size:3})})}catch(e){done(null)}
+ })
+}
 function v572ClearProvinceLabels(){provinceLabelOverlays.forEach(o=>{try{o.setMap(null)}catch(e){}});provinceLabelOverlays=[]}
 function v572ClearCityLabels(){cityLabelOverlays.forEach(o=>{try{o.setMap(null)}catch(e){}});cityLabelOverlays=[]}
 function v573ClearDongLabels(){dongLabelOverlays.forEach(o=>{try{o.setMap(null)}catch(e){}});dongLabelOverlays=[]}
@@ -422,20 +500,26 @@ function v572RenderProvinceLabels(){
   const ov=new kakao.maps.CustomOverlay({position:new kakao.maps.LatLng(item.lat,item.lng),content:wrap,xAnchor:.5,yAnchor:.5,zIndex:6});ov.setMap(f);provinceLabelOverlays.push(ov)
  }
 }
-function v572RenderCityLabels(){
- v572ClearCityLabels();if(mapDrillState.level!=="province"||!mapDrillState.si)return;const groups=v572MunicipalityGroups(mapDrillState.si);
- for(const group of groups){
-  const wrap=document.createElement("div"),btn=document.createElement("button"),dot=document.createElement("span"),txt=document.createElement("span"),name=document.createElement("span"),count=document.createElement("span");
-  wrap.className="city-label-wrap";btn.type="button";btn.className="region-city-btn";dot.className="region-city-dot";txt.className="region-city-text";name.className="region-city-name";name.textContent=group.name;count.className="region-city-count";count.textContent=`저장상권 ${group.areas.length}개`;
-  txt.append(name,count);btn.append(dot,txt);wrap.appendChild(btn);btn.addEventListener("click",ev=>{ev.stopPropagation();v572GoCity(mapDrillState.si,group.gu)});
-  const ov=new kakao.maps.CustomOverlay({position:new kakao.maps.LatLng(group.center.lat,group.center.lng),content:wrap,xAnchor:.5,yAnchor:.5,zIndex:8});ov.setMap(f);cityLabelOverlays.push(ov)
+async function v572RenderCityLabels(){
+ const token=++regionFanoutToken;v572ClearCityLabels();if(mapDrillState.level!=="province"||!mapDrillState.si)return;
+ const si=mapDrillState.si,savedGroups=new Map(v572MunicipalityGroups(si).map(g=>[g.name,g])),names=V575_ADMIN_MUNICIPALITIES[si]||[...savedGroups.keys()];
+ const meta=document.getElementById("regionNavigatorMeta");if(meta)meta.textContent=`${si} · 시·군·구 ${names.length}곳을 펼치는 중...`;
+ for(let idx=0;idx<names.length;idx++){
+  if(token!==regionFanoutToken||mapDrillState.level!=="province"||mapDrillState.si!==si)return;
+  const muni=names[idx],saved=savedGroups.get(muni),center=saved?.center||await v575GeocodeAdmin(si,muni);if(!center)continue;
+  const areas=saved?.areas||v572AreasFor(si,muni),wrap=document.createElement("div"),btn=document.createElement("button"),dot=document.createElement("span"),txt=document.createElement("span"),name=document.createElement("span"),count=document.createElement("span");
+  wrap.className="city-label-wrap";wrap.style.animationDelay=`${Math.min(idx*28,520)}ms`;btn.type="button";btn.className=`region-city-btn ${areas.length?"has-saved":"no-saved"}`;dot.className="region-city-dot";txt.className="region-city-text";name.className="region-city-name";name.textContent=muni;count.className="region-city-count";count.textContent=areas.length?`저장상권 ${areas.length}개`:"상권 탐색";
+  txt.append(name,count);btn.append(dot,txt);wrap.appendChild(btn);btn.addEventListener("click",ev=>{ev.stopPropagation();v572GoCity(si,muni,center)});
+  const ov=new kakao.maps.CustomOverlay({position:new kakao.maps.LatLng(center.lat,center.lng),content:wrap,xAnchor:.5,yAnchor:.5,zIndex:8});ov.setMap(f);cityLabelOverlays.push(ov);
+  if(idx%4===3)await z(12)
  }
+ if(token===regionFanoutToken&&meta)meta.textContent=`${si} · 시·군·구 ${names.length}곳 · 원하는 지역을 누르세요`;
 }
 function v573RenderDongLabels(){
  v573ClearDongLabels();if(mapDrillState.level!=="city"||!mapDrillState.si)return;const groups=v573DongGroups(mapDrillState.si,mapDrillState.gu||"");
- for(const group of groups){
+ for(const [idx,group] of groups.entries()){
   const wrap=document.createElement("div"),btn=document.createElement("button"),icon=document.createElement("span"),txt=document.createElement("span"),name=document.createElement("span"),count=document.createElement("span");
-  wrap.className="dong-label-wrap";btn.type="button";btn.className="region-dong-btn";icon.className="region-dong-icon";icon.textContent="동";txt.className="region-dong-text";name.className="region-dong-name";name.textContent=group.name;count.className="region-dong-count";count.textContent=`상권 ${group.areas.length}개`;
+  wrap.className="dong-label-wrap";wrap.style.animationDelay=`${Math.min(idx*35,420)}ms`;btn.type="button";btn.className="region-dong-btn";icon.className="region-dong-icon";icon.textContent=/읍$/.test(group.name)?"읍":/면$/.test(group.name)?"면":"동";txt.className="region-dong-text";name.className="region-dong-name";name.textContent=group.name;count.className="region-dong-count";count.textContent=`상권 ${group.areas.length}개`;
   txt.append(name,count);btn.append(icon,txt);wrap.appendChild(btn);btn.addEventListener("click",ev=>{ev.stopPropagation();v573GoDong(mapDrillState.si,mapDrillState.gu||"",group.name)});
   const ov=new kakao.maps.CustomOverlay({position:new kakao.maps.LatLng(group.center.lat,group.center.lng),content:wrap,xAnchor:.5,yAnchor:.5,zIndex:9});ov.setMap(f);dongLabelOverlays.push(ov)
  }
@@ -458,13 +542,14 @@ function v572GoNational(){
 }
 function v572GoProvince(si){
  v572CloseAnalysisForNavigation();mapDrillState={level:"province",si,gu:null,dong:null};lastAutoRegionKey=`province|${si}`;v573ClearRegionLabels();v572UpdateBreadcrumb();
- const areas=v572AreasFor(si),fallback=V572_PROVINCES.find(x=>x.name===si)||{lat:36.4,lng:127.8},center=v572CenterForAreas(areas,fallback);v572SmoothMove(center,7);
- setTimeout(()=>v573SyncRegionFromMap(true),380);document.getElementById("statusMessage").innerText=areas.length?`${si} · 저장상권이 있는 시·군·구가 표시됩니다.`:`${si} · 저장된 상권이 아직 없습니다. 지도를 이동하면 행정구역 표시는 자동으로 바뀝니다.`
+ const fallback=V572_PROVINCES.find(x=>x.name===si)||{lat:36.4,lng:127.8},target=V575_PROVINCE_LEVEL[si]||9;v572SmoothMove(fallback,target);
+ setTimeout(()=>{if(mapDrillState.level==="province"&&mapDrillState.si===si)v572RenderCityLabels().catch(err=>console.warn("municipality fanout failed",err))},330);
+ document.getElementById("statusMessage").innerText=`${si} · 시·군·구 말풍선을 펼치는 중입니다.`
 }
-function v572GoCity(si,gu){
- v572CloseAnalysisForNavigation();mapDrillState={level:"city",si,gu,dong:null};lastAutoRegionKey=`city|${si}|${gu}`;v573ClearRegionLabels();v572UpdateBreadcrumb();
- const areas=v572AreasFor(si,gu),center=v572CenterForAreas(areas,V572_PROVINCES.find(x=>x.name===si)||null);v572SmoothMove(center,5);
- setTimeout(()=>v573SyncRegionFromMap(true),360);const label=gu||si;document.getElementById("statusMessage").innerText=areas.length?`${label} · 읍·면·동 말풍선과 저장상권 말풍선이 함께 표시됩니다.`:`${label} · 저장된 상권이 없습니다.`
+function v572GoCity(si,gu,knownCenter=null){
+ v572CloseAnalysisForNavigation();gu=v575NormalizeMuni(si,gu);mapDrillState={level:"city",si,gu,dong:null};lastAutoRegionKey=`city|${si}|${gu}`;v573ClearRegionLabels();v572UpdateBreadcrumb();
+ const areas=v572AreasFor(si,gu),center=knownCenter||v572CenterForAreas(areas,null);if(center)v572SmoothMove(center,5);else v575GeocodeAdmin(si,gu).then(c=>c&&v572SmoothMove(c,5));
+ setTimeout(()=>v573SyncRegionFromMap(true),360);const label=gu||si;document.getElementById("statusMessage").innerText=areas.length?`${label} · 저장된 읍·면·동과 상권 말풍선이 펼쳐집니다.`:`${label} · 저장 상권은 아직 없지만 지도를 계속 탐색할 수 있습니다.`
 }
 function v573GoDong(si,gu,dong){
  v572CloseAnalysisForNavigation();mapDrillState={level:"dong",si,gu,dong};lastAutoRegionKey=`dong|${si}|${gu}|${dong}`;v573ClearRegionLabels();v572UpdateBreadcrumb();
@@ -475,23 +560,23 @@ function v572RegionBack(){const s=mapDrillState;if(s.level==="dong")v572GoCity(s
 function v572RefreshRegionNavigation(){
  v572HideAdminFocus();v572UpdateBreadcrumb();v573ClearRegionLabels();
  if(mapDrillState.level==="national")v572RenderProvinceLabels();
- else if(mapDrillState.level==="province")v572RenderCityLabels();
+ else if(mapDrillState.level==="province")v572RenderCityLabels().catch(err=>console.warn("municipality fanout failed",err));
  else if(mapDrillState.level==="city"){v573RenderDongLabels();v574RenderContextBubble()}
  else if(mapDrillState.level==="dong")v574RenderContextBubble();
  applyMapDisplayFilters()
 }
 async function v573SyncRegionFromMap(force=false){
  const seq=++regionLabelRequestSeq,level=f.getLevel(),center=f.getCenter();
- if(level>=8){
+ if(level>=11){
   const key="national";if(force||key!==lastAutoRegionKey){lastAutoRegionKey=key;mapDrillState={level:"national",si:null,gu:null,dong:null};v572RefreshRegionNavigation()}else applyMapDisplayFilters();
   return
  }
  const region=await dt(center.getLng(),center.getLat());if(seq!==regionLabelRequestSeq)return;
  if(!region.si){v572UpdateBreadcrumb();return}
  let next;
- if(level>=6)next={level:"province",si:region.si,gu:null,dong:null};
- else if(level>=4)next={level:"city",si:region.si,gu:region.gu||"",dong:null};
- else next={level:"dong",si:region.si,gu:region.gu||"",dong:region.dong||""};
+ if(level>=7)next={level:"province",si:region.si,gu:null,dong:null};
+ else if(level>=4)next={level:"city",si:region.si,gu:v575NormalizeMuni(region.si,region.gu||""),dong:null};
+ else next={level:"dong",si:region.si,gu:v575NormalizeMuni(region.si,region.gu||""),dong:region.dong||""};
  const key=`${next.level}|${next.si||""}|${next.gu||""}|${next.dong||""}`;
  if(force||key!==lastAutoRegionKey){lastAutoRegionKey=key;mapDrillState=next;v572RefreshRegionNavigation()}else{mapDrillState=next;v572UpdateBreadcrumb();applyMapDisplayFilters()}
 }
@@ -960,9 +1045,10 @@ for(let t=1;t<=i;t++){const e=t/i;a.push({lat:o.lat+(r.lat-o.lat)*e,lng:o.lng+(r
 
 async function Ht(){
 if(T)return;$(!0);const t=++O;r=new AbortController;
-try{let n=f.getBounds(),a=Object.keys(J);
-for(let o of a){U(t);let a=await Z(J[o].kw,{bounds:n},e.MAP_MAX_PAGES);U(t),a.forEach((t=>jt(t,o))),await z(30)}
-let o=await Z("안경",{bounds:n},e.MAP_MAX_PAGES);U(t);o.forEach((t=>{if(!t.place_name.includes("렌즈")&&!t.place_name.includes("다비치"))jt(t,"f_optical_gen","%2364748b")}))}
+try{let n=f.getBounds(),a=Object.keys(J).filter(key=>key!=="f_olive_hapa");
+for(let o of a){U(t);let rows=await Z(J[o].kw,{bounds:n},e.MAP_MAX_PAGES);U(t),rows.forEach(place=>{if(o==="f_hapa"&&/올리브영/.test(place.place_name||""))return;jt(place,o)}),await z(30)}
+const hapaOlive=await v575HapaOliveForView({bounds:n});U(t);hapaOlive.forEach(place=>jt(place,"f_olive_hapa"));
+let o=await Z("안경",{bounds:n},e.MAP_MAX_PAGES);U(t);o.forEach((t=>{if(!t.place_name.includes("렌즈")&&!t.place_name.includes("다비치")&&!t.place_name.includes("하파크리스틴"))jt(t,"f_optical_gen","%2364748b")}))}
 catch(t){"AbortError"!==t.name&&console.error("지도 마커 검색 오류:",t)}finally{$(!1)}}
 function searchLocation(){
 if(T)return alert("진행 중인 작업이 끝난 뒤 검색해주세요.");
@@ -1398,11 +1484,12 @@ const rows=await tt(code,{bounds:fenceBounds},2);U(u);
 B(rows)&&l.push(`상업활성 ${code}: 일부 표본만 수집`);rows.forEach((q=>{const id=q.id||`${q.place_name}|${q.x}|${q.y}`;
 if(!commerceSeen.has(id)&&Nt(+q.y,+q.x,t)){commerceSeen.add(id),commerceRaw.push(q)}}));await z(15)}
 m.innerText="🎯 렌즈샵·앵커·타깃 시설을 조사 중...";
-const x=[],I=new Set,S=Object.keys(J);
+const x=[],I=new Set,S=Object.keys(J).filter(key=>key!=="f_olive_hapa");
 for(const t of S){
 const n=await Z(J[t].kw,{location:g,radius:p,sort:kakao.maps.services.SortBy.DISTANCE},e.ANALYSIS_MAX_PAGES);
 U(u),B(n)&&l.push(`${J[t].kw}: 수집 불완전`),"f_lensme"===t&&(d=!B(n)),
-n.forEach((e=>{const n=e.id||`${e.place_name}|${e.x}|${e.y}`;I.has(n)||(I.add(n),e.brandKey=t,x.push(e))})),await z(20)}
+n.forEach(place=>{if(t==="f_hapa"&&/올리브영/.test(place.place_name||""))return;const id=place.id||`${place.place_name}|${place.x}|${place.y}`;I.has(id)||(I.add(id),place.brandKey=t,x.push(place))}),await z(20)}
+const hapaOliveRows=await v575HapaOliveForView({location:g,radius:p});U(u);hapaOliveRows.forEach(place=>{const id=place.id||`${place.place_name}|${place.x}|${place.y}`;if(!I.has(id)){I.add(id);place.brandKey="f_olive_hapa";x.push(place)}});
 for(const t of Q){
 const e=await Z(t.kw,{location:g,radius:p,sort:kakao.maps.services.SortBy.DISTANCE},"coffee"===t.type?1:2);
 U(u),B(e)&&l.push(`${t.kw}: 수집 불완전`),e.forEach((e=>{
@@ -1674,7 +1761,7 @@ kakao.maps.event.addListener(f,"zoom_changed",(()=>{applyMapDisplayFilters();v57
 kakao.maps.event.addListener(f,"idle",(async function(){I||w||T||await Ht();v571ScheduleRegionLabels()}));
 v571InitProvinceLabels();v571ScheduleRegionLabels();
 Ct();
-document.getElementById("statusMessage").innerText="📍 지도를 이동하거나 확대·축소하면 대한민국 → 시·도 → 시·군·구 → 읍·면·동이 자동으로 바뀝니다. 상권 말풍선을 눌러 분석을 펼치세요.";
+document.getElementById("statusMessage").innerText="📍 지도를 이동하거나 확대·축소하면 대한민국 → 시·도 → 시·군·구 → 읍·면·동이 자동으로 바뀌고, 시·도 클릭 시 시·군·구가 순차적으로 펼쳐집니다. 상권 말풍선을 눌러 분석을 펼치세요.";
 Ft();
 setTimeout(()=>{v569NormalizeSavedRegions().catch(err=>console.warn("saved region normalize failed",err))},350);
 </script>
