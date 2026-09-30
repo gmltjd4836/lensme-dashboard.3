@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>렌즈미 상권 분석 대시보드 V58.5 저장상권 전체화면 복원</title>
+<title>렌즈미 상권 분석 대시보드 V58.6 다중상권·표시고정</title>
 <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css" rel="stylesheet">
 <script src="https://cdn.tailwindcss.com"></script>
 <style>
@@ -100,7 +100,7 @@ details[open]>summary::before{content:'▾';color:#e11d48}
 <div class="w-full md:w-1/4 bg-white border-r border-gray-200 p-6 flex flex-col shadow-lg z-20 overflow-y-auto">
 <h1 class="text-xl font-extrabold text-slate-800 border-b-4 border-indigo-500 pb-3 mb-4 flex justify-between items-center">
 <span>🗺️ 전국 상권 관제탑</span>
-<span class="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded-full font-bold">V58.5</span>
+<span class="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded-full font-bold">V58.6</span>
 </h1>
 
 <div class="mb-3">
@@ -180,7 +180,7 @@ details[open]>summary::before{content:'▾';color:#e11d48}
 <div id="mapLayerMenu" class="map-layer-menu hidden" onclick="event.stopPropagation()">
 <label class="map-layer-row"><input id="layer_rank" type="checkbox" checked onchange="applyMapDisplayFilters()"><span>순위</span></label>
 <label class="map-layer-row"><input id="layer_inflow" type="checkbox" checked onchange="applyMapDisplayFilters()"><span>유입 화살표</span></label>
-<label class="map-layer-row"><input id="layer_flow" type="checkbox" onchange="applyMapDisplayFilters()"><span>유동인구</span></label>
+<label class="map-layer-row"><input id="layer_flow" type="checkbox" checked onchange="applyMapDisplayFilters()"><span>유동인구</span></label>
 <label class="map-layer-row"><input id="layer_names" type="checkbox" checked onchange="applyMapDisplayFilters()"><span>상권명</span></label>
 </div>
 </div>
@@ -225,7 +225,7 @@ details[open]>summary::before{content:'▾';color:#e11d48}
 <script src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=c045609510f8b75252389123f086be48&libraries=services,drawing"></script>
 
 <script>
-/* V58.5: V58.4 CLEAN 기준. 저장상권 재선택 시 TOP3뿐 아니라 유동인구·메인/보조 유입까지 화면복원 스냅샷으로 복구. */
+/* V58.6: V58.5 기준. 표시 레이어 선택을 유지하고 저장상권을 2개 이상 동시에 선택·표시할 수 있게 개선. */
 const t="mJJ00gscCg39Y6nR0LhUw2yzrIfr7arY65OwUZYk",e={
 TEAM_KILL_METERS:50,SEARCH_RADIUS_MAX:2200,FLOW_MATCH_RADIUS:13,SEGMENT_NODE_SPACING:9,SEGMENT_BEARING_TOLERANCE:24,
 ARM_LOOKAHEAD_METERS:28,MAX_TMAP_ROUTES_PER_SCAN:14,REQUEST_TIMEOUT_MS:12e3,MAX_GATES:7,MAX_DESTINATIONS:10,
@@ -241,12 +241,29 @@ if(!window.kakao?.maps?.services||!window.kakao?.maps?.drawing)throw document.ge
 new Error("Kakao SDK unavailable");
 let n="new",a="",o=null,r=null,s=[],i=null,c=null,d=0,u=document.getElementById("map"),m=new kakao.maps.LatLng(36.15,127.75),g=m,f=new kakao.maps.Map(u,{center:m,
 level:12}),h=new kakao.maps.services.Places,p=new kakao.maps.services.Geocoder,y=[],_=[],A=new Map,E=new Map,M=new kakao.maps.CustomOverlay({xAnchor:.5,yAnchor:1.5,zIndex:150
-}),w=null,b=null,k={},x={},I=!1,S=null,T=!1,O=0,R=null,analysisLines=[],rankOverlays=[],inflowOverlays=[],flowLines=[],expandedSavedAreaId=null,focusedSavedAreaId=null,lastAnalyzedSavedId=null,lastAnalyzedFenceKey="",savedAreaAnalysisCache=new Map,savedAreaPersistentAnalysis=v581LoadPersistentAnalysisStore(),savedBubbleEls={},provinceLabelOverlays=[],cityLabelOverlays=[],dongLabelOverlays=[],adminFocusOverlay=null,regionLabelTimer=null,regionLabelRequestSeq=0,mapDrillState={level:"national",si:null,gu:null,dong:null},lastAutoRegionKey="",regionFanoutToken=0,municipalityCenterCache=new Map,hapaOlivePlaceCache=new Map,legalDongTreePromise=null,legalDongTreeData=null;
+}),w=null,b=null,k={},x={},I=!1,S=null,T=!1,O=0,R=null,analysisLines=[],rankOverlays=[],inflowOverlays=[],flowLines=[],expandedSavedAreaId=null,focusedSavedAreaId=null,selectedSavedAreaIds=new Set(),renderedSavedAreaIds=new Set(),lastAnalyzedSavedId=null,lastAnalyzedFenceKey="",savedAreaAnalysisCache=new Map,savedAreaPersistentAnalysis=v581LoadPersistentAnalysisStore(),savedBubbleEls={},provinceLabelOverlays=[],cityLabelOverlays=[],dongLabelOverlays=[],adminFocusOverlay=null,regionLabelTimer=null,regionLabelRequestSeq=0,mapDrillState={level:"national",si:null,gu:null,dong:null},lastAutoRegionKey="",regionFanoutToken=0,municipalityCenterCache=new Map,hapaOlivePlaceCache=new Map,legalDongTreePromise=null,legalDongTreeData=null;
 
 function D(t){return String(t.id||`${t.place_name}|${t.x}|${t.y}`)}
 function v564FenceKey(path){return(Array.isArray(path)?path:[]).map(p=>`${Number(p.lat).toFixed(6)},${Number(p.lng).toFixed(6)}`).join("|")}
 function layerChecked(id,defaultValue=true){const el=document.getElementById(id);return el?!!el.checked:defaultValue}
 function toggleMapLayerMenu(ev){ev?.stopPropagation?.();document.getElementById("mapLayerMenu")?.classList.toggle("hidden")}
+const V586_LAYER_PREFS_KEY="lensmeLayerPrefsV58_6";
+function v586SaveLayerPrefs(){
+ try{
+  const prefs={};["layer_rank","layer_inflow","layer_flow","layer_names"].forEach(id=>{const el=document.getElementById(id);if(el)prefs[id]=!!el.checked});
+  localStorage.setItem(V586_LAYER_PREFS_KEY,JSON.stringify(prefs))
+ }catch(e){}
+}
+function v586LoadLayerPrefs(){
+ try{
+  const prefs=JSON.parse(localStorage.getItem(V586_LAYER_PREFS_KEY)||"null");if(!prefs||typeof prefs!=="object")return;
+  ["layer_rank","layer_inflow","layer_flow","layer_names"].forEach(id=>{const el=document.getElementById(id);if(el&&typeof prefs[id]==="boolean")el.checked=prefs[id]})
+ }catch(e){}
+}
+function v586InitLayerPrefs(){
+ v586LoadLayerPrefs();
+ ["layer_rank","layer_inflow","layer_flow","layer_names"].forEach(id=>{const el=document.getElementById(id);if(el)el.addEventListener("change",()=>{v586SaveLayerPrefs();applyMapDisplayFilters()})})
+}
 function v572AreaMatchesCurrentCity(area){
 /* V57.8: 시·군·구 단계에서는 저장상권을 절대 노출하지 않는다.
    읍·면·동을 직접 선택해 dong 단계가 된 뒤에만 해당 동의 상권을 표시한다. */
@@ -258,16 +275,16 @@ const sameDong=String(area.dong||"")===String(mapDrillState.dong||"");
 return sameSi&&sameGu&&sameDong
 }
 function applyMapDisplayFilters(){
-const analysisOpen=!!expandedSavedAreaId||(!b&&!!w),showRank=analysisOpen&&layerChecked("layer_rank",true),showInflow=analysisOpen&&layerChecked("layer_inflow",true),showFlow=analysisOpen&&layerChecked("layer_flow",false),showNames=layerChecked("layer_names",true),focusedKey=focusedSavedAreaId==null?null:String(focusedSavedAreaId),activeKey=expandedSavedAreaId==null?null:String(expandedSavedAreaId);
+const analysisOpen=selectedSavedAreaIds.size>0||!!expandedSavedAreaId||(!b&&!!w),showRank=analysisOpen&&layerChecked("layer_rank",true),showInflow=analysisOpen&&layerChecked("layer_inflow",true),showFlow=analysisOpen&&layerChecked("layer_flow",false),showNames=layerChecked("layer_names",true),focusedKey=focusedSavedAreaId==null?null:String(focusedSavedAreaId),activeKey=expandedSavedAreaId==null?null:String(expandedSavedAreaId);
 rankOverlays.forEach(o=>{try{o.setMap(showRank?f:null)}catch(e){}});inflowOverlays.forEach(o=>{try{o.setMap(showInflow?f:null)}catch(e){}});flowLines.forEach(o=>{try{o.setMap(showFlow?f:null)}catch(e){}});
-Object.entries(x).forEach(([id,o])=>{try{const area=Lt.find(a=>String(a.id)===String(id)),showByDong=v572AreaMatchesCurrentCity(area),keep=String(id)===focusedKey||String(id)===activeKey||showByDong;o.setMap(showNames&&keep?f:null)}catch(e){}});
-Object.entries(k).forEach(([id,poly])=>{try{const area=Lt.find(a=>String(a.id)===String(id)),showByDong=v572AreaMatchesCurrentCity(area),keep=String(id)===focusedKey||String(id)===activeKey||showByDong;poly.setMap(keep?f:null)}catch(e){}});
+Object.entries(x).forEach(([id,o])=>{try{const key=String(id),area=Lt.find(a=>String(a.id)===key),showByDong=v572AreaMatchesCurrentCity(area),keep=selectedSavedAreaIds.has(key)||key===focusedKey||key===activeKey||showByDong;o.setMap(showNames&&keep?f:null)}catch(e){}});
+Object.entries(k).forEach(([id,poly])=>{try{const key=String(id),area=Lt.find(a=>String(a.id)===key),showByDong=v572AreaMatchesCurrentCity(area),keep=selectedSavedAreaIds.has(key)||key===focusedKey||key===activeKey||showByDong;poly.setMap(keep?f:null)}catch(e){}});
 document.getElementById("heatLegend")?.classList.toggle("hidden",!showFlow);
 }
-function v571EnableAnalysisLayers(){["layer_rank","layer_inflow","layer_flow","layer_names"].forEach(id=>{const el=document.getElementById(id);if(el)el.checked=true})}
+function v571EnableAnalysisLayers(){/* V58.6: 사용자가 꺼둔 순위·유입·유동인구·상권명 설정을 절대 강제로 켜지 않는다. */}
 
 function v564HideAnalysis(){_.forEach(o=>{try{o.setMap(null)}catch(e){}});flowLines.forEach(o=>{try{o.setMap(null)}catch(e){}});document.getElementById("heatLegend")?.classList.add("hidden");document.getElementById("rankingResultBox")?.classList.add("hidden")}
-function v564SetSavedAreaVisual(activeId=expandedSavedAreaId){const activeKey=activeId==null?null:String(activeId),focusKey=focusedSavedAreaId==null?null:String(focusedSavedAreaId);Object.entries(k).forEach(([id,poly])=>{const active=String(id)===activeKey,focused=String(id)===focusKey;poly.setOptions({fillColor:active?"#e11d48":focused?"#fb7185":"#f43f5e",fillOpacity:active?.24:focused?.13:.075,strokeColor:active?"#9f1239":focused?"#f43f5e":"#e11d48",strokeOpacity:active?1:focused?.9:.65,strokeWeight:active?5:focused?4:2})})}
+function v564SetSavedAreaVisual(activeId=expandedSavedAreaId){const activeKey=activeId==null?null:String(activeId),focusKey=focusedSavedAreaId==null?null:String(focusedSavedAreaId);Object.entries(k).forEach(([id,poly])=>{const key=String(id),selected=selectedSavedAreaIds.has(key)||key===activeKey,focused=key===focusKey;poly.setOptions({fillColor:focused?"#e11d48":selected?"#fb7185":"#f43f5e",fillOpacity:focused?.26:selected?.18:.075,strokeColor:focused?"#9f1239":selected?"#e11d48":"#e11d48",strokeOpacity:focused?1:selected?.92:.65,strokeWeight:focused?5:selected?4:2})})}
 function isRelocationStore(t,ctx){return !!(ctx&&ctx.mode==="reloc"&&Array.isArray(ctx.relocationStoreIds)&&ctx.relocationStoreIds.includes(D(t)))}
 function U(t){if(t!==O||r?.signal.aborted)throw new DOMException("분석 취소","AbortError")}
 function $(t){T=t;const b=document.getElementById("cancelAnalysisBtn");b&&b.classList.toggle("hidden",!t)}
@@ -699,7 +716,7 @@ async function v573RenderDongLabels(){
  }
  if(meta)meta.textContent=`${gu||si} · 읍·면·동 ${groups.length}곳 · 동을 누르면 그 동의 저장상권만 표시`;
 }
-function v572CloseAnalysisForNavigation(){if(expandedSavedAreaId!=null||w){expandedSavedAreaId=null;b=null;w=null;R=null;v564HideAnalysis()}focusedSavedAreaId=null;v570SyncSavedBubbleState(null);v564SetSavedAreaVisual(null)}
+function v572CloseAnalysisForNavigation(){if(expandedSavedAreaId!=null||selectedSavedAreaIds.size||w){selectedSavedAreaIds.clear();expandedSavedAreaId=null;b=null;w=null;R=null;v564HideAnalysis();Rt()}focusedSavedAreaId=null;v570SyncSavedBubbleState(null);v564SetSavedAreaVisual(null)}
 function v572GoNational(){
  v572CloseAnalysisForNavigation();mapDrillState={level:"national",si:null,gu:null,dong:null};lastAutoRegionKey="national";v573ClearRegionLabels();v572UpdateBreadcrumb();
  const bounds=new kakao.maps.LatLngBounds;bounds.extend(new kakao.maps.LatLng(33.05,125.85));bounds.extend(new kakao.maps.LatLng(38.65,129.65));
@@ -737,7 +754,7 @@ function v572RefreshRegionNavigation(){
  applyMapDisplayFilters()
 }
 async function v573SyncRegionFromMap(force=false){
- /* V58.5: 저장상권 분석이 열린 동안 지도 줌/이동 후에도 행정단계와 분석 오버레이를 고정한다. */
+ /* V58.6: 저장상권 분석이 열린 동안 지도 줌/이동 후에도 행정단계와 다중 분석 오버레이를 고정한다. */
  if(expandedSavedAreaId!=null){
   const active=Lt.find(a=>String(a.id)===String(expandedSavedAreaId));
   if(active){
@@ -821,7 +838,7 @@ if(X(next)){
 const analyzedPath=Array.isArray(w)&&w.length>=3?w:F(e),analyzedKey=v564FenceKey(analyzedPath),sameFence=!!(lastAnalyzedFenceKey&&lastAnalyzedFenceKey===analyzedKey&&i?.topSegments?.length);
 if(old)v581DeletePersistentAreaAnalysis(String(o));
 if(sameFence){const html=document.getElementById("rankingResultText")?.innerHTML||"";savedAreaAnalysisCache.set(String(o),{fenceKey:lastAnalyzedFenceKey,analysis:i,html});v581PersistAreaAnalysis(String(o),lastAnalyzedFenceKey,i,html,analyzedPath)}
-lastAnalyzedSavedId=sameFence?String(o):null;expandedSavedAreaId=null;focusedSavedAreaId=null;b=null;w=null;R=null;
+lastAnalyzedSavedId=sameFence?String(o):null;selectedSavedAreaIds.clear();expandedSavedAreaId=null;focusedSavedAreaId=null;b=null;w=null;R=null;
 redrawTarget=null,vt.clear(),I=!1,S=null,setDrawUi(!1),v564HideAnalysis(),Ct();
 document.getElementById("targetLocationInput").innerText=`저장됨 · ${n.trim()}`;
 document.getElementById("btnClearPolygon").classList.add("hidden");
@@ -847,7 +864,7 @@ document.getElementById("statusMessage").innerText=`✏️ ${area.name}: 새 경
 function v570SyncSavedBubbleState(activeId=null){
 const activeKey=activeId==null?null:String(activeId);
 Object.entries(savedBubbleEls).forEach(([id,rec])=>{
- const on=activeKey!==null&&String(id)===activeKey,btn=rec?.button,icon=rec?.icon;
+ const key=String(id),on=selectedSavedAreaIds.has(key)||(selectedSavedAreaIds.size===0&&activeKey!==null&&key===activeKey),btn=rec?.button,icon=rec?.icon;
  if(!btn)return;
  btn.classList.toggle("active",on);btn.setAttribute("aria-pressed",on?"true":"false");
  if(icon){icon.textContent=on?"✓":"📍";icon.className=on?"poly-nametag-check":"poly-nametag-pin"}
@@ -855,6 +872,7 @@ Object.entries(savedBubbleEls).forEach(([id,rec])=>{
 }
 function Ct(){
 let root=document.getElementById("savedPolygonTree");if(!root)return;
+for(const id of [...selectedSavedAreaIds])if(!Lt.some(a=>String(a.id)===String(id)))selectedSavedAreaIds.delete(String(id));
 root.innerHTML="";Object.values(k).forEach(t=>t.setMap(null));Object.values(x).forEach(t=>t.setMap(null));k={};x={};savedBubbleEls={};
 const grouped={};
 Lt.forEach(area=>{
@@ -871,8 +889,8 @@ for(const si of sis){
   for(const dong of Object.keys(grouped[si][gu]).sort((a,b)=>a.localeCompare(b,"ko"))){
    const dongEl=document.createElement("details");dongEl.open=!0;dongEl.innerHTML=`<summary>${V(dong)}</summary><div class="tree-indent"></div>`;const dongBody=dongEl.querySelector(".tree-indent");
    for(const area of grouped[si][gu][dong].sort((a,b)=>String(a.name).localeCompare(String(b.name),"ko"))){
-    const areaId=String(area.id),active=activeKey===areaId,focused=focusKey===areaId,row=document.createElement("div");row.className=`flex items-center gap-1 py-1.5 px-1 rounded-lg border-b border-slate-100 last:border-0 ${active?"bg-rose-50":focused?"bg-indigo-50":""}`;
-    row.innerHTML=`<button class="min-w-0 flex-1 text-left font-extrabold ${active?"text-rose-700":focused?"text-indigo-700":"text-slate-700"} hover:text-rose-600 truncate" data-area-select="${V(areaId)}">${active?"●":focused?"▶":"○"} ${V(area.name)}</button><button data-area-rename="${V(areaId)}" title="이름 변경" class="text-[10px] px-1.5 py-1 rounded bg-slate-50 text-slate-500">이름</button><button data-area-redraw="${V(areaId)}" title="경계 수정" class="text-[10px] px-1.5 py-1 rounded bg-slate-50 text-slate-500">수정</button><button data-area-delete="${V(areaId)}" title="삭제" class="text-[10px] px-1.5 py-1 rounded bg-slate-50 text-slate-400">×</button>`;
+    const areaId=String(area.id),active=selectedSavedAreaIds.has(areaId)||activeKey===areaId,focused=focusKey===areaId,row=document.createElement("div");row.className=`flex items-center gap-1 py-1.5 px-1 rounded-lg border-b border-slate-100 last:border-0 ${focused?"bg-rose-50":active?"bg-rose-50/70":""}`;
+    row.innerHTML=`<button class="min-w-0 flex-1 text-left font-extrabold ${focused?"text-rose-800":active?"text-rose-700":"text-slate-700"} hover:text-rose-600 truncate" data-area-select="${V(areaId)}">${focused?"▶":active?"●":"○"} ${V(area.name)}</button><button data-area-rename="${V(areaId)}" title="이름 변경" class="text-[10px] px-1.5 py-1 rounded bg-slate-50 text-slate-500">이름</button><button data-area-redraw="${V(areaId)}" title="경계 수정" class="text-[10px] px-1.5 py-1 rounded bg-slate-50 text-slate-500">수정</button><button data-area-delete="${V(areaId)}" title="삭제" class="text-[10px] px-1.5 py-1 rounded bg-slate-50 text-slate-400">×</button>`;
     row.querySelector('[data-area-select]')?.addEventListener('click',()=>selectSavedPolygon(areaId));row.querySelector('[data-area-rename]')?.addEventListener('click',()=>renamePolygon(areaId));row.querySelector('[data-area-redraw]')?.addEventListener('click',()=>redrawPolygon(areaId));row.querySelector('[data-area-delete]')?.addEventListener('click',()=>deletePolygon(areaId));dongBody.appendChild(row);
     const poly=W(area.geometry||area.path,{strokeWeight:active?5:focused?4:2,strokeColor:active?"#9f1239":focused?"#f43f5e":"#e11d48",strokeOpacity:active?1:focused?.9:.65,fillOpacity:active?.24:focused?.13:.075,fillColor:active?"#e11d48":focused?"#fb7185":"#f43f5e"},(()=>selectSavedPolygon(areaId)));poly.setMap(f);k[areaId]=poly;
     const bubbleCenter=K(area.geometry||area.path),wrap=document.createElement("div"),btn=document.createElement("button"),icon=document.createElement("span"),label=document.createElement("span");
@@ -897,9 +915,19 @@ await z(55)}
 if(changed&&X(next))Ct()
 }
 
-function deletePolygon(t){const key=String(t);if(confirm("이 상권 경계를 삭제하시겠습니까?"))return T?alert("분석 종료 후 삭제해주세요."):void(X(Lt.filter(e=>String(e.id)!==key))&&(v581DeletePersistentAreaAnalysis(key),String(b)===key&&clearActivePolygon(),Ct()))}
+function deletePolygon(t){
+ const key=String(t);if(!confirm("이 상권 경계를 삭제하시겠습니까?"))return;if(T)return alert("분석 종료 후 삭제해주세요.");
+ if(!X(Lt.filter(e=>String(e.id)!==key)))return;
+ selectedSavedAreaIds.delete(key);v581DeletePersistentAreaAnalysis(key);
+ if(expandedSavedAreaId!=null&&String(expandedSavedAreaId)===key){
+  const next=[...selectedSavedAreaIds].at(-1)||null;
+  if(!next)return clearActivePolygon();
+  const area=Lt.find(a=>String(a.id)===String(next));expandedSavedAreaId=next;focusedSavedAreaId=next;b=next;w=area?F(area.geometry||area.path):null
+ }
+ Ct();v586RenderAllSelectedSavedAreas(expandedSavedAreaId)
+}
 function selectSavedPolygon(t){
-/* V58.5: 저장상권 목록/폴리곤/말풍선 모두 동일한 항상-열기 + 전체 화면복원 */
+/* V58.6: 저장상권 목록/폴리곤/말풍선 모두 누를수록 선택을 누적하고 전체 화면복원 */
 return toggleSavedPolygonAnalysis(t)
 }
 async function v580EnsureSavedAreaAnalysis(key,area,path){
@@ -945,47 +973,39 @@ async function v580EnsureSavedAreaAnalysis(key,area,path){
 }
 async function toggleSavedPolygonAnalysis(t){
 const key=String(t),area=Lt.find(e=>String(e.id)===key);if(!area)return;
-/* V58.5: 저장상권 클릭은 절대 접지 않고 TOP3·유입·유동인구 화면을 항상 연다. */
+/* V58.6: 저장상권 클릭은 기존 선택을 유지한 채 새 상권을 추가 선택한다. */
 if(T){
  if(expandedSavedAreaId!=null&&String(expandedSavedAreaId)===key){
   document.getElementById("statusMessage").innerText=`${area.name} · 현재 TOP3 분석 중입니다. 완료되면 순위가 표시됩니다.`;return
  }
  return alert("현재 다른 상권을 분석 중입니다. 분석이 끝난 뒤 다시 눌러주세요.")
 }
-focusedSavedAreaId=key;
+selectedSavedAreaIds.add(key);focusedSavedAreaId=key;expandedSavedAreaId=key;b=key;w=F(area.geometry||area.path);R=null;
 mapDrillState={level:"dong",si:area.si||null,gu:area.gu||"",dong:area.dong||null};
 lastAutoRegionKey=`dong|${area.si||""}|${area.gu||""}|${area.dong||""}`;
 v572ClearProvinceLabels();v572ClearCityLabels();v573ClearDongLabels();v572HideAdminFocus();v572UpdateBreadcrumb();
-
-/* 다른 상권에서 넘어왔으면 이전 분석 오버레이만 정리하고, 선택 상태는 곧 새 key로 교체한다. */
-if(expandedSavedAreaId!=null&&String(expandedSavedAreaId)!==key){v564HideAnalysis();Rt()}
-expandedSavedAreaId=key;b=key;w=F(area.geometry||area.path);R=null;v571EnableAnalysisLayers();
 v570SyncSavedBubbleState(key);
-document.getElementById("targetLocationInput").innerText=area.name;
+document.getElementById("targetLocationInput").innerText=selectedSavedAreaIds.size>1?`${area.name} · ${selectedSavedAreaIds.size}개 상권 선택중`:area.name;
 document.getElementById("btnClearPolygon").classList.remove("hidden");
-let bounds=new kakao.maps.LatLngBounds;w.forEach(p=>bounds.extend(new kakao.maps.LatLng(p.lat,p.lng)));
-f.setBounds(bounds);g=bounds.getCenter();
+v586FitSelectedSavedAreas(w);
 Ct();v564SetSavedAreaVisual(key);v570SyncSavedBubbleState(key);applyMapDisplayFilters();
 
 const ok=await v580EnsureSavedAreaAnalysis(key,area,w);
-/* setBounds/idle/지역동기화 이후 오버레이가 사라지는 경우까지 한 번 더 보정 */
-if(ok){setTimeout(()=>v583EnsureActiveSavedRankVisible(key),80);setTimeout(()=>v583EnsureActiveSavedRankVisible(key),320)}
+if(ok){
+ v586RenderAllSelectedSavedAreas(key);
+ document.getElementById("statusMessage").innerText=`${area.name} · ${selectedSavedAreaIds.size}개 상권의 TOP3·유입·유동인구를 함께 표시했습니다.`;
+ setTimeout(()=>v583EnsureActiveSavedRankVisible(key),80);setTimeout(()=>v583EnsureActiveSavedRankVisible(key),320)
+}
 }
 
 function v583EnsureActiveSavedRankVisible(areaId=expandedSavedAreaId){
  const key=areaId==null?null:String(areaId);if(!key||expandedSavedAreaId==null||String(expandedSavedAreaId)!==key)return false;
  const area=Lt.find(a=>String(a.id)===key);if(!area)return false;
- const path=F(area.geometry||area.path),fenceKey=v564FenceKey(path);
- let cache=savedAreaAnalysisCache.get(key);
- if(!(cache?.fenceKey===fenceKey&&v585CacheHasDisplayData(cache))){const p=v581GetPersistentAreaAnalysis(key,path);cache=v585PersistentHasFullVisual(p)?p:null}
- if(!(cache?.analysis?.topSegments?.length))return false;
- v571EnableAnalysisLayers();
- /* 순위뿐 아니라 유동인구/유입 오버레이가 하나라도 사라지면 저장 스냅샷에서 전부 재생성 */
- const box=document.getElementById("rankingResultBox"),txt=document.getElementById("rankingResultText"),expectedFlow=v585PersistentHasFullVisual(cache)?cache.visual.flowSegments.length:(cache.analysis?.segments||[]).length,expectedInflow=v585PersistentHasFullVisual(cache)?cache.visual.inflows.length:0;
- if(rankOverlays.length===0||!i?.topSegments?.length||(expectedFlow>0&&flowLines.length===0)||(expectedInflow>0&&inflowOverlays.length===0)){
-  savedAreaAnalysisCache.set(key,cache);v566RestoreCachedAnalysis(cache,path,key)
- }else{
-  applyMapDisplayFilters();if(box&&(txt?.innerHTML||"").trim())box.classList.remove("hidden")
+ const cache=v586GetSavedDisplayCache(key,area);if(!cache?.analysis?.topSegments?.length)return false;
+ const expected=(selectedSavedAreaIds.size?[...selectedSavedAreaIds].map(String):[key]).filter(id=>v586GetSavedDisplayCache(id)),missing=expected.some(id=>!renderedSavedAreaIds.has(id));
+ if(missing||rankOverlays.length===0){v586RenderAllSelectedSavedAreas(key)}
+ else{
+  const box=document.getElementById("rankingResultBox"),txt=document.getElementById("rankingResultText");applyMapDisplayFilters();if(box&&(txt?.innerHTML||"").trim())box.classList.remove("hidden")
  }
  v564SetSavedAreaVisual(key);v570SyncSavedBubbleState(key);applyMapDisplayFilters();
  return rankOverlays.length>0
@@ -993,11 +1013,11 @@ function v583EnsureActiveSavedRankVisible(areaId=expandedSavedAreaId){
 
 function clearActivePolygon(t=!1){
 if(T)return alert("분석이 끝난 후 해제하거나 먼저 취소해주세요.");
-expandedSavedAreaId=null;focusedSavedAreaId=null;b=null,R=null,w=null,S=null,v564HideAnalysis(),
+selectedSavedAreaIds.clear();expandedSavedAreaId=null;focusedSavedAreaId=null;b=null,R=null,w=null,S=null,v564HideAnalysis(),
 document.getElementById("targetLocationInput").innerText="선택 없음",document.getElementById("btnClearPolygon").classList.add("hidden"),
 document.getElementById("comp_count").innerText="-개",document.getElementById("anchor_count").innerText="-개",document.getElementById("rankingResultText").innerHTML="",v564SetSavedAreaVisual(null),Ct(),
 Rt(),t||I||Ft()}
-function Rt(){_.forEach((t=>{try{t.setMap(null)}catch(e){}})),flowLines.forEach((t=>{try{t.setMap(null)}catch(e){}})),_=[],analysisLines=[],rankOverlays=[],inflowOverlays=[],flowLines=[],document.getElementById("heatLegend")?.classList.add("hidden")}
+function Rt(){_.forEach((t=>{try{t.setMap(null)}catch(e){}})),flowLines.forEach((t=>{try{t.setMap(null)}catch(e){}})),_=[],analysisLines=[],rankOverlays=[],inflowOverlays=[],flowLines=[],renderedSavedAreaIds.clear(),document.getElementById("heatLegend")?.classList.add("hidden")}
 
 function Pt(t,e,n,a){
 const o=(n-t)*Math.PI/180,r=(a-e)*Math.PI/180,s=Math.sin(o/2)**2+Math.cos(t*Math.PI/180)*Math.cos(n*Math.PI/180)*Math.sin(r/2)**2;
@@ -1411,14 +1431,49 @@ function v585RenderSavedInflowPath(item){
  const last=path.at(-1),prev=path.at(-2),bearing=Ut(prev.lat,prev.lng,last.lat,last.lng),arrow=new kakao.maps.CustomOverlay({position:new kakao.maps.LatLng(last.lat,last.lng),xAnchor:.5,yAnchor:.5,zIndex:isMain?138:133,content:`<div style="pointer-events:none;color:${color};font-size:${isMain?24:19}px;font-weight:900;line-height:1;text-shadow:0 2px 4px rgba(255,255,255,.95),0 1px 5px rgba(127,29,29,.25);transform:rotate(${bearing-90}deg)">➤</div>`});arrow.setMap(f);_.push(arrow);inflowOverlays.push(arrow)
 }
 function v585RenderSavedInflows(items){(items||[]).slice(0,2).forEach(v585RenderSavedInflowPath);applyMapDisplayFilters()}
+function v586GetSavedDisplayCache(areaId,area=null){
+ const key=String(areaId||"");if(!key)return null;area=area||Lt.find(a=>String(a.id)===key);if(!area)return null;
+ const path=F(area.geometry||area.path),fenceKey=v564FenceKey(path),cached=savedAreaAnalysisCache.get(key);
+ if(cached?.fenceKey===fenceKey&&v585CacheHasDisplayData(cached))return cached;
+ const persistent=v581GetPersistentAreaAnalysis(key,path);return v585PersistentHasFullVisual(persistent)?persistent:null
+}
+function v586AppendSavedAreaAnalysis(cache,fencePath,areaId,primary=false){
+ if(!cache?.analysis)return false;
+ const persistentFull=v585PersistentHasFullVisual(cache),restoredSegments=persistentFull?v585ExpandFlowSegments(cache.visual.flowSegments):cache.analysis.segments||[],analysis={...cache.analysis,segments:restoredSegments,entryModel:persistentFull?null:cache.analysis.entryModel};
+ v566RenderFlowLinesFromSegments(restoredSegments,fencePath);
+ if(persistentFull)v585RenderSavedInflows(cache.visual.inflows);else v564RenderInflows(analysis.entryModel,fencePath);
+ (analysis.topSegments||[]).forEach((seg,idx)=>ie(seg,idx));
+ renderedSavedAreaIds.add(String(areaId||""));
+ if(primary){
+  i=analysis;
+  const txt=document.getElementById("rankingResultText");if(txt)txt.innerHTML=cache.html||"";
+  lastAnalyzedFenceKey=cache.fenceKey||v564FenceKey(fencePath);lastAnalyzedSavedId=areaId||null;
+  const box=document.getElementById("rankingResultBox");if(box&&(txt?.innerHTML||"").trim())box.classList.remove("hidden")
+ }
+ return true
+}
+function v586RenderAllSelectedSavedAreas(primaryKey=expandedSavedAreaId){
+ const primary=primaryKey==null?null:String(primaryKey),keys=[...selectedSavedAreaIds].map(String).filter(key=>Lt.some(a=>String(a.id)===key));
+ if(primary&&!keys.includes(primary)&&Lt.some(a=>String(a.id)===primary))keys.push(primary);
+ const ordered=primary?[...keys.filter(k=>k!==primary),primary]:keys;
+ Rt();let rendered=0;
+ for(const key of ordered){
+  const area=Lt.find(a=>String(a.id)===key);if(!area)continue;
+  const cache=v586GetSavedDisplayCache(key,area);if(!cache)continue;
+  const path=F(area.geometry||area.path);if(v586AppendSavedAreaAnalysis(cache,path,key,key===primary))rendered++
+ }
+ v564SetSavedAreaVisual(primary);v570SyncSavedBubbleState(primary);applyMapDisplayFilters();return rendered
+}
+function v586FitSelectedSavedAreas(fallbackPath=null){
+ const bounds=new kakao.maps.LatLngBounds;let count=0;
+ const ids=selectedSavedAreaIds.size?[...selectedSavedAreaIds]:(expandedSavedAreaId!=null?[String(expandedSavedAreaId)]:[]);
+ for(const id of ids){const area=Lt.find(a=>String(a.id)===String(id));if(!area)continue;for(const p of F(area.geometry||area.path)){bounds.extend(new kakao.maps.LatLng(p.lat,p.lng));count++}}
+ if(!count&&Array.isArray(fallbackPath))for(const p of fallbackPath){bounds.extend(new kakao.maps.LatLng(p.lat,p.lng));count++}
+ if(count){f.setBounds(bounds);g=bounds.getCenter();return true}return false
+}
 function v566RestoreCachedAnalysis(cache,fencePath,areaId){
-if(!cache?.analysis)return false;Rt();
-const persistentFull=v585PersistentHasFullVisual(cache),restoredSegments=persistentFull?v585ExpandFlowSegments(cache.visual.flowSegments):cache.analysis.segments||[];
-i={...cache.analysis,segments:restoredSegments,entryModel:persistentFull?null:cache.analysis.entryModel};
-const txt=document.getElementById("rankingResultText");if(txt)txt.innerHTML=cache.html||"";
-v566RenderFlowLinesFromSegments(restoredSegments,fencePath);if(persistentFull)v585RenderSavedInflows(cache.visual.inflows);else v564RenderInflows(i.entryModel,fencePath);(i.topSegments||[]).forEach((seg,idx)=>ie(seg,idx));
-lastAnalyzedFenceKey=cache.fenceKey||v564FenceKey(fencePath);lastAnalyzedSavedId=areaId||null;applyMapDisplayFilters();
-const box=document.getElementById("rankingResultBox");if(box&&(txt?.innerHTML||"").trim())box.classList.remove("hidden");return true}
+ if(!cache?.analysis)return false;Rt();const ok=v586AppendSavedAreaAnalysis(cache,fencePath,areaId,true);applyMapDisplayFilters();return ok
+}
 
 function v56ProfileTop(t){const m={mainFlow:"메인동선",commercial:"상가밀집",transport:"교통접근",transportLink:"교통연계",entry:"진입효과",destination:"목적시설"};return Object.entries(t).filter(([k,v])=>m[k]&&Number.isFinite(v)).sort((a,b)=>b[1]-a[1]).slice(0,3).map(([k,v])=>`${m[k]} ${v}`).join(" · ")}
 
@@ -1730,9 +1785,10 @@ setTimeout((()=>{T||ce(w)}),60)}));
 
 kakao.maps.event.addListener(f,"zoom_changed",(()=>{applyMapDisplayFilters();v571ScheduleRegionLabels()}));
 kakao.maps.event.addListener(f,"idle",(async function(){I||w||T||f.getLevel()>5||await Ht();v571ScheduleRegionLabels()}));
+v586InitLayerPrefs();
 Ct();
 v572GoNational();
-document.getElementById("statusMessage").innerText="🗺️ 새로고침 시 대한민국 전체 지도부터 시작합니다. 시·도 → 시·군·구 → 읍·면·동 → 저장상권 순서로 들어갑니다. 순위를 한 번 계산한 저장상권은 다음부터 1·2·3위를 즉시 불러옵니다.";
+document.getElementById("statusMessage").innerText="🗺️ 새로고침 시 대한민국 전체 지도부터 시작합니다. 저장상권 말풍선은 여러 개를 연속 선택할 수 있고, 표시 메뉴에서 끈 레이어는 지도 확대·축소 후에도 그대로 유지됩니다.";
 Ft();
 setTimeout(()=>{v569NormalizeSavedRegions().catch(err=>console.warn("saved region normalize failed",err))},350);
 </script>
