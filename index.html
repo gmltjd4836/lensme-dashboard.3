@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>렌즈미 상권 분석 대시보드 V58.6 다중상권·표시고정</title>
+<title>렌즈미 상권 분석 대시보드 V58.7 다중선택·토글해제</title>
 <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css" rel="stylesheet">
 <script src="https://cdn.tailwindcss.com"></script>
 <style>
@@ -100,7 +100,7 @@ details[open]>summary::before{content:'▾';color:#e11d48}
 <div class="w-full md:w-1/4 bg-white border-r border-gray-200 p-6 flex flex-col shadow-lg z-20 overflow-y-auto">
 <h1 class="text-xl font-extrabold text-slate-800 border-b-4 border-indigo-500 pb-3 mb-4 flex justify-between items-center">
 <span>🗺️ 전국 상권 관제탑</span>
-<span class="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded-full font-bold">V58.6</span>
+<span class="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded-full font-bold">V58.7</span>
 </h1>
 
 <div class="mb-3">
@@ -225,7 +225,7 @@ details[open]>summary::before{content:'▾';color:#e11d48}
 <script src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=c045609510f8b75252389123f086be48&libraries=services,drawing"></script>
 
 <script>
-/* V58.6: V58.5 기준. 표시 레이어 선택을 유지하고 저장상권을 2개 이상 동시에 선택·표시할 수 있게 개선. */
+/* V58.7: 다중상권 선택 유지 + 같은 말풍선 재클릭 해제 + 표시 레이어 상태 고정/기본 ON 보정. */
 const t="mJJ00gscCg39Y6nR0LhUw2yzrIfr7arY65OwUZYk",e={
 TEAM_KILL_METERS:50,SEARCH_RADIUS_MAX:2200,FLOW_MATCH_RADIUS:13,SEGMENT_NODE_SPACING:9,SEGMENT_BEARING_TOLERANCE:24,
 ARM_LOOKAHEAD_METERS:28,MAX_TMAP_ROUTES_PER_SCAN:14,REQUEST_TIMEOUT_MS:12e3,MAX_GATES:7,MAX_DESTINATIONS:10,
@@ -247,7 +247,7 @@ function D(t){return String(t.id||`${t.place_name}|${t.x}|${t.y}`)}
 function v564FenceKey(path){return(Array.isArray(path)?path:[]).map(p=>`${Number(p.lat).toFixed(6)},${Number(p.lng).toFixed(6)}`).join("|")}
 function layerChecked(id,defaultValue=true){const el=document.getElementById(id);return el?!!el.checked:defaultValue}
 function toggleMapLayerMenu(ev){ev?.stopPropagation?.();document.getElementById("mapLayerMenu")?.classList.toggle("hidden")}
-const V586_LAYER_PREFS_KEY="lensmeLayerPrefsV58_6";
+const V586_LAYER_PREFS_KEY="lensmeLayerPrefsV58_7";
 function v586SaveLayerPrefs(){
  try{
   const prefs={};["layer_rank","layer_inflow","layer_flow","layer_names"].forEach(id=>{const el=document.getElementById(id);if(el)prefs[id]=!!el.checked});
@@ -255,10 +255,13 @@ function v586SaveLayerPrefs(){
  }catch(e){}
 }
 function v586LoadLayerPrefs(){
- try{
-  const prefs=JSON.parse(localStorage.getItem(V586_LAYER_PREFS_KEY)||"null");if(!prefs||typeof prefs!=="object")return;
-  ["layer_rank","layer_inflow","layer_flow","layer_names"].forEach(id=>{const el=document.getElementById(id);if(el&&typeof prefs[id]==="boolean")el.checked=prefs[id]})
- }catch(e){}
+ const defaults={layer_rank:true,layer_inflow:true,layer_flow:true,layer_names:true};
+ let prefs=null;
+ try{prefs=JSON.parse(localStorage.getItem(V586_LAYER_PREFS_KEY)||"null")}catch(e){prefs=null}
+ ["layer_rank","layer_inflow","layer_flow","layer_names"].forEach(id=>{
+  const el=document.getElementById(id);if(!el)return;
+  el.checked=prefs&&typeof prefs[id]==="boolean"?prefs[id]:defaults[id]
+ })
 }
 function v586InitLayerPrefs(){
  v586LoadLayerPrefs();
@@ -281,7 +284,7 @@ Object.entries(x).forEach(([id,o])=>{try{const key=String(id),area=Lt.find(a=>St
 Object.entries(k).forEach(([id,poly])=>{try{const key=String(id),area=Lt.find(a=>String(a.id)===key),showByDong=v572AreaMatchesCurrentCity(area),keep=selectedSavedAreaIds.has(key)||key===focusedKey||key===activeKey||showByDong;poly.setMap(keep?f:null)}catch(e){}});
 document.getElementById("heatLegend")?.classList.toggle("hidden",!showFlow);
 }
-function v571EnableAnalysisLayers(){/* V58.6: 사용자가 꺼둔 순위·유입·유동인구·상권명 설정을 절대 강제로 켜지 않는다. */}
+function v571EnableAnalysisLayers(){/* V58.7: 최초 기본값은 모두 ON. 사용자가 직접 끈 뒤에는 줌/이동/상권선택으로 다시 켜지지 않는다. */}
 
 function v564HideAnalysis(){_.forEach(o=>{try{o.setMap(null)}catch(e){}});flowLines.forEach(o=>{try{o.setMap(null)}catch(e){}});document.getElementById("heatLegend")?.classList.add("hidden");document.getElementById("rankingResultBox")?.classList.add("hidden")}
 function v564SetSavedAreaVisual(activeId=expandedSavedAreaId){const activeKey=activeId==null?null:String(activeId),focusKey=focusedSavedAreaId==null?null:String(focusedSavedAreaId);Object.entries(k).forEach(([id,poly])=>{const key=String(id),selected=selectedSavedAreaIds.has(key)||key===activeKey,focused=key===focusKey;poly.setOptions({fillColor:focused?"#e11d48":selected?"#fb7185":"#f43f5e",fillOpacity:focused?.26:selected?.18:.075,strokeColor:focused?"#9f1239":selected?"#e11d48":"#e11d48",strokeOpacity:focused?1:selected?.92:.65,strokeWeight:focused?5:selected?4:2})})}
@@ -359,7 +362,7 @@ function v585BuildInflowSnapshot(entryModel,fencePath){
  }
  return out
 }
-function v585PersistentHasFullVisual(snap){return !!(snap&&+snap.version>=2&&Array.isArray(snap.visual?.flowSegments)&&Array.isArray(snap.visual?.inflows))}
+function v585PersistentHasFullVisual(snap){return !!(snap&&+snap.version>=2&&Array.isArray(snap.visual?.flowSegments)&&snap.visual.flowSegments.length>0&&Array.isArray(snap.visual?.inflows))}
 function v585CacheHasDisplayData(cache){return !!(cache?.analysis?.topSegments?.length&&(v585PersistentHasFullVisual(cache)||(Array.isArray(cache.analysis?.segments)&&cache.analysis.segments.length>0)))}
 function v581BuildPersistentCache(fenceKey,analysis,html,fencePath,maxFlow=e.HEATMAP_MAX_SEGMENTS){
  const top=(analysis?.topSegments||[]).slice(0,3).map(v581CompactTopSegment).filter(Boolean);if(!top.length)return null;
@@ -754,7 +757,7 @@ function v572RefreshRegionNavigation(){
  applyMapDisplayFilters()
 }
 async function v573SyncRegionFromMap(force=false){
- /* V58.6: 저장상권 분석이 열린 동안 지도 줌/이동 후에도 행정단계와 다중 분석 오버레이를 고정한다. */
+ /* V58.7: 저장상권 분석이 열린 동안 지도 줌/이동 후에도 행정단계와 다중 분석 오버레이를 고정한다. */
  if(expandedSavedAreaId!=null){
   const active=Lt.find(a=>String(a.id)===String(expandedSavedAreaId));
   if(active){
@@ -927,7 +930,7 @@ function deletePolygon(t){
  Ct();v586RenderAllSelectedSavedAreas(expandedSavedAreaId)
 }
 function selectSavedPolygon(t){
-/* V58.6: 저장상권 목록/폴리곤/말풍선 모두 누를수록 선택을 누적하고 전체 화면복원 */
+/* V58.7: 저장상권 목록/폴리곤/말풍선은 클릭 시 선택, 같은 항목 재클릭 시 선택 해제 */
 return toggleSavedPolygonAnalysis(t)
 }
 async function v580EnsureSavedAreaAnalysis(key,area,path){
@@ -973,13 +976,45 @@ async function v580EnsureSavedAreaAnalysis(key,area,path){
 }
 async function toggleSavedPolygonAnalysis(t){
 const key=String(t),area=Lt.find(e=>String(e.id)===key);if(!area)return;
-/* V58.6: 저장상권 클릭은 기존 선택을 유지한 채 새 상권을 추가 선택한다. */
+/* V58.7: 새 상권은 추가 선택, 이미 선택된 상권은 재클릭하면 해제한다. */
 if(T){
  if(expandedSavedAreaId!=null&&String(expandedSavedAreaId)===key){
-  document.getElementById("statusMessage").innerText=`${area.name} · 현재 TOP3 분석 중입니다. 완료되면 순위가 표시됩니다.`;return
+  document.getElementById("statusMessage").innerText=`${area.name} · 현재 TOP3 분석 중입니다. 분석이 끝난 뒤 다시 누르면 선택 해제할 수 있습니다.`;return
  }
  return alert("현재 다른 상권을 분석 중입니다. 분석이 끝난 뒤 다시 눌러주세요.")
 }
+
+/* 이미 선택된 말풍선/상권을 다시 누르면 그 상권만 해제 */
+if(selectedSavedAreaIds.has(key)){
+ selectedSavedAreaIds.delete(key);
+ const remain=[...selectedSavedAreaIds].map(String).filter(id=>Lt.some(a=>String(a.id)===id));
+ if(!remain.length){
+  expandedSavedAreaId=null;focusedSavedAreaId=null;b=null;w=null;R=null;i=null;
+  v564HideAnalysis();Rt();
+  document.getElementById("targetLocationInput").innerText="선택 없음";
+  document.getElementById("btnClearPolygon").classList.add("hidden");
+  document.getElementById("rankingResultText").innerHTML="";
+  Ct();v570SyncSavedBubbleState(null);v564SetSavedAreaVisual(null);applyMapDisplayFilters();
+  document.getElementById("statusMessage").innerText=`${area.name} 선택 해제 · 선택된 상권이 없습니다.`;
+  return
+ }
+ const current=expandedSavedAreaId!=null?String(expandedSavedAreaId):null;
+ const nextKey=current&&current!==key&&selectedSavedAreaIds.has(current)?current:remain.at(-1);
+ const nextArea=Lt.find(a=>String(a.id)===String(nextKey));
+ expandedSavedAreaId=nextKey;focusedSavedAreaId=nextKey;b=nextKey;w=nextArea?F(nextArea.geometry||nextArea.path):null;R=null;
+ if(nextArea){
+  mapDrillState={level:"dong",si:nextArea.si||null,gu:nextArea.gu||"",dong:nextArea.dong||null};
+  lastAutoRegionKey=`dong|${nextArea.si||""}|${nextArea.gu||""}|${nextArea.dong||""}`
+ }
+ document.getElementById("targetLocationInput").innerText=remain.length>1?`${nextArea?.name||"저장상권"} · ${remain.length}개 상권 선택중`:(nextArea?.name||"저장상권");
+ document.getElementById("btnClearPolygon").classList.remove("hidden");
+ Ct();v586FitSelectedSavedAreas(w);v586RenderAllSelectedSavedAreas(nextKey);
+ v564SetSavedAreaVisual(nextKey);v570SyncSavedBubbleState(nextKey);applyMapDisplayFilters();
+ document.getElementById("statusMessage").innerText=`${area.name} 선택 해제 · ${remain.length}개 상권의 TOP3·유입·유동인구를 표시합니다.`;
+ return
+}
+
+/* 새 상권 추가 선택 */
 selectedSavedAreaIds.add(key);focusedSavedAreaId=key;expandedSavedAreaId=key;b=key;w=F(area.geometry||area.path);R=null;
 mapDrillState={level:"dong",si:area.si||null,gu:area.gu||"",dong:area.dong||null};
 lastAutoRegionKey=`dong|${area.si||""}|${area.gu||""}|${area.dong||""}`;
@@ -993,6 +1028,7 @@ Ct();v564SetSavedAreaVisual(key);v570SyncSavedBubbleState(key);applyMapDisplayFi
 const ok=await v580EnsureSavedAreaAnalysis(key,area,w);
 if(ok){
  v586RenderAllSelectedSavedAreas(key);
+ applyMapDisplayFilters();
  document.getElementById("statusMessage").innerText=`${area.name} · ${selectedSavedAreaIds.size}개 상권의 TOP3·유입·유동인구를 함께 표시했습니다.`;
  setTimeout(()=>v583EnsureActiveSavedRankVisible(key),80);setTimeout(()=>v583EnsureActiveSavedRankVisible(key),320)
 }
@@ -1788,7 +1824,7 @@ kakao.maps.event.addListener(f,"idle",(async function(){I||w||T||f.getLevel()>5|
 v586InitLayerPrefs();
 Ct();
 v572GoNational();
-document.getElementById("statusMessage").innerText="🗺️ 새로고침 시 대한민국 전체 지도부터 시작합니다. 저장상권 말풍선은 여러 개를 연속 선택할 수 있고, 표시 메뉴에서 끈 레이어는 지도 확대·축소 후에도 그대로 유지됩니다.";
+document.getElementById("statusMessage").innerText="🗺️ 새로고침 시 대한민국 전체 지도부터 시작합니다. 저장상권 말풍선은 여러 개 선택할 수 있고 같은 말풍선을 다시 누르면 그 상권만 해제됩니다. 표시 메뉴에서 끈 레이어는 지도 확대·축소 후에도 그대로 유지됩니다.";
 Ft();
 setTimeout(()=>{v569NormalizeSavedRegions().catch(err=>console.warn("saved region normalize failed",err))},350);
 </script>
