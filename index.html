@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>렌즈미 상권 분석 대시보드 V57.9 저장상권 즉시분석·고정</title>
+<title>렌즈미 상권 분석 대시보드 V58.0 저장상권 TOP3 복원 보강</title>
 <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css" rel="stylesheet">
 <script src="https://cdn.tailwindcss.com"></script>
 <style>
@@ -100,7 +100,7 @@ details[open]>summary::before{content:'▾';color:#e11d48}
 <div class="w-full md:w-1/4 bg-white border-r border-gray-200 p-6 flex flex-col shadow-lg z-20 overflow-y-auto">
 <h1 class="text-xl font-extrabold text-slate-800 border-b-4 border-indigo-500 pb-3 mb-4 flex justify-between items-center">
 <span>🗺️ 전국 상권 관제탑</span>
-<span class="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded-full font-bold">V57.9</span>
+<span class="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded-full font-bold">V58.0</span>
 </h1>
 
 <div class="mb-3">
@@ -656,7 +656,7 @@ function v572RefreshRegionNavigation(){
  applyMapDisplayFilters()
 }
 async function v573SyncRegionFromMap(force=false){
- /* V57.9: 저장상권 분석이 열린 동안 지도 줌/이동으로 행정구역 단계가 바뀌며 분석 오버레이가 사라지지 않도록 고정한다. */
+ /* V58.0: 저장상권 분석이 열린 동안 지도 줌/이동으로 행정구역 단계가 바뀌며 분석 오버레이가 사라지지 않도록 고정한다. */
  if(expandedSavedAreaId!=null){
   const active=Lt.find(a=>String(a.id)===String(expandedSavedAreaId));
   if(active){
@@ -1083,34 +1083,50 @@ if(changed&&X(next))Ct()
 
 function deletePolygon(t){const key=String(t);if(confirm("이 상권 경계를 삭제하시겠습니까?"))return T?alert("분석 종료 후 삭제해주세요."):void(X(Lt.filter(e=>String(e.id)!==key))&&(savedAreaAnalysisCache.delete(key),String(b)===key&&clearActivePolygon(),Ct()))}
 function selectSavedPolygon(t){
-/* V57.9: 왼쪽 저장상권 목록/폴리곤 클릭도 말풍선 클릭과 동일하게 즉시 분석을 연다. */
+/* V58.0: 왼쪽 저장상권 클릭은 항상 분석 열기. 결과가 없으면 자동 재분석한다. */
 return toggleSavedPolygonAnalysis(t,false)
 }
-function toggleSavedPolygonAnalysis(t,allowCollapse=true){
-const key=String(t),area=Lt.find(e=>String(e.id)===key);if(!area)return;
-if(T)return alert("현재 분석이 진행 중입니다. 분석이 끝난 뒤 다시 눌러주세요.");
-focusedSavedAreaId=key;mapDrillState={level:"dong",si:area.si||null,gu:area.gu||"",dong:area.dong||null};lastAutoRegionKey=`dong|${area.si||""}|${area.gu||""}|${area.dong||""}`;v572ClearProvinceLabels();v572ClearCityLabels();v573ClearDongLabels();v572HideAdminFocus();v572UpdateBreadcrumb();
-if(expandedSavedAreaId!=null&&String(expandedSavedAreaId)===key){
- if(!allowCollapse){
-  w=F(area.geometry||area.path);b=key;v571EnableAnalysisLayers();
-  let bounds=new kakao.maps.LatLngBounds;w.forEach(p=>bounds.extend(new kakao.maps.LatLng(p.lat,p.lng)));f.setBounds(bounds);g=bounds.getCenter();
-  Ct();v564SetSavedAreaVisual(key);v570SyncSavedBubbleState(key);v564ShowAnalysis();applyMapDisplayFilters();
-  document.getElementById("targetLocationInput").innerText=area.name;document.getElementById("btnClearPolygon").classList.remove("hidden");
-  document.getElementById("statusMessage").innerText=`${area.name} · TOP3·유입·유동인구 분석을 계속 표시합니다.`;return
+async function v580EnsureSavedAreaAnalysis(key,area,path){
+ const fenceKey=v564FenceKey(path),cached=savedAreaAnalysisCache.get(key);
+ v571EnableAnalysisLayers();
+ if(cached?.fenceKey===fenceKey&&cached?.analysis?.topSegments?.length){
+  v566RestoreCachedAnalysis(cached,path,key);applyMapDisplayFilters();
+  document.getElementById("statusMessage").innerText=`${area.name} · 저장된 TOP3·유입·유동인구를 다시 표시했습니다.`;return true
  }
+ if(lastAnalyzedFenceKey===fenceKey&&i?.topSegments?.length){
+  const liveCache={fenceKey,analysis:i,html:document.getElementById("rankingResultText")?.innerHTML||""};
+  savedAreaAnalysisCache.set(key,liveCache);lastAnalyzedSavedId=key;v566RestoreCachedAnalysis(liveCache,path,key);applyMapDisplayFilters();
+  document.getElementById("statusMessage").innerText=`${area.name} · 방금 계산한 TOP3를 다시 표시했습니다.`;return true
+ }
+ Rt();document.getElementById("rankingResultBox")?.classList.add("hidden");document.getElementById("statusMessage").innerText=`${area.name} · TOP3 입지 순위를 계산 중입니다...`;
+ await ce([...path.map(p=>({...p}))]);
+ if(expandedSavedAreaId==null||String(expandedSavedAreaId)!==String(key))return false;
+ v571EnableAnalysisLayers();
+ /* 분석은 끝났는데 지도 순위 오버레이가 비어 있으면 TOP3를 강제로 다시 그린다. */
+ if(i?.topSegments?.length&&rankOverlays.length===0){(i.topSegments||[]).forEach((seg,idx)=>ie(seg,idx))}
+ if(i?.topSegments?.length){
+  const html=document.getElementById("rankingResultText")?.innerHTML||"";
+  savedAreaAnalysisCache.set(String(key),{fenceKey,analysis:i,html});lastAnalyzedSavedId=String(key);lastAnalyzedFenceKey=fenceKey;
+  const box=document.getElementById("rankingResultBox");if(box&&html.trim())box.classList.remove("hidden");
+  applyMapDisplayFilters();document.getElementById("statusMessage").innerText=`${area.name} · 상권 내 TOP${i.topSegments.length} 입지 순위를 표시했습니다.`;return true
+ }
+ applyMapDisplayFilters();return false
+}
+async function toggleSavedPolygonAnalysis(t,allowCollapse=true){
+const key=String(t),area=Lt.find(e=>String(e.id)===key);if(!area)return;
+if(T){if(expandedSavedAreaId!=null&&String(expandedSavedAreaId)===key)return;return alert("현재 다른 상권을 분석 중입니다. 분석이 끝난 뒤 다시 눌러주세요.")}
+focusedSavedAreaId=key;mapDrillState={level:"dong",si:area.si||null,gu:area.gu||"",dong:area.dong||null};lastAutoRegionKey=`dong|${area.si||""}|${area.gu||""}|${area.dong||""}`;v572ClearProvinceLabels();v572ClearCityLabels();v573ClearDongLabels();v572HideAdminFocus();v572UpdateBreadcrumb();
+const sameOpen=expandedSavedAreaId!=null&&String(expandedSavedAreaId)===key;
+if(sameOpen&&allowCollapse&&i?.topSegments?.length&&rankOverlays.length){
  expandedSavedAreaId=null;b=null;w=null;R=null;v564HideAnalysis();Ct();v564SetSavedAreaVisual(null);v570SyncSavedBubbleState(null);applyMapDisplayFilters();
  document.getElementById("targetLocationInput").innerText=area.name;document.getElementById("btnClearPolygon").classList.add("hidden");
- document.getElementById("statusMessage").innerText=`${area.name} 분석을 접었습니다. 말풍선을 다시 누르면 분석이 펼쳐집니다.`;return
+ document.getElementById("statusMessage").innerText=`${area.name} 분석을 접었습니다. 말풍선을 다시 누르면 TOP3가 다시 표시됩니다.`;return
 }
 if(expandedSavedAreaId!=null&&String(expandedSavedAreaId)!==key){v564HideAnalysis();Rt()}
 expandedSavedAreaId=key;b=key;w=F(area.geometry||area.path);R=null;v571EnableAnalysisLayers();
 v570SyncSavedBubbleState(key);document.getElementById("targetLocationInput").innerText=area.name;document.getElementById("btnClearPolygon").classList.remove("hidden");
 let bounds=new kakao.maps.LatLngBounds;w.forEach(p=>bounds.extend(new kakao.maps.LatLng(p.lat,p.lng)));f.setBounds(bounds);g=bounds.getCenter();Ct();v564SetSavedAreaVisual(key);v570SyncSavedBubbleState(key);applyMapDisplayFilters();
-const fenceKey=v564FenceKey(w),cached=savedAreaAnalysisCache.get(key);
-if(cached?.fenceKey===fenceKey&&cached?.analysis?.topSegments?.length){v566RestoreCachedAnalysis(cached,w,key);applyMapDisplayFilters();document.getElementById("statusMessage").innerText=`${area.name} · 저장된 TOP3·유입·유동인구를 펼쳤습니다.`;return}
-if(lastAnalyzedFenceKey===fenceKey&&i?.topSegments?.length){const liveCache={fenceKey,analysis:i,html:document.getElementById("rankingResultText")?.innerHTML||""};savedAreaAnalysisCache.set(key,liveCache);lastAnalyzedSavedId=key;v566RestoreCachedAnalysis(liveCache,w,key);applyMapDisplayFilters();document.getElementById("statusMessage").innerText=`${area.name} · 방금 분석한 결과를 펼쳤습니다.`;return}
-Rt();document.getElementById("rankingResultBox")?.classList.add("hidden");document.getElementById("statusMessage").innerText=`${area.name} · 저장상권을 다시 분석합니다...`;
-const path=[...w.map(p=>({...p}))];setTimeout(()=>{if(expandedSavedAreaId!=null&&String(expandedSavedAreaId)===key&&!T)ce(path)},80)
+await v580EnsureSavedAreaAnalysis(key,area,w)
 }
 
 function clearActivePolygon(t=!1){
