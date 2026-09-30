@@ -100,7 +100,7 @@ details[open]>summary::before{content:'▾';color:#e11d48}
 <div class="w-full md:w-1/4 bg-white border-r border-gray-200 p-6 flex flex-col shadow-lg z-20 overflow-y-auto">
 <h1 class="text-xl font-extrabold text-slate-800 border-b-4 border-indigo-500 pb-3 mb-4 flex justify-between items-center">
 <span>🗺️ 전국 상권 관제탑</span>
-<span class="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded-full font-bold">V58.2</span>
+<span class="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded-full font-bold">V58.3</span>
 </h1>
 
 <div class="mb-3">
@@ -732,13 +732,13 @@ function v572RefreshRegionNavigation(){
  applyMapDisplayFilters()
 }
 async function v573SyncRegionFromMap(force=false){
- /* V58.1: 저장상권 분석이 열린 동안 지도 줌/이동으로 행정구역 단계가 바뀌며 분석 오버레이가 사라지지 않도록 고정한다. */
+ /* V58.3: 저장상권 분석이 열린 동안 지도 줌/이동 후에도 행정단계와 TOP3 표시를 고정한다. */
  if(expandedSavedAreaId!=null){
   const active=Lt.find(a=>String(a.id)===String(expandedSavedAreaId));
   if(active){
    mapDrillState={level:"dong",si:active.si||null,gu:active.gu||"",dong:active.dong||null};
    lastAutoRegionKey=`dong|${active.si||""}|${active.gu||""}|${active.dong||""}`;
-   v573ClearRegionLabels();v572HideAdminFocus();v572UpdateBreadcrumb();applyMapDisplayFilters();return
+   v573ClearRegionLabels();v572HideAdminFocus();v572UpdateBreadcrumb();applyMapDisplayFilters();setTimeout(()=>v583EnsureActiveSavedRankVisible(expandedSavedAreaId),0);return
   }
  }
  const seq=++regionLabelRequestSeq,level=f.getLevel(),center=f.getCenter();
@@ -1137,7 +1137,7 @@ for(const si of sis){
     row.querySelector('[data-area-select]')?.addEventListener('click',()=>selectSavedPolygon(areaId));row.querySelector('[data-area-rename]')?.addEventListener('click',()=>renamePolygon(areaId));row.querySelector('[data-area-redraw]')?.addEventListener('click',()=>redrawPolygon(areaId));row.querySelector('[data-area-delete]')?.addEventListener('click',()=>deletePolygon(areaId));dongBody.appendChild(row);
     const poly=W(area.geometry||area.path,{strokeWeight:active?5:focused?4:2,strokeColor:active?"#9f1239":focused?"#f43f5e":"#e11d48",strokeOpacity:active?1:focused?.9:.65,fillOpacity:active?.24:focused?.13:.075,fillColor:active?"#e11d48":focused?"#fb7185":"#f43f5e"},(()=>selectSavedPolygon(areaId)));poly.setMap(f);k[areaId]=poly;
     const bubbleCenter=K(area.geometry||area.path),wrap=document.createElement("div"),btn=document.createElement("button"),icon=document.createElement("span"),label=document.createElement("span");
-    wrap.className="poly-nametag-wrap";btn.type="button";btn.className=`poly-nametag${active?" active":""}`;btn.setAttribute("aria-pressed",active?"true":"false");icon.className=active?"poly-nametag-check":"poly-nametag-pin";icon.textContent=active?"✓":"📍";label.className="poly-nametag-text";label.textContent=area.name;btn.append(icon,label);wrap.appendChild(btn);btn.addEventListener("click",ev=>{ev.stopPropagation();toggleSavedPolygonAnalysis(areaId)});
+    wrap.className="poly-nametag-wrap";btn.type="button";btn.className=`poly-nametag${active?" active":""}`;btn.setAttribute("aria-pressed",active?"true":"false");icon.className=active?"poly-nametag-check":"poly-nametag-pin";icon.textContent=active?"✓":"📍";label.className="poly-nametag-text";label.textContent=area.name;btn.append(icon,label);wrap.appendChild(btn);btn.addEventListener("click",ev=>{ev.stopPropagation();selectSavedPolygon(areaId)});
     const ov=new kakao.maps.CustomOverlay({position:new kakao.maps.LatLng(bubbleCenter.lat,bubbleCenter.lng),content:wrap,xAnchor:.5,yAnchor:1,zIndex:active?125:110});ov.setMap(f);x[areaId]=ov;savedBubbleEls[areaId]={wrap,button:btn,icon,label,overlay:ov}
    }
    guBody.appendChild(dongEl)
@@ -1160,8 +1160,8 @@ if(changed&&X(next))Ct()
 
 function deletePolygon(t){const key=String(t);if(confirm("이 상권 경계를 삭제하시겠습니까?"))return T?alert("분석 종료 후 삭제해주세요."):void(X(Lt.filter(e=>String(e.id)!==key))&&(v581DeletePersistentAreaAnalysis(key),String(b)===key&&clearActivePolygon(),Ct()))}
 function selectSavedPolygon(t){
-/* V58.2: 왼쪽 저장상권 클릭은 항상 분석 열기. 옛 저장상권은 최초 1회 순위를 마이그레이션해 영구저장한다. */
-return toggleSavedPolygonAnalysis(t,false)
+/* V58.3: 저장상권 목록/폴리곤/말풍선 모두 동일한 항상-열기 동작 */
+return toggleSavedPolygonAnalysis(t)
 }
 async function v580EnsureSavedAreaAnalysis(key,area,path){
  const fenceKey=v564FenceKey(path),cached=savedAreaAnalysisCache.get(key),persistent=v581GetPersistentAreaAnalysis(key,path);
@@ -1204,21 +1204,52 @@ async function v580EnsureSavedAreaAnalysis(key,area,path){
  }
  document.getElementById("statusMessage").innerText=`${area.name} · 분석 가능한 도로 후보를 만들지 못했습니다. 펜스 범위 또는 데이터 수집 상태를 확인해주세요.`;applyMapDisplayFilters();return false
 }
-async function toggleSavedPolygonAnalysis(t,allowCollapse=true){
+async function toggleSavedPolygonAnalysis(t){
 const key=String(t),area=Lt.find(e=>String(e.id)===key);if(!area)return;
-if(T){if(expandedSavedAreaId!=null&&String(expandedSavedAreaId)===key)return;return alert("현재 다른 상권을 분석 중입니다. 분석이 끝난 뒤 다시 눌러주세요.")}
-focusedSavedAreaId=key;mapDrillState={level:"dong",si:area.si||null,gu:area.gu||"",dong:area.dong||null};lastAutoRegionKey=`dong|${area.si||""}|${area.gu||""}|${area.dong||""}`;v572ClearProvinceLabels();v572ClearCityLabels();v573ClearDongLabels();v572HideAdminFocus();v572UpdateBreadcrumb();
-const sameOpen=expandedSavedAreaId!=null&&String(expandedSavedAreaId)===key;
-if(sameOpen&&allowCollapse&&i?.topSegments?.length&&rankOverlays.length){
- expandedSavedAreaId=null;b=null;w=null;R=null;v564HideAnalysis();Ct();v564SetSavedAreaVisual(null);v570SyncSavedBubbleState(null);applyMapDisplayFilters();
- document.getElementById("targetLocationInput").innerText=area.name;document.getElementById("btnClearPolygon").classList.add("hidden");
- document.getElementById("statusMessage").innerText=`${area.name} 분석을 접었습니다. 말풍선을 다시 누르면 TOP3가 다시 표시됩니다.`;return
+/* V58.3: 저장상권 클릭은 절대 토글/접기하지 않는다. 항상 해당 상권 분석을 연다. */
+if(T){
+ if(expandedSavedAreaId!=null&&String(expandedSavedAreaId)===key){
+  document.getElementById("statusMessage").innerText=`${area.name} · 현재 TOP3 분석 중입니다. 완료되면 순위가 표시됩니다.`;return
+ }
+ return alert("현재 다른 상권을 분석 중입니다. 분석이 끝난 뒤 다시 눌러주세요.")
 }
+focusedSavedAreaId=key;
+mapDrillState={level:"dong",si:area.si||null,gu:area.gu||"",dong:area.dong||null};
+lastAutoRegionKey=`dong|${area.si||""}|${area.gu||""}|${area.dong||""}`;
+v572ClearProvinceLabels();v572ClearCityLabels();v573ClearDongLabels();v572HideAdminFocus();v572UpdateBreadcrumb();
+
+/* 다른 상권에서 넘어왔으면 이전 분석 오버레이만 정리하고, 선택 상태는 곧 새 key로 교체한다. */
 if(expandedSavedAreaId!=null&&String(expandedSavedAreaId)!==key){v564HideAnalysis();Rt()}
 expandedSavedAreaId=key;b=key;w=F(area.geometry||area.path);R=null;v571EnableAnalysisLayers();
-v570SyncSavedBubbleState(key);document.getElementById("targetLocationInput").innerText=area.name;document.getElementById("btnClearPolygon").classList.remove("hidden");
-let bounds=new kakao.maps.LatLngBounds;w.forEach(p=>bounds.extend(new kakao.maps.LatLng(p.lat,p.lng)));f.setBounds(bounds);g=bounds.getCenter();Ct();v564SetSavedAreaVisual(key);v570SyncSavedBubbleState(key);applyMapDisplayFilters();
-await v580EnsureSavedAreaAnalysis(key,area,w)
+v570SyncSavedBubbleState(key);
+document.getElementById("targetLocationInput").innerText=area.name;
+document.getElementById("btnClearPolygon").classList.remove("hidden");
+let bounds=new kakao.maps.LatLngBounds;w.forEach(p=>bounds.extend(new kakao.maps.LatLng(p.lat,p.lng)));
+f.setBounds(bounds);g=bounds.getCenter();
+Ct();v564SetSavedAreaVisual(key);v570SyncSavedBubbleState(key);applyMapDisplayFilters();
+
+const ok=await v580EnsureSavedAreaAnalysis(key,area,w);
+/* setBounds/idle/지역동기화 이후 오버레이가 사라지는 경우까지 한 번 더 보정 */
+if(ok){setTimeout(()=>v583EnsureActiveSavedRankVisible(key),80);setTimeout(()=>v583EnsureActiveSavedRankVisible(key),320)}
+}
+
+function v583EnsureActiveSavedRankVisible(areaId=expandedSavedAreaId){
+ const key=areaId==null?null:String(areaId);if(!key||expandedSavedAreaId==null||String(expandedSavedAreaId)!==key)return false;
+ const area=Lt.find(a=>String(a.id)===key);if(!area)return false;
+ const path=F(area.geometry||area.path),fenceKey=v564FenceKey(path);
+ let cache=savedAreaAnalysisCache.get(key);
+ if(!(cache?.fenceKey===fenceKey&&cache?.analysis?.topSegments?.length))cache=v581GetPersistentAreaAnalysis(key,path);
+ if(!(cache?.analysis?.topSegments?.length))return false;
+ v571EnableAnalysisLayers();
+ /* rank 배열이 비었거나 결과 패널이 사라졌으면 저장 스냅샷에서 완전히 재생성 */
+ const box=document.getElementById("rankingResultBox"),txt=document.getElementById("rankingResultText");
+ if(rankOverlays.length===0||!i?.topSegments?.length){
+  savedAreaAnalysisCache.set(key,cache);v566RestoreCachedAnalysis(cache,path,key)
+ }else{
+  applyMapDisplayFilters();if(box&&(txt?.innerHTML||"").trim())box.classList.remove("hidden")
+ }
+ v564SetSavedAreaVisual(key);v570SyncSavedBubbleState(key);applyMapDisplayFilters();
+ return rankOverlays.length>0
 }
 
 function clearActivePolygon(t=!1){
