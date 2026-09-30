@@ -100,7 +100,7 @@ details[open]>summary::before{content:'▾';color:#e11d48}
 <div class="w-full md:w-1/4 bg-white border-r border-gray-200 p-6 flex flex-col shadow-lg z-20 overflow-y-auto">
 <h1 class="text-xl font-extrabold text-slate-800 border-b-4 border-indigo-500 pb-3 mb-4 flex justify-between items-center">
 <span>🗺️ 전국 상권 관제탑</span>
-<span class="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded-full font-bold">V58.0</span>
+<span class="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded-full font-bold">V58.1</span>
 </h1>
 
 <div class="mb-3">
@@ -240,7 +240,7 @@ if(!window.kakao?.maps?.services||!window.kakao?.maps?.drawing)throw document.ge
 new Error("Kakao SDK unavailable");
 let n="new",a="",o=null,r=null,s=[],i=null,l="",c=null,d=0,u=document.getElementById("map"),m=new kakao.maps.LatLng(36.15,127.75),g=m,f=new kakao.maps.Map(u,{center:m,
 level:12}),h=new kakao.maps.services.Places,p=new kakao.maps.services.Geocoder,y=[],_=[],A=new Map,E=new Map,M=new kakao.maps.CustomOverlay({xAnchor:.5,yAnchor:1.5,zIndex:150
-}),w=null,b=null,k={},x={},I=!1,S=null,T=!1,O=0,v=[],L={},C={},R=null,P=[],N=[],analysisLines=[],rankOverlays=[],inflowOverlays=[],flowLines=[],expandedSavedAreaId=null,focusedSavedAreaId=null,lastAnalyzedSavedId=null,lastAnalyzedFenceKey="",savedAreaAnalysisCache=new Map,savedBubbleEls={},provinceLabelOverlays=[],cityLabelOverlays=[],dongLabelOverlays=[],adminFocusOverlay=null,regionLabelTimer=null,regionLabelRequestSeq=0,mapDrillState={level:"national",si:null,gu:null,dong:null},lastAutoRegionKey="",regionFanoutToken=0,municipalityCenterCache=new Map,hapaOlivePlaceCache=new Map,legalDongTreePromise=null,legalDongTreeData=null;
+}),w=null,b=null,k={},x={},I=!1,S=null,T=!1,O=0,v=[],L={},C={},R=null,P=[],N=[],analysisLines=[],rankOverlays=[],inflowOverlays=[],flowLines=[],expandedSavedAreaId=null,focusedSavedAreaId=null,lastAnalyzedSavedId=null,lastAnalyzedFenceKey="",savedAreaAnalysisCache=new Map,savedAreaPersistentAnalysis=v581LoadPersistentAnalysisStore(),savedBubbleEls={},provinceLabelOverlays=[],cityLabelOverlays=[],dongLabelOverlays=[],adminFocusOverlay=null,regionLabelTimer=null,regionLabelRequestSeq=0,mapDrillState={level:"national",si:null,gu:null,dong:null},lastAutoRegionKey="",regionFanoutToken=0,municipalityCenterCache=new Map,hapaOlivePlaceCache=new Map,legalDongTreePromise=null,legalDongTreeData=null;
 
 function D(t){return String(t.id||`${t.place_name}|${t.x}|${t.y}`)}
 function v564FenceKey(path){return(Array.isArray(path)?path:[]).map(p=>`${Number(p.lat).toFixed(6)},${Number(p.lng).toFixed(6)}`).join("|")}
@@ -308,18 +308,56 @@ function W(t,e={},n=null){
 const a=H(t),o=("MultiPolygon"===a.geometry.type?a.geometry.coordinates:[a.geometry.coordinates]).map((t=>new kakao.maps.Polygon({...e,
 path:t.map((t=>t.map((t=>new kakao.maps.LatLng(t[1],t[0])))))})));
 return n&&o.forEach((t=>kakao.maps.event.addListener(t,"click",n))),{setMap(t){o.forEach((e=>e.setMap(t)))},setOptions(t){o.forEach((e=>e.setOptions(t)))}}}
-function X(t){try{return localStorage.setItem("lensmePolygonsV43_2",JSON.stringify(t)),Lt=t,!0}
+const V581_ANALYSIS_STORAGE_KEY="lensmeSavedAnalysisV58_1";
+function v581LoadPersistentAnalysisStore(){
+ try{const raw=JSON.parse(localStorage.getItem(V581_ANALYSIS_STORAGE_KEY)||"{}");return raw&&typeof raw==="object"&&!Array.isArray(raw)?raw:{}}
+ catch(e){console.warn("저장상권 순위 데이터 읽기 실패",e);return{}}
+}
+function v581WritePersistentAnalysisStore(){
+ try{localStorage.setItem(V581_ANALYSIS_STORAGE_KEY,JSON.stringify(savedAreaPersistentAnalysis||{}));return true}
+ catch(e){console.warn("저장상권 순위 영구저장 실패",e);return false}
+}
+function v581PlainPoint(p){return p&&Number.isFinite(+p.lat)&&Number.isFinite(+p.lng)?{lat:+p.lat,lng:+p.lng}:null}
+function v581CompactTopSegment(seg){
+ if(!seg)return null;let rw=seg.recommendationWindow||null;
+ if(!rw&&seg.a&&seg.b){const a=v581PlainPoint(seg.a),b=v581PlainPoint(seg.b);if(a&&b)rw={a,b,path:[a,b],center:{lat:(a.lat+b.lat)/2,lng:(a.lng+b.lng)/2},length:Pt(a.lat,a.lng,b.lat,b.lng)}}
+ const path=(rw?.path||[]).map(v581PlainPoint).filter(Boolean),a=v581PlainPoint(rw?.a||seg.a),b=v581PlainPoint(rw?.b||seg.b),mid=v581PlainPoint(seg.mid)||(a&&b?{lat:(a.lat+b.lat)/2,lng:(a.lng+b.lng)/2}:null),displayPoint=v581PlainPoint(seg.displayPoint)||v581PlainPoint(rw?.center)||mid;
+ if(!mid||!displayPoint||path.length<2)return null;
+ return{a:a||path[0],b:b||path.at(-1),mid,displayPoint,bearing:Number.isFinite(+seg.bearing)?+seg.bearing:0,score:Number.isFinite(+seg.score)?+seg.score:0,topPercent:Number.isFinite(+seg.topPercent)?+seg.topPercent:null,zone:seg.zone||"",candidateType:seg.candidateType||"",roadName:seg.roadName||"",flowEstimate:Number.isFinite(+seg.flowEstimate)?+seg.flowEstimate:null,recommendationWindow:{a:a||path[0],b:b||path.at(-1),path,center:v581PlainPoint(rw?.center)||displayPoint,length:Number.isFinite(+rw?.length)?+rw.length:Pt(path[0].lat,path[0].lng,path.at(-1).lat,path.at(-1).lng)}}
+}
+function v581BuildPersistentCache(fenceKey,analysis,html){
+ const top=(analysis?.topSegments||[]).slice(0,3).map(v581CompactTopSegment).filter(Boolean);if(!top.length)return null;
+ return{version:1,fenceKey:String(fenceKey||""),savedAt:new Date().toISOString(),html:String(html||""),analysis:{topSegments:top,segments:[],entryModel:null,persistentSnapshot:true}}
+}
+function v581PersistAreaAnalysis(areaId,fenceKey,analysis,html){
+ const key=String(areaId||"");if(!key)return false;const snap=v581BuildPersistentCache(fenceKey,analysis,html);if(!snap)return false;
+ savedAreaPersistentAnalysis[key]=snap;const ok=v581WritePersistentAnalysisStore();if(ok)savedAreaAnalysisCache.set(key,snap);return ok
+}
+function v581GetPersistentAreaAnalysis(areaId,path){
+ const key=String(areaId||""),snap=savedAreaPersistentAnalysis?.[key];if(!snap?.analysis?.topSegments?.length)return null;
+ const fenceKey=v564FenceKey(path);return String(snap.fenceKey||"")===String(fenceKey)?snap:null
+}
+function v581DeletePersistentAreaAnalysis(areaId){
+ const key=String(areaId||"");if(!key)return;delete savedAreaPersistentAnalysis[key];savedAreaAnalysisCache.delete(key);v581WritePersistentAnalysisStore()
+}
+function v581PrunePersistentAnalysis(){
+ const ids=new Set((Lt||[]).map(a=>String(a.id))),store=savedAreaPersistentAnalysis||{};let changed=false;
+ for(const key of Object.keys(store)){if(!ids.has(String(key))){delete store[key];changed=true}}
+ if(changed)v581WritePersistentAnalysisStore()
+}
+function X(t){try{return localStorage.setItem("lensmePolygonsV43_2",JSON.stringify(t)),Lt=t,v581PrunePersistentAnalysis(),!0}
 catch(t){return alert("상권을 저장하지 못했습니다. 브라우저 저장 공간을 확인하고 백업해주세요."),!1}}
 function exportAreas(){
-const t=document.createElement("a"),e=URL.createObjectURL(new Blob([JSON.stringify({version:1,areas:Lt},null,2)],{type:"application/json"}));
+const analysisSnapshots={};for(const area of Lt||[]){const snap=savedAreaPersistentAnalysis?.[String(area.id)];if(snap)analysisSnapshots[String(area.id)]=snap}
+const t=document.createElement("a"),e=URL.createObjectURL(new Blob([JSON.stringify({version:2,areas:Lt,analysisSnapshots},null,2)],{type:"application/json"}));
 t.href=e,t.download="lensme_trade_areas.json",t.click(),setTimeout((()=>URL.revokeObjectURL(e)),1e3)}
 async function importAreas(t){
 if(T)return t.value="",alert("분석 종료 후 가져와주세요.");
-try{const e=JSON.parse(await t.files[0].text()),n=Array.isArray(e)?e:e.areas;
+try{const e=JSON.parse(await t.files[0].text()),n=Array.isArray(e)?e:e.areas,importSnaps=!Array.isArray(e)&&e?.analysisSnapshots&&typeof e.analysisSnapshots==="object"?e.analysisSnapshots:{};
 if(!Array.isArray(n)||n.length>1e3||!n.every((t=>t?.name&&j(H(t.geometry||t.path)))))throw new Error("형식 또는 경위도 좌표를 확인하세요.");
-const a=[...Lt];n.forEach(((t,e)=>{
-const n=H(t.geometry||t.path).geometry,o=F(n),r=K(o),s=/^[a-zA-Z0-9_-]+$/.test(t.id||"")?t.id:`import_${Date.now()}_${e}`,i={...t,id:s,geometry:n,path:o,centerLat:r.lat,
-centerLng:r.lng,si:t.si||"가져온 상권",gu:t.gu||"",dong:t.dong||"미분류"};a.findIndex((t=>t.id===s))<0&&a.push(i)})),X(a)&&(Ct(),setTimeout(()=>v569NormalizeSavedRegions().catch(err=>console.warn("import region normalize failed",err)),80))}
+const a=[...Lt],idMap={};n.forEach(((t,eidx)=>{
+const n=H(t.geometry||t.path).geometry,o=F(n),r=K(o),originalId=String(t.id||""),s=/^[a-zA-Z0-9_-]+$/.test(originalId)?originalId:`import_${Date.now()}_${eidx}`,i={...t,id:s,geometry:n,path:o,centerLat:r.lat,
+centerLng:r.lng,si:t.si||"가져온 상권",gu:t.gu||"",dong:t.dong||"미분류"};if(a.findIndex((t=>t.id===s))<0){a.push(i);idMap[originalId]=s}})),X(a)&&(()=>{let changed=false;for(const[oldId,newId]of Object.entries(idMap)){const snap=importSnaps?.[oldId];if(!snap?.analysis?.topSegments?.length)continue;const area=a.find(x=>String(x.id)===String(newId));if(!area)continue;if(String(snap.fenceKey||"")!==String(v564FenceKey(F(area.geometry||area.path))))continue;savedAreaPersistentAnalysis[String(newId)]=snap;changed=true}if(changed)v581WritePersistentAnalysisStore();Ct();setTimeout(()=>v569NormalizeSavedRegions().catch(err=>console.warn("import region normalize failed",err)),80)})()}
 catch(t){alert("가져오기 실패: "+t.message)}finally{t.value=""}}
 
 async function Y(t,n,a,o){const r=O;return new Promise((s=>{
@@ -656,7 +694,7 @@ function v572RefreshRegionNavigation(){
  applyMapDisplayFilters()
 }
 async function v573SyncRegionFromMap(force=false){
- /* V58.0: 저장상권 분석이 열린 동안 지도 줌/이동으로 행정구역 단계가 바뀌며 분석 오버레이가 사라지지 않도록 고정한다. */
+ /* V58.1: 저장상권 분석이 열린 동안 지도 줌/이동으로 행정구역 단계가 바뀌며 분석 오버레이가 사라지지 않도록 고정한다. */
  if(expandedSavedAreaId!=null){
   const active=Lt.find(a=>String(a.id)===String(expandedSavedAreaId));
   if(active){
@@ -1004,7 +1042,8 @@ regionResolved:!!(region.si&&region.dong),reviewStatus:"사용자 직접 작성"
 const next=old?[...Lt.filter(t=>t.id!==old.id),r]:[...Lt,r];
 if(X(next)){
 const analyzedPath=Array.isArray(w)&&w.length>=3?w:F(e),analyzedKey=v564FenceKey(analyzedPath),sameFence=!!(lastAnalyzedFenceKey&&lastAnalyzedFenceKey===analyzedKey&&i?.topSegments?.length);
-if(sameFence)savedAreaAnalysisCache.set(String(o),{fenceKey:lastAnalyzedFenceKey,analysis:i,html:document.getElementById("rankingResultText")?.innerHTML||""});
+if(old)v581DeletePersistentAreaAnalysis(String(o));
+if(sameFence){const html=document.getElementById("rankingResultText")?.innerHTML||"";savedAreaAnalysisCache.set(String(o),{fenceKey:lastAnalyzedFenceKey,analysis:i,html});v581PersistAreaAnalysis(String(o),lastAnalyzedFenceKey,i,html)}
 lastAnalyzedSavedId=sameFence?String(o):null;expandedSavedAreaId=null;focusedSavedAreaId=null;b=null;w=null;R=null;
 redrawTarget=null,vt.clear(),I=!1,S=null,setDrawUi(!1),v564HideAnalysis(),Ct();
 document.getElementById("targetLocationInput").innerText=`저장됨 · ${n.trim()}`;
@@ -1081,24 +1120,28 @@ await z(55)}
 if(changed&&X(next))Ct()
 }
 
-function deletePolygon(t){const key=String(t);if(confirm("이 상권 경계를 삭제하시겠습니까?"))return T?alert("분석 종료 후 삭제해주세요."):void(X(Lt.filter(e=>String(e.id)!==key))&&(savedAreaAnalysisCache.delete(key),String(b)===key&&clearActivePolygon(),Ct()))}
+function deletePolygon(t){const key=String(t);if(confirm("이 상권 경계를 삭제하시겠습니까?"))return T?alert("분석 종료 후 삭제해주세요."):void(X(Lt.filter(e=>String(e.id)!==key))&&(v581DeletePersistentAreaAnalysis(key),String(b)===key&&clearActivePolygon(),Ct()))}
 function selectSavedPolygon(t){
-/* V58.0: 왼쪽 저장상권 클릭은 항상 분석 열기. 결과가 없으면 자동 재분석한다. */
+/* V58.1: 왼쪽 저장상권 클릭은 항상 분석 열기. 영구저장 순위가 없으면 최초 1회 자동 재분석한다. */
 return toggleSavedPolygonAnalysis(t,false)
 }
 async function v580EnsureSavedAreaAnalysis(key,area,path){
- const fenceKey=v564FenceKey(path),cached=savedAreaAnalysisCache.get(key);
+ const fenceKey=v564FenceKey(path),cached=savedAreaAnalysisCache.get(key),persistent=v581GetPersistentAreaAnalysis(key,path);
  v571EnableAnalysisLayers();
  if(cached?.fenceKey===fenceKey&&cached?.analysis?.topSegments?.length){
   v566RestoreCachedAnalysis(cached,path,key);applyMapDisplayFilters();
-  document.getElementById("statusMessage").innerText=`${area.name} · 저장된 TOP3·유입·유동인구를 다시 표시했습니다.`;return true
+  document.getElementById("statusMessage").innerText=`${area.name} · 저장된 TOP3 입지 순위를 다시 표시했습니다.`;return true
+ }
+ if(persistent?.analysis?.topSegments?.length){
+  savedAreaAnalysisCache.set(String(key),persistent);v566RestoreCachedAnalysis(persistent,path,key);applyMapDisplayFilters();
+  document.getElementById("statusMessage").innerText=`${area.name} · 이전에 저장한 1·2·3위 입지 순위를 즉시 불러왔습니다.`;return true
  }
  if(lastAnalyzedFenceKey===fenceKey&&i?.topSegments?.length){
   const liveCache={fenceKey,analysis:i,html:document.getElementById("rankingResultText")?.innerHTML||""};
-  savedAreaAnalysisCache.set(key,liveCache);lastAnalyzedSavedId=key;v566RestoreCachedAnalysis(liveCache,path,key);applyMapDisplayFilters();
-  document.getElementById("statusMessage").innerText=`${area.name} · 방금 계산한 TOP3를 다시 표시했습니다.`;return true
+  savedAreaAnalysisCache.set(key,liveCache);v581PersistAreaAnalysis(key,fenceKey,i,liveCache.html);lastAnalyzedSavedId=key;v566RestoreCachedAnalysis(liveCache,path,key);applyMapDisplayFilters();
+  document.getElementById("statusMessage").innerText=`${area.name} · 방금 계산한 TOP3를 저장하고 다시 표시했습니다.`;return true
  }
- Rt();document.getElementById("rankingResultBox")?.classList.add("hidden");document.getElementById("statusMessage").innerText=`${area.name} · TOP3 입지 순위를 계산 중입니다...`;
+ Rt();document.getElementById("rankingResultBox")?.classList.add("hidden");document.getElementById("statusMessage").innerText=`${area.name} · 기존 저장상권의 TOP3를 최초 1회 계산해 영구저장 중입니다...`;
  await ce([...path.map(p=>({...p}))]);
  if(expandedSavedAreaId==null||String(expandedSavedAreaId)!==String(key))return false;
  v571EnableAnalysisLayers();
@@ -1106,9 +1149,9 @@ async function v580EnsureSavedAreaAnalysis(key,area,path){
  if(i?.topSegments?.length&&rankOverlays.length===0){(i.topSegments||[]).forEach((seg,idx)=>ie(seg,idx))}
  if(i?.topSegments?.length){
   const html=document.getElementById("rankingResultText")?.innerHTML||"";
-  savedAreaAnalysisCache.set(String(key),{fenceKey,analysis:i,html});lastAnalyzedSavedId=String(key);lastAnalyzedFenceKey=fenceKey;
+  savedAreaAnalysisCache.set(String(key),{fenceKey,analysis:i,html});v581PersistAreaAnalysis(String(key),fenceKey,i,html);lastAnalyzedSavedId=String(key);lastAnalyzedFenceKey=fenceKey;
   const box=document.getElementById("rankingResultBox");if(box&&html.trim())box.classList.remove("hidden");
-  applyMapDisplayFilters();document.getElementById("statusMessage").innerText=`${area.name} · 상권 내 TOP${i.topSegments.length} 입지 순위를 표시했습니다.`;return true
+  applyMapDisplayFilters();document.getElementById("statusMessage").innerText=`${area.name} · 상권 내 TOP${i.topSegments.length} 입지 순위를 표시하고 저장했습니다.`;return true
  }
  applyMapDisplayFilters();return false
 }
@@ -1850,8 +1893,8 @@ ${s?`<div class="bg-blue-50/70 rounded-lg p-2 text-[9.5px] text-blue-700 mb-2"><
 H.length||(j+=`<div class="text-xs text-rose-600 font-bold">TOP 후보를 만들 수 없습니다. 렌즈미 50m 제외, 입점가능성·신뢰도 ${e.TOP3_MIN_CONFIDENCE}점·종합점수 ${e.TOP3_MIN_SCORE}점 기준을 통과한 서로 다른 구간이 없습니다. 낮은 근거 후보를 억지로 TOP3에 채우지 않습니다.</div>`),
 U(u),P.innerHTML=j,document.getElementById("rankingResultBox").classList.remove("hidden"),applyMapDisplayFilters(),
 lastAnalyzedFenceKey=analysisFenceKey,lastAnalyzedSavedId=expandedSavedAreaId!=null?String(expandedSavedAreaId):(b!=null?String(b):null);
-if(lastAnalyzedSavedId)savedAreaAnalysisCache.set(String(lastAnalyzedSavedId),{fenceKey:analysisFenceKey,analysis:i,html:P.innerHTML});
-m.innerText=`TOP3 완료 · 전체도로 ${osmSegments.length}구간 · TMAP ${R.length}경로 · 공백검증 ${gapRecovery.targets.length}곳/복구 ${gapRecovery.routes.length}경로 · 유효 교통-횡단 ${transportCrosswalkModel.validCount}곳 · 후보 ${H.length}곳`;
+if(lastAnalyzedSavedId){savedAreaAnalysisCache.set(String(lastAnalyzedSavedId),{fenceKey:analysisFenceKey,analysis:i,html:P.innerHTML});if(H.length)v581PersistAreaAnalysis(String(lastAnalyzedSavedId),analysisFenceKey,i,P.innerHTML);else v581DeletePersistentAreaAnalysis(String(lastAnalyzedSavedId))}
+m.innerText=`TOP3 완료 · 전체도로 ${osmSegments.length}구간 · TMAP ${R.length}경로 · 공백검증 ${gapRecovery.targets.length}곳/복구 ${gapRecovery.routes.length}경로 · 유효 교통-횡단 ${transportCrosswalkModel.validCount}곳 · 후보 ${H.length}곳${lastAnalyzedSavedId&&H.length?" · 순위 저장완료":""}`;
 }catch(t){
 if("AbortError"===t.name)return void(m.textContent="입지 분석을 취소했습니다.");
 console.error("V45 분석 에러:",t),m.innerText="⚠️ 분석 중 에러가 발생했습니다. 개발자도구 Console을 확인하세요."}
@@ -1878,7 +1921,7 @@ kakao.maps.event.addListener(f,"zoom_changed",(()=>{applyMapDisplayFilters();v57
 kakao.maps.event.addListener(f,"idle",(async function(){I||w||T||f.getLevel()>5||await Ht();v571ScheduleRegionLabels()}));
 Ct();
 v572GoNational();
-document.getElementById("statusMessage").innerText="🗺️ 새로고침 시 대한민국 전체 지도부터 시작합니다. 시·도 → 시·군·구 → 읍·면·동 → 저장상권 순서로 들어가며, 저장상권을 누르면 목록/지도 어디서든 TOP3 분석이 바로 열리고 지도 이동 중에도 유지됩니다.";
+document.getElementById("statusMessage").innerText="🗺️ 새로고침 시 대한민국 전체 지도부터 시작합니다. 시·도 → 시·군·구 → 읍·면·동 → 저장상권 순서로 들어갑니다. 순위를 한 번 계산한 저장상권은 다음부터 1·2·3위를 즉시 불러옵니다.";
 Ft();
 setTimeout(()=>{v569NormalizeSavedRegions().catch(err=>console.warn("saved region normalize failed",err))},350);
 </script>
