@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>렌즈미 상권 분석 대시보드 V58.0 저장상권 TOP3 복원 보강</title>
+<title>렌즈미 상권 분석 대시보드 V58.5 저장상권 전체화면 복원</title>
 <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css" rel="stylesheet">
 <script src="https://cdn.tailwindcss.com"></script>
 <style>
@@ -100,7 +100,7 @@ details[open]>summary::before{content:'▾';color:#e11d48}
 <div class="w-full md:w-1/4 bg-white border-r border-gray-200 p-6 flex flex-col shadow-lg z-20 overflow-y-auto">
 <h1 class="text-xl font-extrabold text-slate-800 border-b-4 border-indigo-500 pb-3 mb-4 flex justify-between items-center">
 <span>🗺️ 전국 상권 관제탑</span>
-<span class="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded-full font-bold">V58.4</span>
+<span class="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded-full font-bold">V58.5</span>
 </h1>
 
 <div class="mb-3">
@@ -225,7 +225,7 @@ details[open]>summary::before{content:'▾';color:#e11d48}
 <script src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=c045609510f8b75252389123f086be48&libraries=services,drawing"></script>
 
 <script>
-/* V58.4 CLEANUP: 현재 UI에서 도달 불가능한 구형 자동상권탐색/토글/미사용 헬퍼만 제거. TOP3·저장상권·행정구역·TMAP/OSM 분석 로직은 유지. */
+/* V58.5: V58.4 CLEAN 기준. 저장상권 재선택 시 TOP3뿐 아니라 유동인구·메인/보조 유입까지 화면복원 스냅샷으로 복구. */
 const t="mJJ00gscCg39Y6nR0LhUw2yzrIfr7arY65OwUZYk",e={
 TEAM_KILL_METERS:50,SEARCH_RADIUS_MAX:2200,FLOW_MATCH_RADIUS:13,SEGMENT_NODE_SPACING:9,SEGMENT_BEARING_TOLERANCE:24,
 ARM_LOOKAHEAD_METERS:28,MAX_TMAP_ROUTES_PER_SCAN:14,REQUEST_TIMEOUT_MS:12e3,MAX_GATES:7,MAX_DESTINATIONS:10,
@@ -321,13 +321,43 @@ function v581CompactTopSegment(seg){
  if(!mid||!displayPoint||path.length<2)return null;
  return{a:a||path[0],b:b||path.at(-1),mid,displayPoint,bearing:Number.isFinite(+seg.bearing)?+seg.bearing:0,score:Number.isFinite(+seg.score)?+seg.score:0,topPercent:Number.isFinite(+seg.topPercent)?+seg.topPercent:null,zone:seg.zone||"",candidateType:seg.candidateType||"",roadName:seg.roadName||"",flowEstimate:Number.isFinite(+seg.flowEstimate)?+seg.flowEstimate:null,recommendationWindow:{a:a||path[0],b:b||path.at(-1),path,center:v581PlainPoint(rw?.center)||displayPoint,length:Number.isFinite(+rw?.length)?+rw.length:Pt(path[0].lat,path[0].lng,path.at(-1).lat,path.at(-1).lng)}}
 }
-function v581BuildPersistentCache(fenceKey,analysis,html){
- const top=(analysis?.topSegments||[]).slice(0,3).map(v581CompactTopSegment).filter(Boolean);if(!top.length)return null;
- return{version:1,fenceKey:String(fenceKey||""),savedAt:new Date().toISOString(),html:String(html||""),analysis:{topSegments:top,segments:[],entryModel:null,persistentSnapshot:true}}
+function v585RoundCoord(n){return Number.isFinite(+n)?+(+n).toFixed(6):null}
+function v585CompactFlowSegments(segments,maxCount=e.HEATMAP_MAX_SEGMENTS){
+ const out=[];
+ for(const seg of (segments||[]).slice(0,Math.max(0,maxCount||0))){
+  const a=v581PlainPoint(seg?.a),b=v581PlainPoint(seg?.b);if(!a||!b)continue;
+  const flow=Number.isFinite(+seg.flowEstimate)?Math.round(+seg.flowEstimate):v568FlowEstimate(seg),conf=Number.isFinite(+seg.confidence)?Math.round(+seg.confidence):35;
+  out.push([v585RoundCoord(a.lat),v585RoundCoord(a.lng),v585RoundCoord(b.lat),v585RoundCoord(b.lng),flow,conf])
+ }
+ return out
 }
-function v581PersistAreaAnalysis(areaId,fenceKey,analysis,html){
- const key=String(areaId||"");if(!key)return false;const snap=v581BuildPersistentCache(fenceKey,analysis,html);if(!snap)return false;
- savedAreaPersistentAnalysis[key]=snap;const ok=v581WritePersistentAnalysisStore();if(ok)savedAreaAnalysisCache.set(key,snap);return ok
+function v585ExpandFlowSegments(rows){
+ return (rows||[]).map(r=>{if(!Array.isArray(r)||r.length<6)return null;const a={lat:+r[0],lng:+r[1]},b={lat:+r[2],lng:+r[3]};if(!Number.isFinite(a.lat)||!Number.isFinite(a.lng)||!Number.isFinite(b.lat)||!Number.isFinite(b.lng))return null;return{a,b,mid:{lat:(a.lat+b.lat)/2,lng:(a.lng+b.lng)/2},flowEstimate:+r[4]||0,confidence:+r[5]||35}}).filter(Boolean)
+}
+function v585BuildInflowSnapshot(entryModel,fencePath){
+ const out=[],candidates=v566InflowCandidates(entryModel,fencePath);
+ for(let idx=0;idx<Math.min(2,candidates.length);idx++){
+  const isMain=idx===0,entry=candidates[idx]?.entry,path=v564InsideEntryPath(entry,isMain,fencePath);if(path.length<2||v566PathLength(path)<12)continue;
+  out.push({label:isMain?"메인 유입":"보조 유입",isMain,path:path.map(p=>[v585RoundCoord(p.lat),v585RoundCoord(p.lng)]).filter(p=>p[0]!=null&&p[1]!=null)})
+ }
+ return out
+}
+function v585PersistentHasFullVisual(snap){return !!(snap&&+snap.version>=2&&Array.isArray(snap.visual?.flowSegments)&&Array.isArray(snap.visual?.inflows))}
+function v585CacheHasDisplayData(cache){return !!(cache?.analysis?.topSegments?.length&&(v585PersistentHasFullVisual(cache)||(Array.isArray(cache.analysis?.segments)&&cache.analysis.segments.length>0)))}
+function v581BuildPersistentCache(fenceKey,analysis,html,fencePath,maxFlow=e.HEATMAP_MAX_SEGMENTS){
+ const top=(analysis?.topSegments||[]).slice(0,3).map(v581CompactTopSegment).filter(Boolean);if(!top.length)return null;
+ const flowSegments=v585CompactFlowSegments(analysis?.segments||[],maxFlow),inflows=v585BuildInflowSnapshot(analysis?.entryModel,fencePath||[]);
+ return{version:2,fenceKey:String(fenceKey||""),savedAt:new Date().toISOString(),html:String(html||""),analysis:{topSegments:top,segments:[],entryModel:null,persistentSnapshot:true},visual:{flowSegments,inflows}}
+}
+function v581PersistAreaAnalysis(areaId,fenceKey,analysis,html,fencePath){
+ const key=String(areaId||"");if(!key)return false;
+ const previous=savedAreaPersistentAnalysis?.[key];
+ for(const limit of [e.HEATMAP_MAX_SEGMENTS,1600,1000,600,300]){
+  const snap=v581BuildPersistentCache(fenceKey,analysis,html,fencePath,limit);if(!snap)return false;
+  savedAreaPersistentAnalysis[key]=snap;if(v581WritePersistentAnalysisStore())return true
+ }
+ if(previous)savedAreaPersistentAnalysis[key]=previous;else delete savedAreaPersistentAnalysis[key];
+ return false
 }
 function v581GetPersistentAreaAnalysis(areaId,path){
  const key=String(areaId||""),snap=savedAreaPersistentAnalysis?.[key];if(!snap?.analysis?.topSegments?.length)return null;
@@ -707,7 +737,7 @@ function v572RefreshRegionNavigation(){
  applyMapDisplayFilters()
 }
 async function v573SyncRegionFromMap(force=false){
- /* V58.3: 저장상권 분석이 열린 동안 지도 줌/이동 후에도 행정단계와 TOP3 표시를 고정한다. */
+ /* V58.5: 저장상권 분석이 열린 동안 지도 줌/이동 후에도 행정단계와 분석 오버레이를 고정한다. */
  if(expandedSavedAreaId!=null){
   const active=Lt.find(a=>String(a.id)===String(expandedSavedAreaId));
   if(active){
@@ -790,7 +820,7 @@ const next=old?[...Lt.filter(t=>t.id!==old.id),r]:[...Lt,r];
 if(X(next)){
 const analyzedPath=Array.isArray(w)&&w.length>=3?w:F(e),analyzedKey=v564FenceKey(analyzedPath),sameFence=!!(lastAnalyzedFenceKey&&lastAnalyzedFenceKey===analyzedKey&&i?.topSegments?.length);
 if(old)v581DeletePersistentAreaAnalysis(String(o));
-if(sameFence){const html=document.getElementById("rankingResultText")?.innerHTML||"";savedAreaAnalysisCache.set(String(o),{fenceKey:lastAnalyzedFenceKey,analysis:i,html});v581PersistAreaAnalysis(String(o),lastAnalyzedFenceKey,i,html)}
+if(sameFence){const html=document.getElementById("rankingResultText")?.innerHTML||"";savedAreaAnalysisCache.set(String(o),{fenceKey:lastAnalyzedFenceKey,analysis:i,html});v581PersistAreaAnalysis(String(o),lastAnalyzedFenceKey,i,html,analyzedPath)}
 lastAnalyzedSavedId=sameFence?String(o):null;expandedSavedAreaId=null;focusedSavedAreaId=null;b=null;w=null;R=null;
 redrawTarget=null,vt.clear(),I=!1,S=null,setDrawUi(!1),v564HideAnalysis(),Ct();
 document.getElementById("targetLocationInput").innerText=`저장됨 · ${n.trim()}`;
@@ -869,26 +899,26 @@ if(changed&&X(next))Ct()
 
 function deletePolygon(t){const key=String(t);if(confirm("이 상권 경계를 삭제하시겠습니까?"))return T?alert("분석 종료 후 삭제해주세요."):void(X(Lt.filter(e=>String(e.id)!==key))&&(v581DeletePersistentAreaAnalysis(key),String(b)===key&&clearActivePolygon(),Ct()))}
 function selectSavedPolygon(t){
-/* V58.3: 저장상권 목록/폴리곤/말풍선 모두 동일한 항상-열기 동작 */
+/* V58.5: 저장상권 목록/폴리곤/말풍선 모두 동일한 항상-열기 + 전체 화면복원 */
 return toggleSavedPolygonAnalysis(t)
 }
 async function v580EnsureSavedAreaAnalysis(key,area,path){
  const fenceKey=v564FenceKey(path),cached=savedAreaAnalysisCache.get(key),persistent=v581GetPersistentAreaAnalysis(key,path);
  v571EnableAnalysisLayers();
- if(cached?.fenceKey===fenceKey&&cached?.analysis?.topSegments?.length){
+ if(cached?.fenceKey===fenceKey&&v585CacheHasDisplayData(cached)){
   v566RestoreCachedAnalysis(cached,path,key);applyMapDisplayFilters();
-  document.getElementById("statusMessage").innerText=`${area.name} · 저장된 TOP3 입지 순위를 다시 표시했습니다.`;return true
+  document.getElementById("statusMessage").innerText=`${area.name} · 저장된 TOP3·유입·유동인구를 다시 표시했습니다.`;return true
  }
- if(persistent?.analysis?.topSegments?.length){
+ if(persistent?.analysis?.topSegments?.length&&v585PersistentHasFullVisual(persistent)){
   savedAreaAnalysisCache.set(String(key),persistent);v566RestoreCachedAnalysis(persistent,path,key);applyMapDisplayFilters();
-  document.getElementById("statusMessage").innerText=`${area.name} · 이전에 저장한 1·2·3위 입지 순위를 즉시 불러왔습니다.`;return true
+  document.getElementById("statusMessage").innerText=`${area.name} · 저장된 1·2·3위·유입·유동인구를 즉시 불러왔습니다.`;return true
  }
  if(lastAnalyzedFenceKey===fenceKey&&i?.topSegments?.length){
   const liveCache={fenceKey,analysis:i,html:document.getElementById("rankingResultText")?.innerHTML||""};
-  savedAreaAnalysisCache.set(key,liveCache);v581PersistAreaAnalysis(key,fenceKey,i,liveCache.html);lastAnalyzedSavedId=key;v566RestoreCachedAnalysis(liveCache,path,key);applyMapDisplayFilters();
+  savedAreaAnalysisCache.set(key,liveCache);v581PersistAreaAnalysis(key,fenceKey,i,liveCache.html,path);lastAnalyzedSavedId=key;v566RestoreCachedAnalysis(liveCache,path,key);applyMapDisplayFilters();
   document.getElementById("statusMessage").innerText=`${area.name} · 방금 계산한 TOP3를 저장하고 다시 표시했습니다.`;return true
  }
- Rt();document.getElementById("rankingResultBox")?.classList.add("hidden");document.getElementById("statusMessage").innerText=`${area.name} · 기존 저장상권 TOP3를 최초 1회 복구·영구저장 중입니다...`;
+ Rt();document.getElementById("rankingResultBox")?.classList.add("hidden");document.getElementById("statusMessage").innerText=`${area.name} · 기존 저장상권의 TOP3·유입·유동인구를 최초 1회 재구성해 저장 중입니다...`;
  await ce([...path.map(p=>({...p}))]);
  if(expandedSavedAreaId==null||String(expandedSavedAreaId)!==String(key))return false;
  v571EnableAnalysisLayers();
@@ -907,7 +937,7 @@ async function v580EnsureSavedAreaAnalysis(key,area,path){
  if(i?.topSegments?.length&&rankOverlays.length===0){(i.topSegments||[]).forEach((seg,idx)=>ie(seg,idx))}
  if(i?.topSegments?.length){
   const html=document.getElementById("rankingResultText")?.innerHTML||"";
-  savedAreaAnalysisCache.set(String(key),{fenceKey,analysis:i,html});v581PersistAreaAnalysis(String(key),fenceKey,i,html);lastAnalyzedSavedId=String(key);lastAnalyzedFenceKey=fenceKey;
+  savedAreaAnalysisCache.set(String(key),{fenceKey,analysis:i,html});v581PersistAreaAnalysis(String(key),fenceKey,i,html,path);lastAnalyzedSavedId=String(key);lastAnalyzedFenceKey=fenceKey;
   const box=document.getElementById("rankingResultBox");if(box&&html.trim())box.classList.remove("hidden");
   applyMapDisplayFilters();document.getElementById("statusMessage").innerText=`${area.name} · 기존 저장상권 TOP${i.topSegments.length} 입지 순위를 복구해 표시하고 영구저장했습니다.`;return true
  }
@@ -915,7 +945,7 @@ async function v580EnsureSavedAreaAnalysis(key,area,path){
 }
 async function toggleSavedPolygonAnalysis(t){
 const key=String(t),area=Lt.find(e=>String(e.id)===key);if(!area)return;
-/* V58.3: 저장상권 클릭은 절대 토글/접기하지 않는다. 항상 해당 상권 분석을 연다. */
+/* V58.5: 저장상권 클릭은 절대 접지 않고 TOP3·유입·유동인구 화면을 항상 연다. */
 if(T){
  if(expandedSavedAreaId!=null&&String(expandedSavedAreaId)===key){
   document.getElementById("statusMessage").innerText=`${area.name} · 현재 TOP3 분석 중입니다. 완료되면 순위가 표시됩니다.`;return
@@ -947,12 +977,12 @@ function v583EnsureActiveSavedRankVisible(areaId=expandedSavedAreaId){
  const area=Lt.find(a=>String(a.id)===key);if(!area)return false;
  const path=F(area.geometry||area.path),fenceKey=v564FenceKey(path);
  let cache=savedAreaAnalysisCache.get(key);
- if(!(cache?.fenceKey===fenceKey&&cache?.analysis?.topSegments?.length))cache=v581GetPersistentAreaAnalysis(key,path);
+ if(!(cache?.fenceKey===fenceKey&&v585CacheHasDisplayData(cache))){const p=v581GetPersistentAreaAnalysis(key,path);cache=v585PersistentHasFullVisual(p)?p:null}
  if(!(cache?.analysis?.topSegments?.length))return false;
  v571EnableAnalysisLayers();
- /* rank 배열이 비었거나 결과 패널이 사라졌으면 저장 스냅샷에서 완전히 재생성 */
- const box=document.getElementById("rankingResultBox"),txt=document.getElementById("rankingResultText");
- if(rankOverlays.length===0||!i?.topSegments?.length){
+ /* 순위뿐 아니라 유동인구/유입 오버레이가 하나라도 사라지면 저장 스냅샷에서 전부 재생성 */
+ const box=document.getElementById("rankingResultBox"),txt=document.getElementById("rankingResultText"),expectedFlow=v585PersistentHasFullVisual(cache)?cache.visual.flowSegments.length:(cache.analysis?.segments||[]).length,expectedInflow=v585PersistentHasFullVisual(cache)?cache.visual.inflows.length:0;
+ if(rankOverlays.length===0||!i?.topSegments?.length||(expectedFlow>0&&flowLines.length===0)||(expectedInflow>0&&inflowOverlays.length===0)){
   savedAreaAnalysisCache.set(key,cache);v566RestoreCachedAnalysis(cache,path,key)
  }else{
   applyMapDisplayFilters();if(box&&(txt?.innerHTML||"").trim())box.classList.remove("hidden")
@@ -1373,10 +1403,20 @@ function v566RenderFlowLinesFromSegments(segments,fencePath){
  const color=flowEstimate>=80?"#dc2626":flowEstimate>=65?"#f97316":flowEstimate>=50?"#eab308":flowEstimate>=35?"#16a34a":"#2563eb",confidence=seg.confidence||35;
  const line=new kakao.maps.Polyline({path:[new kakao.maps.LatLng(seg.a.lat,seg.a.lng),new kakao.maps.LatLng(seg.b.lat,seg.b.lng)],strokeWeight:flowEstimate>=80?7:flowEstimate>=65?6:5,strokeColor:color,strokeOpacity:confidence>=70?.74:confidence>=50?.62:.43,strokeStyle:"solid",zIndex:72});analysisLines.push(line);flowLines.push(line);_.push(line)
 });applyMapDisplayFilters()}
+function v585RenderSavedInflowPath(item){
+ const path=(item?.path||[]).map(p=>Array.isArray(p)?{lat:+p[0],lng:+p[1]}:p).filter(p=>Number.isFinite(p?.lat)&&Number.isFinite(p?.lng));if(path.length<2)return;
+ const isMain=!!item.isMain,labelText=item.label||(isMain?"메인 유입":"보조 유입"),color=isMain?"#b91c1c":"#ef4444";
+ const line=new kakao.maps.Polyline({path:path.map(p=>new kakao.maps.LatLng(p.lat,p.lng)),strokeWeight:isMain?5:3,strokeColor:color,strokeOpacity:isMain?.96:.74,strokeStyle:"solid",endArrow:true,zIndex:isMain?132:128});line.setMap(f);_.push(line);inflowOverlays.push(line);
+ const li=Math.min(path.length-1,Math.max(1,Math.floor(path.length*.28))),lp=path[li],label=new kakao.maps.CustomOverlay({position:new kakao.maps.LatLng(lp.lat,lp.lng),xAnchor:.5,yAnchor:1.45,zIndex:isMain?136:131,content:`<div style="pointer-events:none;background:${isMain?"#fff1f2":"rgba(255,255,255,.95)"};border:${isMain?2:1}px solid ${color};color:${isMain?"#991b1b":"#dc2626"};font-size:${isMain?9:8}px;font-weight:900;border-radius:999px;padding:${isMain?"3px 7px":"2px 6px"};box-shadow:0 3px 8px rgba(127,29,29,.15);white-space:nowrap">${labelText}</div>`});label.setMap(f);_.push(label);inflowOverlays.push(label);
+ const last=path.at(-1),prev=path.at(-2),bearing=Ut(prev.lat,prev.lng,last.lat,last.lng),arrow=new kakao.maps.CustomOverlay({position:new kakao.maps.LatLng(last.lat,last.lng),xAnchor:.5,yAnchor:.5,zIndex:isMain?138:133,content:`<div style="pointer-events:none;color:${color};font-size:${isMain?24:19}px;font-weight:900;line-height:1;text-shadow:0 2px 4px rgba(255,255,255,.95),0 1px 5px rgba(127,29,29,.25);transform:rotate(${bearing-90}deg)">➤</div>`});arrow.setMap(f);_.push(arrow);inflowOverlays.push(arrow)
+}
+function v585RenderSavedInflows(items){(items||[]).slice(0,2).forEach(v585RenderSavedInflowPath);applyMapDisplayFilters()}
 function v566RestoreCachedAnalysis(cache,fencePath,areaId){
-if(!cache?.analysis)return false;Rt();i=cache.analysis;
+if(!cache?.analysis)return false;Rt();
+const persistentFull=v585PersistentHasFullVisual(cache),restoredSegments=persistentFull?v585ExpandFlowSegments(cache.visual.flowSegments):cache.analysis.segments||[];
+i={...cache.analysis,segments:restoredSegments,entryModel:persistentFull?null:cache.analysis.entryModel};
 const txt=document.getElementById("rankingResultText");if(txt)txt.innerHTML=cache.html||"";
-v566RenderFlowLinesFromSegments(i.segments||[],fencePath);v564RenderInflows(i.entryModel,fencePath);(i.topSegments||[]).forEach((seg,idx)=>ie(seg,idx));
+v566RenderFlowLinesFromSegments(restoredSegments,fencePath);if(persistentFull)v585RenderSavedInflows(cache.visual.inflows);else v564RenderInflows(i.entryModel,fencePath);(i.topSegments||[]).forEach((seg,idx)=>ie(seg,idx));
 lastAnalyzedFenceKey=cache.fenceKey||v564FenceKey(fencePath);lastAnalyzedSavedId=areaId||null;applyMapDisplayFilters();
 const box=document.getElementById("rankingResultBox");if(box&&(txt?.innerHTML||"").trim())box.classList.remove("hidden");return true}
 
@@ -1664,7 +1704,7 @@ ${s?`<div class="bg-blue-50/70 rounded-lg p-2 text-[9.5px] text-blue-700 mb-2"><
 H.length||(j+=`<div class="text-xs text-rose-600 font-bold">TOP 후보를 만들 수 없습니다. 렌즈미 50m 제외, 입점가능성·신뢰도 ${e.TOP3_MIN_CONFIDENCE}점·종합점수 ${e.TOP3_MIN_SCORE}점 기준을 통과한 서로 다른 구간이 없습니다. 낮은 근거 후보를 억지로 TOP3에 채우지 않습니다.</div>`),
 U(u),P.innerHTML=j,document.getElementById("rankingResultBox").classList.remove("hidden"),applyMapDisplayFilters(),
 lastAnalyzedFenceKey=analysisFenceKey,lastAnalyzedSavedId=expandedSavedAreaId!=null?String(expandedSavedAreaId):(b!=null?String(b):null);
-if(lastAnalyzedSavedId){savedAreaAnalysisCache.set(String(lastAnalyzedSavedId),{fenceKey:analysisFenceKey,analysis:i,html:P.innerHTML});if(H.length)v581PersistAreaAnalysis(String(lastAnalyzedSavedId),analysisFenceKey,i,P.innerHTML)}
+if(lastAnalyzedSavedId){savedAreaAnalysisCache.set(String(lastAnalyzedSavedId),{fenceKey:analysisFenceKey,analysis:i,html:P.innerHTML});if(H.length)v581PersistAreaAnalysis(String(lastAnalyzedSavedId),analysisFenceKey,i,P.innerHTML,t)}
 m.innerText=`TOP3 완료 · 전체도로 ${osmSegments.length}구간 · TMAP ${R.length}경로 · 공백검증 ${gapRecovery.targets.length}곳/복구 ${gapRecovery.routes.length}경로 · 유효 교통-횡단 ${transportCrosswalkModel.validCount}곳 · 후보 ${H.length}곳${lastAnalyzedSavedId&&H.length?" · 순위 저장완료":""}`;
 }catch(t){
 if("AbortError"===t.name)return void(m.textContent="입지 분석을 취소했습니다.");
