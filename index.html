@@ -100,7 +100,7 @@ details[open]>summary::before{content:'▾';color:#e11d48}
 <div class="w-full md:w-1/4 bg-white border-r border-gray-200 p-6 flex flex-col shadow-lg z-20 overflow-y-auto">
 <h1 class="text-xl font-extrabold text-slate-800 border-b-4 border-indigo-500 pb-3 mb-4 flex justify-between items-center">
 <span>🗺️ 전국 상권 관제탑</span>
-<span class="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded-full font-bold">V58.1</span>
+<span class="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded-full font-bold">V58.2</span>
 </h1>
 
 <div class="mb-3">
@@ -339,6 +339,44 @@ function v581GetPersistentAreaAnalysis(areaId,path){
 }
 function v581DeletePersistentAreaAnalysis(areaId){
  const key=String(areaId||"");if(!key)return;delete savedAreaPersistentAnalysis[key];savedAreaAnalysisCache.delete(key);v581WritePersistentAnalysisStore()
+}
+/* V58.2: 예전 버전에서 이미 저장한 상권은 TOP3 스냅샷이 없을 수 있다.
+   최초 클릭 시 기존 분석의 전체 후보군에서 안전 조건(렌즈미 50m 제외/입점가능)을 유지한 채
+   기준을 단계적으로 완화해 최대 3개를 복구하고 영구 저장한다. */
+function v582MigrationTopSegments(segments,fencePath,limit=3){
+ const prepared=[];
+ for(const seg of segments||[]){
+  if(!seg||seg.excluded||seg.competition?.teamKill||seg.siteFeasible===false||!Number.isFinite(+seg.score))continue;
+  let rw=null;try{rw=he(seg,e.TOP3_WINDOW_METERS)}catch(err){rw=null}
+  if(!rw?.a||!rw?.b)continue;const p=rw.center||seg.mid;if(!p)continue;
+  if(!Nt(rw.a.lat,rw.a.lng,fencePath)||!Nt(rw.b.lat,rw.b.lng,fencePath)||!Nt(p.lat,p.lng,fencePath))continue;
+  if(Number.isFinite(rw.snapDistance)&&rw.snapDistance>Math.max(28,e.ROAD_SNAP_MAX_METERS*1.8))continue;
+  seg.recommendationWindow=rw;seg.displayPoint={...p};seg.roadSnapDistance=rw.snapDistance;seg.roadRouteName=rw.route?.name||seg.roadName||"";prepared.push(seg)
+ }
+ prepared.sort((a,b)=>(+b.score||0)-(+a.score||0)||(+b.confidence||0)-(+a.confidence||0));
+ const passes=[
+  {score:e.TOP3_MIN_SCORE,conf:e.TOP3_MIN_CONFIDENCE,support:2,sep:e.TOP3_MIN_SEPARATION_METERS},
+  {score:44,conf:35,support:1,sep:45},
+  {score:34,conf:25,support:0,sep:35},
+  {score:-1e9,conf:0,support:0,sep:22}
+ ],picked=[];
+ for(const pass of passes){
+  for(const seg of prepared){
+   if(picked.includes(seg))continue;
+   const support=(seg.demand?.targetCount||0)+(seg.commercial?.count60||0),direct=(seg.routeHitIds||[]).length;
+   if((+seg.score||0)<pass.score||(+seg.confidence||0)<pass.conf)continue;
+   if(pass.support>0&&support<pass.support&&direct<1)continue;
+   const p=seg.displayPoint||seg.mid;if(picked.some(q=>{const x=q.displayPoint||q.mid;return Pt(p.lat,p.lng,x.lat,x.lng)<pass.sep}))continue;
+   picked.push(seg);if(picked.length>=limit)return picked
+  }
+ }
+ return picked
+}
+function v582MigrationRankHtml(area,top){
+ const root=document.getElementById("rankingResultText"),old=root?.innerHTML||"";
+ const cleaned=old.replace(/<div class="text-xs text-rose-600 font-bold">TOP 후보를 만들 수 없습니다[\s\S]*?<\/div>/,"");
+ const cards=(top||[]).map((seg,idx)=>{const p=seg.displayPoint||seg.mid,score=Math.round(+seg.score||0),conf=Math.round(+seg.confidence||0),support=(seg.demand?.targetCount||0)+(seg.commercial?.count60||0),direct=(seg.routeHitIds||[]).length;return `<div class="bg-white px-3 py-3 rounded-xl border border-rose-200 shadow-sm mb-2"><div class="flex justify-between items-center"><div><b class="text-[13px] text-rose-700">${idx+1}위 입지</b><p class="text-[10px] text-slate-500 mt-0.5">기존 저장상권 순위 복구 · 펜스 내부 후보</p></div><div class="text-right"><b class="text-xl text-rose-600">${score}</b><p class="text-[9px] text-slate-400">상대지수</p></div></div><div class="grid grid-cols-3 gap-1 mt-2 text-[9px] text-center"><div class="rounded bg-slate-50 p-1"><span class="block text-slate-400">신뢰도</span><b>${conf}</b></div><div class="rounded bg-slate-50 p-1"><span class="block text-slate-400">시설근거</span><b>${support}</b></div><div class="rounded bg-slate-50 p-1"><span class="block text-slate-400">직접동선</span><b>${direct}</b></div></div><button onclick="focusTopCandidate(${idx})" class="mt-2 text-[10px] font-black bg-slate-800 text-white rounded px-2.5 py-1.5">📍 지도에서 보기</button></div>`}).join("");
+ return `${cleaned}<div class="mb-2 rounded-lg border border-amber-200 bg-amber-50 px-2.5 py-2 text-[10px] font-bold text-amber-800">기존 버전에서 저장된 상권이라 과거 TOP3 스냅샷이 없어 현재 후보군으로 최초 1회 복구했습니다. 렌즈미 50m 제외와 입점가능 조건은 유지했습니다.</div>${cards}`
 }
 function v581PrunePersistentAnalysis(){
  const ids=new Set((Lt||[]).map(a=>String(a.id))),store=savedAreaPersistentAnalysis||{};let changed=false;
@@ -1122,7 +1160,7 @@ if(changed&&X(next))Ct()
 
 function deletePolygon(t){const key=String(t);if(confirm("이 상권 경계를 삭제하시겠습니까?"))return T?alert("분석 종료 후 삭제해주세요."):void(X(Lt.filter(e=>String(e.id)!==key))&&(v581DeletePersistentAreaAnalysis(key),String(b)===key&&clearActivePolygon(),Ct()))}
 function selectSavedPolygon(t){
-/* V58.1: 왼쪽 저장상권 클릭은 항상 분석 열기. 영구저장 순위가 없으면 최초 1회 자동 재분석한다. */
+/* V58.2: 왼쪽 저장상권 클릭은 항상 분석 열기. 옛 저장상권은 최초 1회 순위를 마이그레이션해 영구저장한다. */
 return toggleSavedPolygonAnalysis(t,false)
 }
 async function v580EnsureSavedAreaAnalysis(key,area,path){
@@ -1141,19 +1179,30 @@ async function v580EnsureSavedAreaAnalysis(key,area,path){
   savedAreaAnalysisCache.set(key,liveCache);v581PersistAreaAnalysis(key,fenceKey,i,liveCache.html);lastAnalyzedSavedId=key;v566RestoreCachedAnalysis(liveCache,path,key);applyMapDisplayFilters();
   document.getElementById("statusMessage").innerText=`${area.name} · 방금 계산한 TOP3를 저장하고 다시 표시했습니다.`;return true
  }
- Rt();document.getElementById("rankingResultBox")?.classList.add("hidden");document.getElementById("statusMessage").innerText=`${area.name} · 기존 저장상권의 TOP3를 최초 1회 계산해 영구저장 중입니다...`;
+ Rt();document.getElementById("rankingResultBox")?.classList.add("hidden");document.getElementById("statusMessage").innerText=`${area.name} · 기존 저장상권 TOP3를 최초 1회 복구·영구저장 중입니다...`;
  await ce([...path.map(p=>({...p}))]);
  if(expandedSavedAreaId==null||String(expandedSavedAreaId)!==String(key))return false;
  v571EnableAnalysisLayers();
+ /* V58.2: 엄격 기준 TOP3가 부족하면 "기존 저장상권 마이그레이션"에 한해 후보를 단계적으로 보완한다. */
+ if((i?.topSegments?.length||0)<3&&i?.segments?.length){
+  const migrated=v582MigrationTopSegments(i.segments,path,3);
+  if(migrated.length>(i?.topSegments?.length||0)){
+   i.topSegments=migrated;Rt();
+   /* 순위 표시를 다시 만들고, 복구 순위 전용 간단 결과표를 저장한다. */
+   (i.topSegments||[]).forEach((seg,idx)=>ie(seg,idx));
+   const migratedHtml=v582MigrationRankHtml(area,i.topSegments),txt=document.getElementById("rankingResultText");if(txt)txt.innerHTML=migratedHtml;
+   const box=document.getElementById("rankingResultBox");if(box)box.classList.remove("hidden")
+  }
+ }
  /* 분석은 끝났는데 지도 순위 오버레이가 비어 있으면 TOP3를 강제로 다시 그린다. */
  if(i?.topSegments?.length&&rankOverlays.length===0){(i.topSegments||[]).forEach((seg,idx)=>ie(seg,idx))}
  if(i?.topSegments?.length){
   const html=document.getElementById("rankingResultText")?.innerHTML||"";
   savedAreaAnalysisCache.set(String(key),{fenceKey,analysis:i,html});v581PersistAreaAnalysis(String(key),fenceKey,i,html);lastAnalyzedSavedId=String(key);lastAnalyzedFenceKey=fenceKey;
   const box=document.getElementById("rankingResultBox");if(box&&html.trim())box.classList.remove("hidden");
-  applyMapDisplayFilters();document.getElementById("statusMessage").innerText=`${area.name} · 상권 내 TOP${i.topSegments.length} 입지 순위를 표시하고 저장했습니다.`;return true
+  applyMapDisplayFilters();document.getElementById("statusMessage").innerText=`${area.name} · 기존 저장상권 TOP${i.topSegments.length} 입지 순위를 복구해 표시하고 영구저장했습니다.`;return true
  }
- applyMapDisplayFilters();return false
+ document.getElementById("statusMessage").innerText=`${area.name} · 분석 가능한 도로 후보를 만들지 못했습니다. 펜스 범위 또는 데이터 수집 상태를 확인해주세요.`;applyMapDisplayFilters();return false
 }
 async function toggleSavedPolygonAnalysis(t,allowCollapse=true){
 const key=String(t),area=Lt.find(e=>String(e.id)===key);if(!area)return;
@@ -1893,7 +1942,7 @@ ${s?`<div class="bg-blue-50/70 rounded-lg p-2 text-[9.5px] text-blue-700 mb-2"><
 H.length||(j+=`<div class="text-xs text-rose-600 font-bold">TOP 후보를 만들 수 없습니다. 렌즈미 50m 제외, 입점가능성·신뢰도 ${e.TOP3_MIN_CONFIDENCE}점·종합점수 ${e.TOP3_MIN_SCORE}점 기준을 통과한 서로 다른 구간이 없습니다. 낮은 근거 후보를 억지로 TOP3에 채우지 않습니다.</div>`),
 U(u),P.innerHTML=j,document.getElementById("rankingResultBox").classList.remove("hidden"),applyMapDisplayFilters(),
 lastAnalyzedFenceKey=analysisFenceKey,lastAnalyzedSavedId=expandedSavedAreaId!=null?String(expandedSavedAreaId):(b!=null?String(b):null);
-if(lastAnalyzedSavedId){savedAreaAnalysisCache.set(String(lastAnalyzedSavedId),{fenceKey:analysisFenceKey,analysis:i,html:P.innerHTML});if(H.length)v581PersistAreaAnalysis(String(lastAnalyzedSavedId),analysisFenceKey,i,P.innerHTML);else v581DeletePersistentAreaAnalysis(String(lastAnalyzedSavedId))}
+if(lastAnalyzedSavedId){savedAreaAnalysisCache.set(String(lastAnalyzedSavedId),{fenceKey:analysisFenceKey,analysis:i,html:P.innerHTML});if(H.length)v581PersistAreaAnalysis(String(lastAnalyzedSavedId),analysisFenceKey,i,P.innerHTML)}
 m.innerText=`TOP3 완료 · 전체도로 ${osmSegments.length}구간 · TMAP ${R.length}경로 · 공백검증 ${gapRecovery.targets.length}곳/복구 ${gapRecovery.routes.length}경로 · 유효 교통-횡단 ${transportCrosswalkModel.validCount}곳 · 후보 ${H.length}곳${lastAnalyzedSavedId&&H.length?" · 순위 저장완료":""}`;
 }catch(t){
 if("AbortError"===t.name)return void(m.textContent="입지 분석을 취소했습니다.");
