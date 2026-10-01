@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>렌즈미 상권 분석 대시보드 V58.7 다중선택·토글해제</title>
+<title>렌즈미 상권 분석 대시보드 V58.8 다중선택·토글해제</title>
 <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css" rel="stylesheet">
 <script src="https://cdn.tailwindcss.com"></script>
 <style>
@@ -100,7 +100,7 @@ details[open]>summary::before{content:'▾';color:#e11d48}
 <div class="w-full md:w-1/4 bg-white border-r border-gray-200 p-6 flex flex-col shadow-lg z-20 overflow-y-auto">
 <h1 class="text-xl font-extrabold text-slate-800 border-b-4 border-indigo-500 pb-3 mb-4 flex justify-between items-center">
 <span>🗺️ 전국 상권 관제탑</span>
-<span class="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded-full font-bold">V58.7</span>
+<span class="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded-full font-bold">V58.8</span>
 </h1>
 
 <div class="mb-3">
@@ -225,7 +225,7 @@ details[open]>summary::before{content:'▾';color:#e11d48}
 <script src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=c045609510f8b75252389123f086be48&libraries=services,drawing"></script>
 
 <script>
-/* V58.7: 다중상권 선택 유지 + 같은 말풍선 재클릭 해제 + 표시 레이어 상태 고정/기본 ON 보정. */
+/* V58.8: 다중상권 선택 유지 + 같은 말풍선 재클릭 해제 + 표시 레이어 상태 고정/기본 ON 보정. */
 const t="mJJ00gscCg39Y6nR0LhUw2yzrIfr7arY65OwUZYk",e={
 TEAM_KILL_METERS:50,SEARCH_RADIUS_MAX:2200,FLOW_MATCH_RADIUS:13,SEGMENT_NODE_SPACING:9,SEGMENT_BEARING_TOLERANCE:24,
 ARM_LOOKAHEAD_METERS:28,MAX_TMAP_ROUTES_PER_SCAN:14,REQUEST_TIMEOUT_MS:12e3,MAX_GATES:7,MAX_DESTINATIONS:10,
@@ -241,7 +241,7 @@ if(!window.kakao?.maps?.services||!window.kakao?.maps?.drawing)throw document.ge
 new Error("Kakao SDK unavailable");
 let n="new",a="",o=null,r=null,s=[],i=null,c=null,d=0,u=document.getElementById("map"),m=new kakao.maps.LatLng(36.15,127.75),g=m,f=new kakao.maps.Map(u,{center:m,
 level:12}),h=new kakao.maps.services.Places,p=new kakao.maps.services.Geocoder,y=[],_=[],A=new Map,E=new Map,M=new kakao.maps.CustomOverlay({xAnchor:.5,yAnchor:1.5,zIndex:150
-}),w=null,b=null,k={},x={},I=!1,S=null,T=!1,O=0,R=null,analysisLines=[],rankOverlays=[],inflowOverlays=[],flowLines=[],expandedSavedAreaId=null,focusedSavedAreaId=null,selectedSavedAreaIds=new Set(),renderedSavedAreaIds=new Set(),lastAnalyzedSavedId=null,lastAnalyzedFenceKey="",savedAreaAnalysisCache=new Map,savedAreaPersistentAnalysis=v581LoadPersistentAnalysisStore(),savedBubbleEls={},provinceLabelOverlays=[],cityLabelOverlays=[],dongLabelOverlays=[],adminFocusOverlay=null,regionLabelTimer=null,regionLabelRequestSeq=0,mapDrillState={level:"national",si:null,gu:null,dong:null},lastAutoRegionKey="",regionFanoutToken=0,municipalityCenterCache=new Map,hapaOlivePlaceCache=new Map,legalDongTreePromise=null,legalDongTreeData=null;
+}),w=null,b=null,k={},x={},I=!1,S=null,T=!1,O=0,R=null,analysisLines=[],rankOverlays=[],inflowOverlays=[],flowLines=[],expandedSavedAreaId=null,focusedSavedAreaId=null,selectedSavedAreaIds=new Set(),renderedSavedAreaIds=new Set(),savedAreaOverlayGroups=new Map(),currentRenderSavedAreaId=null,lastSavedAreaToggleKey="",lastSavedAreaToggleAt=0,lastAnalyzedSavedId=null,lastAnalyzedFenceKey="",savedAreaAnalysisCache=new Map,savedAreaPersistentAnalysis=v581LoadPersistentAnalysisStore(),savedBubbleEls={},provinceLabelOverlays=[],cityLabelOverlays=[],dongLabelOverlays=[],adminFocusOverlay=null,regionLabelTimer=null,regionLabelRequestSeq=0,mapDrillState={level:"national",si:null,gu:null,dong:null},lastAutoRegionKey="",regionFanoutToken=0,municipalityCenterCache=new Map,hapaOlivePlaceCache=new Map,legalDongTreePromise=null,legalDongTreeData=null;
 
 function D(t){return String(t.id||`${t.place_name}|${t.x}|${t.y}`)}
 function v564FenceKey(path){return(Array.isArray(path)?path:[]).map(p=>`${Number(p.lat).toFixed(6)},${Number(p.lng).toFixed(6)}`).join("|")}
@@ -284,7 +284,7 @@ Object.entries(x).forEach(([id,o])=>{try{const key=String(id),area=Lt.find(a=>St
 Object.entries(k).forEach(([id,poly])=>{try{const key=String(id),area=Lt.find(a=>String(a.id)===key),showByDong=v572AreaMatchesCurrentCity(area),keep=selectedSavedAreaIds.has(key)||key===focusedKey||key===activeKey||showByDong;poly.setMap(keep?f:null)}catch(e){}});
 document.getElementById("heatLegend")?.classList.toggle("hidden",!showFlow);
 }
-function v571EnableAnalysisLayers(){/* V58.7: 최초 기본값은 모두 ON. 사용자가 직접 끈 뒤에는 줌/이동/상권선택으로 다시 켜지지 않는다. */}
+function v571EnableAnalysisLayers(){/* V58.8: 최초 기본값은 모두 ON. 사용자가 직접 끈 뒤에는 줌/이동/상권선택으로 다시 켜지지 않는다. */}
 
 function v564HideAnalysis(){_.forEach(o=>{try{o.setMap(null)}catch(e){}});flowLines.forEach(o=>{try{o.setMap(null)}catch(e){}});document.getElementById("heatLegend")?.classList.add("hidden");document.getElementById("rankingResultBox")?.classList.add("hidden")}
 function v564SetSavedAreaVisual(activeId=expandedSavedAreaId){const activeKey=activeId==null?null:String(activeId),focusKey=focusedSavedAreaId==null?null:String(focusedSavedAreaId);Object.entries(k).forEach(([id,poly])=>{const key=String(id),selected=selectedSavedAreaIds.has(key)||key===activeKey,focused=key===focusKey;poly.setOptions({fillColor:focused?"#e11d48":selected?"#fb7185":"#f43f5e",fillOpacity:focused?.26:selected?.18:.075,strokeColor:focused?"#9f1239":selected?"#e11d48":"#e11d48",strokeOpacity:focused?1:selected?.92:.65,strokeWeight:focused?5:selected?4:2})})}
@@ -757,7 +757,7 @@ function v572RefreshRegionNavigation(){
  applyMapDisplayFilters()
 }
 async function v573SyncRegionFromMap(force=false){
- /* V58.7: 저장상권 분석이 열린 동안 지도 줌/이동 후에도 행정단계와 다중 분석 오버레이를 고정한다. */
+ /* V58.8: 저장상권 분석이 열린 동안 지도 줌/이동 후에도 행정단계와 다중 분석 오버레이를 고정한다. */
  if(expandedSavedAreaId!=null){
   const active=Lt.find(a=>String(a.id)===String(expandedSavedAreaId));
   if(active){
@@ -871,6 +871,8 @@ Object.entries(savedBubbleEls).forEach(([id,rec])=>{
  if(!btn)return;
  btn.classList.toggle("active",on);btn.setAttribute("aria-pressed",on?"true":"false");
  if(icon){icon.textContent=on?"✓":"📍";icon.className=on?"poly-nametag-check":"poly-nametag-pin"}
+ if(rec?.wrap){rec.wrap.style.transform=on?"translateY(-42px)":"translateY(0)";rec.wrap.style.transition="transform .16s ease, opacity .16s ease";rec.wrap.style.opacity=on?".92":"1"}
+ try{rec?.overlay?.setZIndex?.(on?90:110)}catch(e){}
 });
 }
 function Ct(){
@@ -897,8 +899,8 @@ for(const si of sis){
     row.querySelector('[data-area-select]')?.addEventListener('click',()=>selectSavedPolygon(areaId));row.querySelector('[data-area-rename]')?.addEventListener('click',()=>renamePolygon(areaId));row.querySelector('[data-area-redraw]')?.addEventListener('click',()=>redrawPolygon(areaId));row.querySelector('[data-area-delete]')?.addEventListener('click',()=>deletePolygon(areaId));dongBody.appendChild(row);
     const poly=W(area.geometry||area.path,{strokeWeight:active?5:focused?4:2,strokeColor:active?"#9f1239":focused?"#f43f5e":"#e11d48",strokeOpacity:active?1:focused?.9:.65,fillOpacity:active?.24:focused?.13:.075,fillColor:active?"#e11d48":focused?"#fb7185":"#f43f5e"},(()=>selectSavedPolygon(areaId)));poly.setMap(f);k[areaId]=poly;
     const bubbleCenter=K(area.geometry||area.path),wrap=document.createElement("div"),btn=document.createElement("button"),icon=document.createElement("span"),label=document.createElement("span");
-    wrap.className="poly-nametag-wrap";btn.type="button";btn.className=`poly-nametag${active?" active":""}`;btn.setAttribute("aria-pressed",active?"true":"false");icon.className=active?"poly-nametag-check":"poly-nametag-pin";icon.textContent=active?"✓":"📍";label.className="poly-nametag-text";label.textContent=area.name;btn.append(icon,label);wrap.appendChild(btn);btn.addEventListener("click",ev=>{ev.stopPropagation();selectSavedPolygon(areaId)});
-    const ov=new kakao.maps.CustomOverlay({position:new kakao.maps.LatLng(bubbleCenter.lat,bubbleCenter.lng),content:wrap,xAnchor:.5,yAnchor:1,zIndex:active?125:110});ov.setMap(f);x[areaId]=ov;savedBubbleEls[areaId]={wrap,button:btn,icon,label,overlay:ov}
+    wrap.className="poly-nametag-wrap";wrap.style.transform=active?"translateY(-42px)":"translateY(0)";wrap.style.transition="transform .16s ease, opacity .16s ease";wrap.style.opacity=active?".92":"1";btn.type="button";btn.className=`poly-nametag${active?" active":""}`;btn.setAttribute("aria-pressed",active?"true":"false");icon.className=active?"poly-nametag-check":"poly-nametag-pin";icon.textContent=active?"✓":"📍";label.className="poly-nametag-text";label.textContent=area.name;btn.append(icon,label);wrap.appendChild(btn);btn.addEventListener("click",ev=>{ev.preventDefault();ev.stopPropagation();ev.stopImmediatePropagation?.();selectSavedPolygon(areaId)});
+    const ov=new kakao.maps.CustomOverlay({position:new kakao.maps.LatLng(bubbleCenter.lat,bubbleCenter.lng),content:wrap,xAnchor:.5,yAnchor:1,zIndex:active?90:110});ov.setMap(f);x[areaId]=ov;savedBubbleEls[areaId]={wrap,button:btn,icon,label,overlay:ov}
    }
    guBody.appendChild(dongEl)
   }
@@ -930,8 +932,11 @@ function deletePolygon(t){
  Ct();v586RenderAllSelectedSavedAreas(expandedSavedAreaId)
 }
 function selectSavedPolygon(t){
-/* V58.7: 저장상권 목록/폴리곤/말풍선은 클릭 시 선택, 같은 항목 재클릭 시 선택 해제 */
-return toggleSavedPolygonAnalysis(t)
+/* V58.8: 말풍선과 바로 아래 폴리곤이 같은 클릭을 중복으로 받는 경우 180ms 안의 중복 호출을 1회로 합친다. */
+const key=String(t),now=(window.performance?.now?.()||Date.now());
+if(lastSavedAreaToggleKey===key&&now-lastSavedAreaToggleAt<180)return;
+lastSavedAreaToggleKey=key;lastSavedAreaToggleAt=now;
+return toggleSavedPolygonAnalysis(key)
 }
 async function v580EnsureSavedAreaAnalysis(key,area,path){
  const fenceKey=v564FenceKey(path),cached=savedAreaAnalysisCache.get(key),persistent=v581GetPersistentAreaAnalysis(key,path);
@@ -976,7 +981,7 @@ async function v580EnsureSavedAreaAnalysis(key,area,path){
 }
 async function toggleSavedPolygonAnalysis(t){
 const key=String(t),area=Lt.find(e=>String(e.id)===key);if(!area)return;
-/* V58.7: 새 상권은 추가 선택, 이미 선택된 상권은 재클릭하면 해제한다. */
+/* V58.8: 새 상권은 추가 선택, 이미 선택된 상권은 재클릭하면 해제한다. */
 if(T){
  if(expandedSavedAreaId!=null&&String(expandedSavedAreaId)===key){
   document.getElementById("statusMessage").innerText=`${area.name} · 현재 TOP3 분석 중입니다. 분석이 끝난 뒤 다시 누르면 선택 해제할 수 있습니다.`;return
@@ -987,6 +992,7 @@ if(T){
 /* 이미 선택된 말풍선/상권을 다시 누르면 그 상권만 해제 */
 if(selectedSavedAreaIds.has(key)){
  selectedSavedAreaIds.delete(key);
+ v588RemoveSavedAreaOverlays(key);
  const remain=[...selectedSavedAreaIds].map(String).filter(id=>Lt.some(a=>String(a.id)===id));
  if(!remain.length){
   expandedSavedAreaId=null;focusedSavedAreaId=null;b=null;w=null;R=null;i=null;
@@ -1053,7 +1059,7 @@ selectedSavedAreaIds.clear();expandedSavedAreaId=null;focusedSavedAreaId=null;b=
 document.getElementById("targetLocationInput").innerText="선택 없음",document.getElementById("btnClearPolygon").classList.add("hidden"),
 document.getElementById("comp_count").innerText="-개",document.getElementById("anchor_count").innerText="-개",document.getElementById("rankingResultText").innerHTML="",v564SetSavedAreaVisual(null),Ct(),
 Rt(),t||I||Ft()}
-function Rt(){_.forEach((t=>{try{t.setMap(null)}catch(e){}})),flowLines.forEach((t=>{try{t.setMap(null)}catch(e){}})),_=[],analysisLines=[],rankOverlays=[],inflowOverlays=[],flowLines=[],renderedSavedAreaIds.clear(),document.getElementById("heatLegend")?.classList.add("hidden")}
+function Rt(){_.forEach((t=>{try{t.setMap(null)}catch(e){}})),flowLines.forEach((t=>{try{t.setMap(null)}catch(e){}})),_=[],analysisLines=[],rankOverlays=[],inflowOverlays=[],flowLines=[],renderedSavedAreaIds.clear(),savedAreaOverlayGroups.clear(),currentRenderSavedAreaId=null,document.getElementById("heatLegend")?.classList.add("hidden")}
 
 function Pt(t,e,n,a){
 const o=(n-t)*Math.PI/180,r=(a-e)*Math.PI/180,s=Math.sin(o/2)**2+Math.cos(t*Math.PI/180)*Math.cos(n*Math.PI/180)*Math.sin(r/2)**2;
@@ -1265,12 +1271,12 @@ function se(t){return `${tradeZoneLabel(t)} · ${candidateTypeLabel(t)}`}
 function ie(t,rankIdx,n){
 const a=["#7f1d1d","#1d4ed8","#047857"][rankIdx]||"#334155",o=t.recommendationWindow||he(t,28),p=t.displayPoint||o.center||t.mid;
 t.recommendationWindow=o,t.displayPoint={...p};
-const r=new kakao.maps.Polyline({path:o.path.map((t=>new kakao.maps.LatLng(t.lat,t.lng))),strokeWeight:9,strokeColor:a,strokeOpacity:.96,strokeStyle:"solid"});
-r.setMap(f),_.push(r),rankOverlays.push(r);
+const r=new kakao.maps.Polyline({path:o.path.map((t=>new kakao.maps.LatLng(t.lat,t.lng))),strokeWeight:9,strokeColor:a,strokeOpacity:.96,strokeStyle:"solid",zIndex:260});
+r.setMap(f),_.push(r),rankOverlays.push(r),v588TrackSavedOverlay(r,"rank");
 const s=rankIdx+1,i=`${s}위`,l=new kakao.maps.CustomOverlay({
 position:new kakao.maps.LatLng(p.lat,p.lng),
 content:`<div style="position:relative;z-index:999;text-align:center;pointer-events:none"><div style="background:${a};color:white;padding:5px 10px;border-radius:9px;font-weight:900;font-size:12px;border:2px solid white;box-shadow:0 3px 7px rgba(0,0,0,.35);white-space:nowrap;margin-bottom:3px">${i}</div><div style="width:12px;height:12px;border-radius:50%;background:#fff;border:4px solid ${a};box-shadow:0 1px 4px rgba(0,0,0,.4);margin:0 auto"></div></div>`,
-xAnchor:.5,yAnchor:1});return l.setMap(f),_.push(l),rankOverlays.push(l),applyMapDisplayFilters(),i}
+xAnchor:.5,yAnchor:1,zIndex:300});return l.setMap(f),_.push(l),rankOverlays.push(l),v588TrackSavedOverlay(l,"rank"),applyMapDisplayFilters(),i}
 function le(t,e){
 if(!e)return "길찾기 경로가 확보되지 않아 추천구간 분석을 수행하지 못했습니다.";
 const direct=(t.routeHitIds||[]).length;
@@ -1412,9 +1418,9 @@ if(out.length<2){
 return out}
 function v564RenderInflowEntry(entry,labelText,isMain,fencePath){
 if(!entry?.route?.coords?.length||!entry.point)return;const path=v564InsideEntryPath(entry,isMain,fencePath);if(path.length<2||v566PathLength(path)<12)return;
-const color=isMain?"#b91c1c":"#ef4444",line=new kakao.maps.Polyline({path:path.map(p=>new kakao.maps.LatLng(p.lat,p.lng)),strokeWeight:isMain?5:3,strokeColor:color,strokeOpacity:isMain?.96:.74,strokeStyle:"solid",endArrow:true,zIndex:isMain?132:128});line.setMap(f);_.push(line);inflowOverlays.push(line);
-const li=Math.min(path.length-1,Math.max(1,Math.floor(path.length*.28))),lp=path[li],label=new kakao.maps.CustomOverlay({position:new kakao.maps.LatLng(lp.lat,lp.lng),xAnchor:.5,yAnchor:1.45,zIndex:isMain?136:131,content:`<div style="pointer-events:none;background:${isMain?"#fff1f2":"rgba(255,255,255,.95)"};border:${isMain?2:1}px solid ${color};color:${isMain?"#991b1b":"#dc2626"};font-size:${isMain?9:8}px;font-weight:900;border-radius:999px;padding:${isMain?"3px 7px":"2px 6px"};box-shadow:0 3px 8px rgba(127,29,29,.15);white-space:nowrap">${labelText}</div>`});label.setMap(f);_.push(label);inflowOverlays.push(label);
-const last=path.at(-1),prev=path.at(-2),bearing=Ut(prev.lat,prev.lng,last.lat,last.lng),arrow=new kakao.maps.CustomOverlay({position:new kakao.maps.LatLng(last.lat,last.lng),xAnchor:.5,yAnchor:.5,zIndex:isMain?138:133,content:`<div style="pointer-events:none;color:${color};font-size:${isMain?24:19}px;font-weight:900;line-height:1;text-shadow:0 2px 4px rgba(255,255,255,.95),0 1px 5px rgba(127,29,29,.25);transform:rotate(${bearing-90}deg)">➤</div>`});arrow.setMap(f);_.push(arrow);inflowOverlays.push(arrow)
+const color=isMain?"#b91c1c":"#ef4444",line=new kakao.maps.Polyline({path:path.map(p=>new kakao.maps.LatLng(p.lat,p.lng)),strokeWeight:isMain?5:3,strokeColor:color,strokeOpacity:isMain?.96:.74,strokeStyle:"solid",endArrow:true,zIndex:isMain?132:128});line.setMap(f);_.push(line);inflowOverlays.push(line);v588TrackSavedOverlay(line,"inflow");
+const li=Math.min(path.length-1,Math.max(1,Math.floor(path.length*.28))),lp=path[li],label=new kakao.maps.CustomOverlay({position:new kakao.maps.LatLng(lp.lat,lp.lng),xAnchor:.5,yAnchor:1.45,zIndex:isMain?136:131,content:`<div style="pointer-events:none;background:${isMain?"#fff1f2":"rgba(255,255,255,.95)"};border:${isMain?2:1}px solid ${color};color:${isMain?"#991b1b":"#dc2626"};font-size:${isMain?9:8}px;font-weight:900;border-radius:999px;padding:${isMain?"3px 7px":"2px 6px"};box-shadow:0 3px 8px rgba(127,29,29,.15);white-space:nowrap">${labelText}</div>`});label.setMap(f);_.push(label);inflowOverlays.push(label);v588TrackSavedOverlay(label,"inflow");
+const last=path.at(-1),prev=path.at(-2),bearing=Ut(prev.lat,prev.lng,last.lat,last.lng),arrow=new kakao.maps.CustomOverlay({position:new kakao.maps.LatLng(last.lat,last.lng),xAnchor:.5,yAnchor:.5,zIndex:isMain?138:133,content:`<div style="pointer-events:none;color:${color};font-size:${isMain?24:19}px;font-weight:900;line-height:1;text-shadow:0 2px 4px rgba(255,255,255,.95),0 1px 5px rgba(127,29,29,.25);transform:rotate(${bearing-90}deg)">➤</div>`});arrow.setMap(f);_.push(arrow);inflowOverlays.push(arrow);v588TrackSavedOverlay(arrow,"inflow")
 }
 function v564RenderInflows(entryModel,fencePath){
 const candidates=v566InflowCandidates(entryModel,fencePath);if(candidates[0])v564RenderInflowEntry(candidates[0].entry,"메인 유입",true,fencePath);if(candidates[1])v564RenderInflowEntry(candidates[1].entry,"보조 유입",false,fencePath);applyMapDisplayFilters()}
@@ -1457,16 +1463,28 @@ function v566RenderFlowLinesFromSegments(segments,fencePath){
  if(fencePath?.length>=3&&!Nt(seg.mid.lat,seg.mid.lng,fencePath))return;
  const flowEstimate=Number.isFinite(seg.flowEstimate)?seg.flowEstimate:v568FlowEstimate(seg);seg.flowEstimate=flowEstimate;
  const color=flowEstimate>=80?"#dc2626":flowEstimate>=65?"#f97316":flowEstimate>=50?"#eab308":flowEstimate>=35?"#16a34a":"#2563eb",confidence=seg.confidence||35;
- const line=new kakao.maps.Polyline({path:[new kakao.maps.LatLng(seg.a.lat,seg.a.lng),new kakao.maps.LatLng(seg.b.lat,seg.b.lng)],strokeWeight:flowEstimate>=80?7:flowEstimate>=65?6:5,strokeColor:color,strokeOpacity:confidence>=70?.74:confidence>=50?.62:.43,strokeStyle:"solid",zIndex:72});analysisLines.push(line);flowLines.push(line);_.push(line)
+ const line=new kakao.maps.Polyline({path:[new kakao.maps.LatLng(seg.a.lat,seg.a.lng),new kakao.maps.LatLng(seg.b.lat,seg.b.lng)],strokeWeight:flowEstimate>=80?7:flowEstimate>=65?6:5,strokeColor:color,strokeOpacity:confidence>=70?.74:confidence>=50?.62:.43,strokeStyle:"solid",zIndex:72});analysisLines.push(line);flowLines.push(line);_.push(line);v588TrackSavedOverlay(line,"flow")
 });applyMapDisplayFilters()}
 function v585RenderSavedInflowPath(item){
  const path=(item?.path||[]).map(p=>Array.isArray(p)?{lat:+p[0],lng:+p[1]}:p).filter(p=>Number.isFinite(p?.lat)&&Number.isFinite(p?.lng));if(path.length<2)return;
  const isMain=!!item.isMain,labelText=item.label||(isMain?"메인 유입":"보조 유입"),color=isMain?"#b91c1c":"#ef4444";
- const line=new kakao.maps.Polyline({path:path.map(p=>new kakao.maps.LatLng(p.lat,p.lng)),strokeWeight:isMain?5:3,strokeColor:color,strokeOpacity:isMain?.96:.74,strokeStyle:"solid",endArrow:true,zIndex:isMain?132:128});line.setMap(f);_.push(line);inflowOverlays.push(line);
- const li=Math.min(path.length-1,Math.max(1,Math.floor(path.length*.28))),lp=path[li],label=new kakao.maps.CustomOverlay({position:new kakao.maps.LatLng(lp.lat,lp.lng),xAnchor:.5,yAnchor:1.45,zIndex:isMain?136:131,content:`<div style="pointer-events:none;background:${isMain?"#fff1f2":"rgba(255,255,255,.95)"};border:${isMain?2:1}px solid ${color};color:${isMain?"#991b1b":"#dc2626"};font-size:${isMain?9:8}px;font-weight:900;border-radius:999px;padding:${isMain?"3px 7px":"2px 6px"};box-shadow:0 3px 8px rgba(127,29,29,.15);white-space:nowrap">${labelText}</div>`});label.setMap(f);_.push(label);inflowOverlays.push(label);
- const last=path.at(-1),prev=path.at(-2),bearing=Ut(prev.lat,prev.lng,last.lat,last.lng),arrow=new kakao.maps.CustomOverlay({position:new kakao.maps.LatLng(last.lat,last.lng),xAnchor:.5,yAnchor:.5,zIndex:isMain?138:133,content:`<div style="pointer-events:none;color:${color};font-size:${isMain?24:19}px;font-weight:900;line-height:1;text-shadow:0 2px 4px rgba(255,255,255,.95),0 1px 5px rgba(127,29,29,.25);transform:rotate(${bearing-90}deg)">➤</div>`});arrow.setMap(f);_.push(arrow);inflowOverlays.push(arrow)
+ const line=new kakao.maps.Polyline({path:path.map(p=>new kakao.maps.LatLng(p.lat,p.lng)),strokeWeight:isMain?5:3,strokeColor:color,strokeOpacity:isMain?.96:.74,strokeStyle:"solid",endArrow:true,zIndex:isMain?132:128});line.setMap(f);_.push(line);inflowOverlays.push(line);v588TrackSavedOverlay(line,"inflow");
+ const li=Math.min(path.length-1,Math.max(1,Math.floor(path.length*.28))),lp=path[li],label=new kakao.maps.CustomOverlay({position:new kakao.maps.LatLng(lp.lat,lp.lng),xAnchor:.5,yAnchor:1.45,zIndex:isMain?136:131,content:`<div style="pointer-events:none;background:${isMain?"#fff1f2":"rgba(255,255,255,.95)"};border:${isMain?2:1}px solid ${color};color:${isMain?"#991b1b":"#dc2626"};font-size:${isMain?9:8}px;font-weight:900;border-radius:999px;padding:${isMain?"3px 7px":"2px 6px"};box-shadow:0 3px 8px rgba(127,29,29,.15);white-space:nowrap">${labelText}</div>`});label.setMap(f);_.push(label);inflowOverlays.push(label);v588TrackSavedOverlay(label,"inflow");
+ const last=path.at(-1),prev=path.at(-2),bearing=Ut(prev.lat,prev.lng,last.lat,last.lng),arrow=new kakao.maps.CustomOverlay({position:new kakao.maps.LatLng(last.lat,last.lng),xAnchor:.5,yAnchor:.5,zIndex:isMain?138:133,content:`<div style="pointer-events:none;color:${color};font-size:${isMain?24:19}px;font-weight:900;line-height:1;text-shadow:0 2px 4px rgba(255,255,255,.95),0 1px 5px rgba(127,29,29,.25);transform:rotate(${bearing-90}deg)">➤</div>`});arrow.setMap(f);_.push(arrow);inflowOverlays.push(arrow);v588TrackSavedOverlay(arrow,"inflow")
 }
 function v585RenderSavedInflows(items){(items||[]).slice(0,2).forEach(v585RenderSavedInflowPath);applyMapDisplayFilters()}
+function v588TrackSavedOverlay(obj,kind="all"){
+ if(!obj||currentRenderSavedAreaId==null)return;const key=String(currentRenderSavedAreaId);let rec=savedAreaOverlayGroups.get(key);
+ if(!rec){rec={all:new Set(),rank:new Set(),inflow:new Set(),flow:new Set()};savedAreaOverlayGroups.set(key,rec)}
+ rec.all.add(obj);if(rec[kind])rec[kind].add(obj)
+}
+function v588RemoveSavedAreaOverlays(areaId){
+ const key=String(areaId||""),rec=savedAreaOverlayGroups.get(key);if(!rec)return false;
+ for(const obj of rec.all){try{obj.setMap(null)}catch(e){}}
+ const keep=arr=>(arr||[]).filter(obj=>!rec.all.has(obj));
+ _=keep(_);analysisLines=keep(analysisLines);rankOverlays=keep(rankOverlays);inflowOverlays=keep(inflowOverlays);flowLines=keep(flowLines);
+ savedAreaOverlayGroups.delete(key);renderedSavedAreaIds.delete(key);applyMapDisplayFilters();return true
+}
 function v586GetSavedDisplayCache(areaId,area=null){
  const key=String(areaId||"");if(!key)return null;area=area||Lt.find(a=>String(a.id)===key);if(!area)return null;
  const path=F(area.geometry||area.path),fenceKey=v564FenceKey(path),cached=savedAreaAnalysisCache.get(key);
@@ -1474,19 +1492,21 @@ function v586GetSavedDisplayCache(areaId,area=null){
  const persistent=v581GetPersistentAreaAnalysis(key,path);return v585PersistentHasFullVisual(persistent)?persistent:null
 }
 function v586AppendSavedAreaAnalysis(cache,fencePath,areaId,primary=false){
- if(!cache?.analysis)return false;
- const persistentFull=v585PersistentHasFullVisual(cache),restoredSegments=persistentFull?v585ExpandFlowSegments(cache.visual.flowSegments):cache.analysis.segments||[],analysis={...cache.analysis,segments:restoredSegments,entryModel:persistentFull?null:cache.analysis.entryModel};
- v566RenderFlowLinesFromSegments(restoredSegments,fencePath);
- if(persistentFull)v585RenderSavedInflows(cache.visual.inflows);else v564RenderInflows(analysis.entryModel,fencePath);
- (analysis.topSegments||[]).forEach((seg,idx)=>ie(seg,idx));
- renderedSavedAreaIds.add(String(areaId||""));
- if(primary){
-  i=analysis;
-  const txt=document.getElementById("rankingResultText");if(txt)txt.innerHTML=cache.html||"";
-  lastAnalyzedFenceKey=cache.fenceKey||v564FenceKey(fencePath);lastAnalyzedSavedId=areaId||null;
-  const box=document.getElementById("rankingResultBox");if(box&&(txt?.innerHTML||"").trim())box.classList.remove("hidden")
- }
- return true
+ if(!cache?.analysis)return false;const prevRenderKey=currentRenderSavedAreaId;currentRenderSavedAreaId=String(areaId||"");
+ try{
+  const persistentFull=v585PersistentHasFullVisual(cache),restoredSegments=persistentFull?v585ExpandFlowSegments(cache.visual.flowSegments):cache.analysis.segments||[],analysis={...cache.analysis,segments:restoredSegments,entryModel:persistentFull?null:cache.analysis.entryModel};
+  v566RenderFlowLinesFromSegments(restoredSegments,fencePath);
+  if(persistentFull)v585RenderSavedInflows(cache.visual.inflows);else v564RenderInflows(analysis.entryModel,fencePath);
+  (analysis.topSegments||[]).forEach((seg,idx)=>ie(seg,idx));
+  renderedSavedAreaIds.add(String(areaId||""));
+  if(primary){
+   i=analysis;
+   const txt=document.getElementById("rankingResultText");if(txt)txt.innerHTML=cache.html||"";
+   lastAnalyzedFenceKey=cache.fenceKey||v564FenceKey(fencePath);lastAnalyzedSavedId=areaId||null;
+   const box=document.getElementById("rankingResultBox");if(box&&(txt?.innerHTML||"").trim())box.classList.remove("hidden")
+  }
+  return true
+ }finally{currentRenderSavedAreaId=prevRenderKey}
 }
 function v586RenderAllSelectedSavedAreas(primaryKey=expandedSavedAreaId){
  const primary=primaryKey==null?null:String(primaryKey),keys=[...selectedSavedAreaIds].map(String).filter(key=>Lt.some(a=>String(a.id)===key));
