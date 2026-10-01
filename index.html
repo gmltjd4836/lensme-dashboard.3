@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>렌즈미 상권 분석 대시보드 V59.5 기존기능복구·전국수량재귀</title>
+<title>렌즈미 상권 분석 대시보드 V59.6 가독성·행정구역토글</title>
 <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css" rel="stylesheet">
 <script src="https://cdn.tailwindcss.com"></script>
 <style>
@@ -20,13 +20,13 @@ input[type=checkbox]{width:1.1rem;height:1.1rem;cursor:pointer}
 .store-tooltip{background:#fff;border:2px solid #334155;border-radius:8px;padding:6px 12px;font-size:13px;font-weight:800;color:#0f172a;box-shadow:0 4px 10px rgba(0,0,0,.2);white-space:nowrap;transform:translateY(-10px);z-index:200}
 .store-tooltip::after{content:'';position:absolute;bottom:-6px;left:50%;transform:translateX(-50%);border-width:6px 6px 0;border-style:solid;border-color:#334155 transparent transparent transparent}
 .poly-nametag-wrap{position:relative;z-index:110;transform:translateY(-7px)}
-.poly-nametag{appearance:none;-webkit-appearance:none;background:rgba(255,255,255,.97);border:1px solid rgba(148,163,184,.34);border-radius:14px;padding:9px 13px 9px 11px;color:#1e293b;font-size:13px;font-weight:900;letter-spacing:-.2px;box-shadow:0 7px 20px rgba(15,23,42,.16),0 1px 3px rgba(15,23,42,.08);cursor:pointer;white-space:nowrap;pointer-events:auto;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);transition:transform .16s ease,box-shadow .16s ease,border-color .16s ease,background .16s ease,color .16s ease;display:flex;align-items:center;gap:6px;position:relative}
-.poly-nametag:hover{transform:translateY(-2px) scale(1.02);box-shadow:0 10px 26px rgba(15,23,42,.20),0 2px 5px rgba(15,23,42,.08);border-color:rgba(225,29,72,.38)}
+.poly-nametag{appearance:none;-webkit-appearance:none;background:rgba(255,255,255,.97);border:1px solid rgba(148,163,184,.48);border-radius:13px;padding:8px 12px 8px 10px;color:#334155;font-size:12px;font-weight:850;letter-spacing:-.15px;box-shadow:0 4px 12px rgba(15,23,42,.11),0 1px 2px rgba(15,23,42,.06);cursor:pointer;white-space:nowrap;pointer-events:auto;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);transition:transform .16s ease,box-shadow .16s ease,border-color .16s ease,background .16s ease,color .16s ease;display:flex;align-items:center;gap:6px;position:relative}
+.poly-nametag:hover{transform:translateY(-1px) scale(1.015);box-shadow:0 7px 18px rgba(15,23,42,.15),0 1px 3px rgba(15,23,42,.07);border-color:#94a3b8;background:#f8fafc}
 .poly-nametag::after{content:'';position:absolute;left:50%;bottom:-6px;width:11px;height:11px;background:inherit;border-right:1px solid rgba(148,163,184,.34);border-bottom:1px solid rgba(148,163,184,.34);transform:translateX(-50%) rotate(45deg);border-radius:0 0 3px 0}
-.poly-nametag.active{background:linear-gradient(135deg,#e11d48 0%,#9f1239 100%)!important;color:#fff!important;border:2px solid #881337!important;box-shadow:0 0 0 4px rgba(225,29,72,.18),0 12px 30px rgba(159,18,57,.38)!important;transform:translateY(-2px) scale(1.05)}
-.poly-nametag.active::after{border-color:#be123c}
+.poly-nametag.active{background:linear-gradient(135deg,#fff7f9 0%,#fff1f2 100%)!important;color:#881337!important;border:2px solid #fda4af!important;box-shadow:0 0 0 3px rgba(251,113,133,.10),0 7px 18px rgba(15,23,42,.14)!important;transform:translateY(-1px) scale(1.02)}
+.poly-nametag.active::after{border-color:#fda4af}
 .poly-nametag-pin,.poly-nametag-check{position:relative;z-index:1;font-size:14px;line-height:1;filter:drop-shadow(0 1px 1px rgba(15,23,42,.12))}
-.poly-nametag-check{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:999px;background:rgba(255,255,255,.20);font-size:12px;font-weight:1000}
+.poly-nametag-check{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:999px;background:#ffe4e6;color:#be123c;border:1px solid #fecdd3;font-size:11px;font-weight:1000}
 .poly-nametag-text{position:relative;z-index:1;line-height:1.15}
 .poly-nametag.active .poly-nametag-text{font-weight:1000}
 
@@ -100,7 +100,7 @@ details[open]>summary::before{content:'▾';color:#e11d48}
 <div class="w-full md:w-1/4 bg-white border-r border-gray-200 p-6 flex flex-col shadow-lg z-20 overflow-y-auto">
 <h1 class="text-xl font-extrabold text-slate-800 border-b-4 border-indigo-500 pb-3 mb-4 flex justify-between items-center">
 <span>🗺️ 전국 상권 관제탑</span>
-<span class="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded-full font-bold">V59.5</span>
+<span class="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded-full font-bold">V59.6</span>
 </h1>
 
 <div class="mb-3">
@@ -182,6 +182,7 @@ details[open]>summary::before{content:'▾';color:#e11d48}
 <label class="map-layer-row"><input id="layer_inflow" type="checkbox" checked onchange="applyMapDisplayFilters()"><span>유입 화살표</span></label>
 <label class="map-layer-row"><input id="layer_flow" type="checkbox" checked onchange="applyMapDisplayFilters()"><span>유동인구</span></label>
 <label class="map-layer-row"><input id="layer_names" type="checkbox" checked onchange="applyMapDisplayFilters()"><span>상권명</span></label>
+<label class="map-layer-row"><input id="layer_admin" type="checkbox" checked><span>행정구역 탐색</span></label>
 </div>
 </div>
 
@@ -225,7 +226,10 @@ details[open]>summary::before{content:'▾';color:#e11d48}
 <script src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=c045609510f8b75252389123f086be48&libraries=services,drawing"></script>
 
 <script>
-/* V59.5: V58.8 전체 기능 그대로 유지.
+/* V59.6: V59.5 전체 기능 그대로 유지.
+   - 저장상권 말풍선 가독성 개선
+   - 행정구역 탐색 말풍선 ON/OFF 추가
+   - 기존 저장상권/순위/전국수량 로직 유지.
    추가: 전국 브랜드 수량 재귀분할 완전수집 + 물리매장 중복제거 + 전국 필터 마커.
    중요: 기존 저장상권/행정계층/순위 저장키는 변경하지 않는다. */
 const t="mJJ00gscCg39Y6nR0LhUw2yzrIfr7arY65OwUZYk",e={
@@ -252,22 +256,22 @@ function toggleMapLayerMenu(ev){ev?.stopPropagation?.();document.getElementById(
 const V586_LAYER_PREFS_KEY="lensmeLayerPrefsV58_7";
 function v586SaveLayerPrefs(){
  try{
-  const prefs={};["layer_rank","layer_inflow","layer_flow","layer_names"].forEach(id=>{const el=document.getElementById(id);if(el)prefs[id]=!!el.checked});
+  const prefs={};["layer_rank","layer_inflow","layer_flow","layer_names","layer_admin"].forEach(id=>{const el=document.getElementById(id);if(el)prefs[id]=!!el.checked});
   localStorage.setItem(V586_LAYER_PREFS_KEY,JSON.stringify(prefs))
  }catch(e){}
 }
 function v586LoadLayerPrefs(){
- const defaults={layer_rank:true,layer_inflow:true,layer_flow:true,layer_names:true};
+ const defaults={layer_rank:true,layer_inflow:true,layer_flow:true,layer_names:true,layer_admin:true};
  let prefs=null;
  try{prefs=JSON.parse(localStorage.getItem(V586_LAYER_PREFS_KEY)||"null")}catch(e){prefs=null}
- ["layer_rank","layer_inflow","layer_flow","layer_names"].forEach(id=>{
+ ["layer_rank","layer_inflow","layer_flow","layer_names","layer_admin"].forEach(id=>{
   const el=document.getElementById(id);if(!el)return;
   el.checked=prefs&&typeof prefs[id]==="boolean"?prefs[id]:defaults[id]
  })
 }
 function v586InitLayerPrefs(){
  v586LoadLayerPrefs();
- ["layer_rank","layer_inflow","layer_flow","layer_names"].forEach(id=>{const el=document.getElementById(id);if(el)el.addEventListener("change",()=>{v586SaveLayerPrefs();applyMapDisplayFilters()})})
+ ["layer_rank","layer_inflow","layer_flow","layer_names","layer_admin"].forEach(id=>{const el=document.getElementById(id);if(el)el.addEventListener("change",()=>{v586SaveLayerPrefs();if(id==="layer_admin")v572RefreshRegionNavigation();else applyMapDisplayFilters()})})
 }
 function v572AreaMatchesCurrentCity(area){
 /* V57.8: 시·군·구 단계에서는 저장상권을 절대 노출하지 않는다.
@@ -280,8 +284,9 @@ const sameDong=String(area.dong||"")===String(mapDrillState.dong||"");
 return sameSi&&sameGu&&sameDong
 }
 function applyMapDisplayFilters(){
-const analysisOpen=selectedSavedAreaIds.size>0||!!expandedSavedAreaId||(!b&&!!w),showRank=analysisOpen&&layerChecked("layer_rank",true),showInflow=analysisOpen&&layerChecked("layer_inflow",true),showFlow=analysisOpen&&layerChecked("layer_flow",false),showNames=layerChecked("layer_names",true),focusedKey=focusedSavedAreaId==null?null:String(focusedSavedAreaId),activeKey=expandedSavedAreaId==null?null:String(expandedSavedAreaId);
+const analysisOpen=selectedSavedAreaIds.size>0||!!expandedSavedAreaId||(!b&&!!w),showRank=analysisOpen&&layerChecked("layer_rank",true),showInflow=analysisOpen&&layerChecked("layer_inflow",true),showFlow=analysisOpen&&layerChecked("layer_flow",false),showNames=layerChecked("layer_names",true),showAdmin=layerChecked("layer_admin",true),focusedKey=focusedSavedAreaId==null?null:String(focusedSavedAreaId),activeKey=expandedSavedAreaId==null?null:String(expandedSavedAreaId);
 rankOverlays.forEach(o=>{try{o.setMap(showRank?f:null)}catch(e){}});inflowOverlays.forEach(o=>{try{o.setMap(showInflow?f:null)}catch(e){}});flowLines.forEach(o=>{try{o.setMap(showFlow?f:null)}catch(e){}});
+provinceLabelOverlays.forEach(o=>{try{o.setMap(showAdmin?f:null)}catch(e){}});cityLabelOverlays.forEach(o=>{try{o.setMap(showAdmin?f:null)}catch(e){}});dongLabelOverlays.forEach(o=>{try{o.setMap(showAdmin?f:null)}catch(e){}});if(adminFocusOverlay){try{adminFocusOverlay.setMap(showAdmin?f:null)}catch(e){}}
 Object.entries(x).forEach(([id,o])=>{try{const key=String(id),area=Lt.find(a=>String(a.id)===key),showByDong=v572AreaMatchesCurrentCity(area),keep=selectedSavedAreaIds.has(key)||key===focusedKey||key===activeKey||showByDong;o.setMap(showNames&&keep?f:null)}catch(e){}});
 Object.entries(k).forEach(([id,poly])=>{try{const key=String(id),area=Lt.find(a=>String(a.id)===key),showByDong=v572AreaMatchesCurrentCity(area),keep=selectedSavedAreaIds.has(key)||key===focusedKey||key===activeKey||showByDong;poly.setMap(keep?f:null)}catch(e){}});
 document.getElementById("heatLegend")?.classList.toggle("hidden",!showFlow);
@@ -761,7 +766,7 @@ function v572UpdateBreadcrumb(){
 }
 function v572SmoothMove(center,targetLevel){if(!center)return;const ll=new kakao.maps.LatLng(center.lat,center.lng);try{f.panTo(ll)}catch(e){f.setCenter(ll)}setTimeout(()=>{try{f.setLevel(targetLevel,{anchor:ll,animate:{duration:300}})}catch(e){f.setLevel(targetLevel)}},120)}
 function v572RenderProvinceLabels(){
- v572ClearProvinceLabels();if(mapDrillState.level!=="national"||f.getLevel()<8)return;
+ v572ClearProvinceLabels();if(!layerChecked("layer_admin",true))return;if(mapDrillState.level!=="national"||f.getLevel()<8)return;
  for(const item of V572_PROVINCES){
   const count=v572AreasFor(item.name).length,wrap=document.createElement("div"),btn=document.createElement("button"),name=document.createElement("span"),badge=document.createElement("span");
   wrap.className="province-label-wrap";btn.type="button";btn.className=`region-province-btn ${count?"has-areas":"no-areas"}`;
@@ -771,7 +776,7 @@ function v572RenderProvinceLabels(){
  }
 }
 async function v572RenderCityLabels(){
- v572ClearCityLabels();const token=regionFanoutToken;if(mapDrillState.level!=="province"||!mapDrillState.si)return;
+ v572ClearCityLabels();if(!layerChecked("layer_admin",true))return;const token=regionFanoutToken;if(mapDrillState.level!=="province"||!mapDrillState.si)return;
  const si=mapDrillState.si,savedGroups=new Map(v572MunicipalityGroups(si).map(g=>[g.name,g])),names=V575_ADMIN_MUNICIPALITIES[si]||[...savedGroups.keys()];
  const meta=document.getElementById("regionNavigatorMeta");if(meta)meta.textContent=`${si} · 시·군·구 ${names.length}곳을 펼치는 중...`;
  for(let idx=0;idx<names.length;idx++){
@@ -788,7 +793,7 @@ async function v572RenderCityLabels(){
  if(token===regionFanoutToken&&meta)meta.textContent=`${si} · 시·군·구 ${names.length}곳 · 원하는 지역을 누르세요`;
 }
 async function v573RenderDongLabels(){
- v573ClearDongLabels();if(mapDrillState.level!=="city"||!mapDrillState.si)return;
+ v573ClearDongLabels();if(!layerChecked("layer_admin",true))return;if(mapDrillState.level!=="city"||!mapDrillState.si)return;
  const si=mapDrillState.si,gu=mapDrillState.gu||"",stateKey=`${si}|${gu}`,meta=document.getElementById("regionNavigatorMeta");
  if(meta)meta.textContent=`${gu||si} · 전체 읍·면·동을 불러오는 중...`;
  const groups=await v578AllDongGroups(si,gu);
@@ -829,6 +834,7 @@ function v573GoDong(si,gu,dong){
 }
 function v572RefreshRegionNavigation(){
  v572HideAdminFocus();v572UpdateBreadcrumb();v573ClearRegionLabels();
+ if(!layerChecked("layer_admin",true)){applyMapDisplayFilters();return}
  if(mapDrillState.level==="national")v572RenderProvinceLabels();
  else if(mapDrillState.level==="province")v572RenderCityLabels().catch(err=>console.warn("municipality fanout failed",err));
  else if(mapDrillState.level==="city"){
