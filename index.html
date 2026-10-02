@@ -435,19 +435,6 @@ details[open]>summary::before{color:#6d63ff!important}
 <div id="savedPolygonTree" class="max-h-52 overflow-y-auto space-y-1 text-sm"></div><p class="text-[9.5px] text-slate-400 mt-2">저장목록·지도 말풍선 모두 해당 상권을 열어 TOP3를 표시합니다. 시·군·구 단계에서는 동 이름과 저장상권이 함께 표시됩니다.</p>
 </div>
 
-<div class="mb-3 bg-white p-3 rounded-xl border border-sky-200 shadow-sm">
-<div class="flex items-center justify-between mb-2">
-<label class="text-sm font-extrabold text-slate-700">📌 내 후보 위치</label>
-<span id="userMarkerCount" class="text-[10px] font-black text-sky-700 bg-sky-50 px-2 py-1 rounded-full">0개</span>
-</div>
-<div class="flex gap-2 mb-2">
-<button id="btnUserMarkerMode" onclick="toggleUserMarkerMode()" class="flex-1 rounded-lg bg-sky-600 hover:bg-sky-700 text-white px-2 py-2 text-[11px] font-extrabold">📍 지도에서 찍기</button>
-<button onclick="clearAllUserMarkers()" class="rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 px-2 py-2 text-[10px] font-bold">전체삭제</button>
-</div>
-<div id="userMarkerList" class="max-h-32 overflow-y-auto space-y-1"></div>
-<p class="text-[9.5px] text-slate-400 mt-2">저장상권 말풍선을 눌러 TOP3를 연 뒤 후보를 찍으면 현재 상권에 자동 포함됩니다. 다시 그 상권을 열면 후보도 함께 표시됩니다.</p>
-</div>
-
 <div class="mb-2 bg-white p-3 rounded-xl border border-indigo-200 shadow-sm">
 <div class="flex justify-between items-center gap-2 mb-2">
 <div class="min-w-0">
@@ -456,6 +443,7 @@ details[open]>summary::before{color:#6d63ff!important}
 </div>
 <button onclick="clearActivePolygon()" id="btnClearPolygon" class="hidden text-[10px] bg-slate-100 text-slate-500 px-2 py-1 rounded font-bold">해제</button>
 </div>
+<button id="btnUserMarkerMode" onclick="toggleUserMarkerMode()" class="w-full mb-2 rounded-lg bg-sky-600 hover:bg-sky-700 text-white px-2 py-2 text-[11px] font-extrabold">📍 지도에서 찍기</button>
 <div id="relocAutoNotice" class="hidden mb-2 rounded-md bg-amber-50 border border-amber-100 px-2 py-1.5 text-[10px] font-bold text-amber-700">🚚 펜스 안 렌즈미를 이전 대상점으로 자동 적용합니다.</div>
 <div class="grid grid-cols-2 gap-2 text-[10px] mb-2">
 <div class="rounded-md bg-pink-50 px-2 py-1.5"><span class="text-slate-500">렌즈샵</span><b id="comp_count" class="float-right text-pink-600">-</b></div>
@@ -537,7 +525,7 @@ details[open]>summary::before{color:#6d63ff!important}
 <script src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=c045609510f8b75252389123f086be48&libraries=services,drawing"></script>
 
 <script>
-/* V61.4: 저장상권 선택 후 후보위치를 찍으면 현재 저장상권에 자동 귀속. 후보 마커 소형화/라벨 가림 개선.
+/* V61.5: 저장상권 선택 후 후보위치를 찍으면 현재 저장상권에 자동 귀속. 후보 마커 소형화/라벨 가림 개선.
    V60.0 프리미엄 UI 기반. 올리브영/다이소 현재 화면 지도표시 복구.
    기존 저장상권·TOP3·전국 브랜드 수량 로직은 유지한다. */
 /* V60.0: V59.5 전체 기능 그대로 유지.
@@ -2855,7 +2843,7 @@ v620MigrateExistingUserMarkersToAreas();
 Ct();
 v610RenderUserMarkers();
 v572GoNational();
-document.getElementById("statusMessage").innerText="🗺️ 새로고침 시 대한민국 전체 지도부터 시작합니다. 저장상권 말풍선은 여러 개 선택할 수 있고 같은 말풍선을 다시 누르면 그 상권만 해제됩니다. 표시 메뉴에서 끈 레이어는 지도 확대·축소 후에도 그대로 유지됩니다. 저장상권의 TOP3·유동인구는 상권 본체에도 함께 저장됩니다. 내 후보는 TOP3가 열린 저장상권에 자동 귀속되며, 클릭 전용 레이어로 위치를 정확히 찍고 작은 점 + 상단 이름표로 표시됩니다. 해당 상권 말풍선을 누르면 함께 복원되고 백업에도 보존됩니다.";
+document.getElementById("statusMessage").innerText="🗺️ 새로고침 시 대한민국 전체 지도부터 시작합니다. 저장상권 말풍선은 여러 개 선택할 수 있고 같은 말풍선을 다시 누르면 그 상권만 해제됩니다. 표시 메뉴에서 끈 레이어는 지도 확대·축소 후에도 그대로 유지됩니다. 저장상권의 TOP3·유동인구는 상권 본체에도 함께 저장됩니다. 내 후보는 별도 목록 없이 현재 열린 저장상권 안에 바로 저장되며, 상권을 다시 열면 작은 점 + 상단 이름표로 지도에 표시됩니다. 해당 상권 말풍선을 누르면 함께 복원되고 백업에도 보존됩니다.";
 Ft();
 setTimeout(()=>{v569NormalizeSavedRegions().catch(err=>console.warn("saved region normalize failed",err))},350);
 /* 전국 수량은 저장상권/TOP3 복원보다 뒤에, 한 브랜드씩 순차 실행한다. */
