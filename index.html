@@ -397,7 +397,7 @@ details[open]>summary::before{color:#6d63ff!important}
 <div id="premiumSidebar" class="w-full md:w-1/4 bg-white border-r border-gray-200 p-6 flex flex-col shadow-lg z-20 overflow-y-auto">
 <h1 id="premiumHeader" class="text-xl font-extrabold text-slate-800 border-b-4 border-indigo-500 pb-3 mb-4 flex justify-between items-center">
 <span class="premium-brand"><span class="premium-brand-kicker">LENS ME</span><span class="premium-brand-title">상권 분석 지도</span></span>
-<span class="premium-version text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded-full font-bold">V61.1</span>
+<span class="premium-version text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded-full font-bold">V61.2</span>
 </h1>
 
 <div class="mb-3">
@@ -445,7 +445,7 @@ details[open]>summary::before{color:#6d63ff!important}
 <button onclick="clearAllUserMarkers()" class="rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 px-2 py-2 text-[10px] font-bold">전체삭제</button>
 </div>
 <div id="userMarkerList" class="max-h-32 overflow-y-auto space-y-1"></div>
-<p class="text-[9.5px] text-slate-400 mt-2">저장상권을 연 뒤 펜스 안에 직접 후보를 찍으면 그 상권에 귀속됩니다. 상권 말풍선을 누를 때 해당 후보도 함께 표시되며 백업/복원에도 포함됩니다.</p>
+<p class="text-[9.5px] text-slate-400 mt-2">저장상권 말풍선을 눌러 TOP3를 연 뒤 후보를 찍으면 현재 상권에 자동 포함됩니다. 다시 그 상권을 열면 후보도 함께 표시됩니다.</p>
 </div>
 
 <div class="mb-2 bg-white p-3 rounded-xl border border-indigo-200 shadow-sm">
@@ -537,7 +537,7 @@ details[open]>summary::before{color:#6d63ff!important}
 <script src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=c045609510f8b75252389123f086be48&libraries=services,drawing"></script>
 
 <script>
-/* V61.1: V61.0 기반. 저장상권별 사용자 후보 마커 귀속/표시 기능 추가.
+/* V61.3: 저장상권 선택 후 후보위치를 찍으면 현재 저장상권에 자동 귀속. 후보 마커 소형화/라벨 가림 개선.
    V60.0 프리미엄 UI 기반. 올리브영/다이소 현재 화면 지도표시 복구.
    기존 저장상권·TOP3·전국 브랜드 수량 로직은 유지한다. */
 /* V60.0: V59.5 전체 기능 그대로 유지.
@@ -566,9 +566,9 @@ level:12}),h=new kakao.maps.services.Places,p=new kakao.maps.services.Geocoder,y
 }),w=null,b=null,k={},x={},I=!1,S=null,T=!1,O=0,R=null,analysisLines=[],rankOverlays=[],inflowOverlays=[],flowLines=[],expandedSavedAreaId=null,focusedSavedAreaId=null,selectedSavedAreaIds=new Set(),renderedSavedAreaIds=new Set(),savedAreaOverlayGroups=new Map(),currentRenderSavedAreaId=null,lastSavedAreaToggleKey="",lastSavedAreaToggleAt=0,lastAnalyzedSavedId=null,lastAnalyzedFenceKey="",savedAreaAnalysisCache=new Map,savedAreaPersistentAnalysis=v581LoadPersistentAnalysisStore(),savedBubbleEls={},provinceLabelOverlays=[],cityLabelOverlays=[],dongLabelOverlays=[],adminFocusOverlay=null,regionLabelTimer=null,regionLabelRequestSeq=0,mapDrillState={level:"national",si:null,gu:null,dong:null},lastAutoRegionKey="",regionFanoutToken=0,municipalityCenterCache=new Map,hapaOlivePlaceCache=new Map,legalDongTreePromise=null,legalDongTreeData=null;
 
 const V610_USER_MARKER_KEY="lensmeUserMarkersV61_0";
-let userMarkers=v610LoadUserMarkers(),userMarkerObjects=new Map(),userMarkerMode=false,userMarkerOpenId=null;
+let userMarkers=v610LoadUserMarkers(),userMarkerObjects=new Map(),userMarkerMode=false,userMarkerOpenId=null,userMarkerAddGuardAt=0;
 
-/* V61.1: 내 후보 마커를 저장상권에 귀속한다.
+/* V61.3: 내 후보 마커는 현재 열린 저장상권에 자동 귀속한다.
    - 선택한 저장상권 안에서 찍으면 해당 상권 후보로 자동 저장
    - 저장상권 말풍선을 누른 동안 그 상권 후보만 지도에 표시
    - 기존 V61.0 마커는 좌표가 펜스 안이면 최초 1회 자동 귀속
@@ -658,8 +658,9 @@ function v620ChangeUserMarkerArea(id){
 }
 function v610MarkerIcon(assigned=true){
  const fill=assigned?"#0284c7":"#64748b";
- const svg=`<svg xmlns="http://www.w3.org/2000/svg" width="34" height="42" viewBox="0 0 34 42"><path d="M17 1C8.7 1 2 7.7 2 16c0 10.8 15 25 15 25s15-14.2 15-25C32 7.7 25.3 1 17 1z" fill="${fill}" stroke="white" stroke-width="2.5"/><circle cx="17" cy="16" r="6" fill="white"/><circle cx="17" cy="16" r="2.6" fill="${fill}"/></svg>`;
- return new kakao.maps.MarkerImage("data:image/svg+xml;charset=UTF-8,"+encodeURIComponent(svg),new kakao.maps.Size(34,42),{offset:new kakao.maps.Point(17,41)})
+ /* V61.3: 후보 이름을 가리지 않도록 큰 핀 대신 작은 점 마커 사용 */
+ const svg=`<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6" fill="${fill}" stroke="white" stroke-width="2"/><circle cx="8" cy="8" r="2" fill="white" opacity=".95"/></svg>`;
+ return new kakao.maps.MarkerImage("data:image/svg+xml;charset=UTF-8,"+encodeURIComponent(svg),new kakao.maps.Size(16,16),{offset:new kakao.maps.Point(8,8)})
 }
 function v610CloseUserMarkerPopup(){
  if(userMarkerOpenId&&userMarkerObjects.get(String(userMarkerOpenId))?.popup){try{userMarkerObjects.get(String(userMarkerOpenId)).popup.setMap(null)}catch(e){}}
@@ -676,9 +677,10 @@ function v610RenderUserMarkers(){
  for(const rec of userMarkerObjects.values()){try{rec.marker.setMap(null);rec.label.setMap(null);rec.popup.setMap(null)}catch(e){}}
  userMarkerObjects.clear();userMarkerOpenId=null;
  for(const m of userMarkers){
-  const key=String(m.id),pos=new kakao.maps.LatLng(+m.lat,+m.lng),marker=new kakao.maps.Marker({position:pos,image:v610MarkerIcon(!!m.areaId),zIndex:145});
-  const label=new kakao.maps.CustomOverlay({position:pos,xAnchor:.5,yAnchor:1.72,zIndex:144,content:`<button onclick="focusUserMarker('${key}')" style="border:1px solid #bae6fd;background:rgba(255,255,255,.96);color:#075985;border-radius:999px;padding:5px 8px;font:900 9px Pretendard,sans-serif;box-shadow:0 5px 14px rgba(15,23,42,.12);cursor:pointer;white-space:nowrap">📌 ${V(m.name||"후보 위치")}</button>`});
-  const popup=new kakao.maps.CustomOverlay({position:pos,xAnchor:.5,yAnchor:1.38,zIndex:180,content:""});
+  const key=String(m.id),pos=new kakao.maps.LatLng(+m.lat,+m.lng),marker=new kakao.maps.Marker({position:pos,image:v610MarkerIcon(!!m.areaId),zIndex:146});
+  /* V61.3: 라벨을 작은 점 마커보다 위에 두고 z-index도 높여 이름이 가려지지 않게 한다. */
+  const label=new kakao.maps.CustomOverlay({position:pos,xAnchor:.5,yAnchor:2.05,zIndex:164,content:`<button onclick="focusUserMarker('${key}')" style="border:1px solid #bae6fd;background:rgba(255,255,255,.98);color:#075985;border-radius:999px;padding:4px 7px;font:900 9px Pretendard,sans-serif;box-shadow:0 4px 11px rgba(15,23,42,.11);cursor:pointer;white-space:nowrap;line-height:1.15">${V(m.name||"후보 위치")}</button>`});
+  const popup=new kakao.maps.CustomOverlay({position:pos,xAnchor:.5,yAnchor:1.55,zIndex:180,content:""});
   kakao.maps.event.addListener(marker,"click",()=>v610OpenUserMarker(key));
   userMarkerObjects.set(key,{marker,label,popup});
  }
@@ -699,25 +701,79 @@ function v610ApplyUserMarkerVisibility(show=true){
 }
 function toggleUserMarkerMode(){
  if(T||I)return alert("분석 또는 상권 그리기가 끝난 뒤 내 후보를 추가해주세요.");
- userMarkerMode=!userMarkerMode;const btn=document.getElementById("btnUserMarkerMode"),activeArea=expandedSavedAreaId!=null?v620AreaById(expandedSavedAreaId):null;
- if(btn){btn.textContent=userMarkerMode?"✋ 지도에서 위치 클릭":"📍 지도에서 찍기";btn.classList.toggle("bg-sky-600",!userMarkerMode);btn.classList.toggle("bg-amber-500",userMarkerMode)}
- document.getElementById("statusMessage").innerText=userMarkerMode?(activeArea?`📌 ${activeArea.name} 후보 추가 · 펜스 안 원하는 위치를 클릭하세요.`:"📌 내 후보 추가 · 저장상권 안을 클릭하면 그 상권에 자동으로 들어갑니다."):"내 후보 추가를 취소했습니다."
-}
-function v610AddUserMarkerAt(lat,lng){
+ const btn=document.getElementById("btnUserMarkerMode");
+
+ /* 이미 후보 추가 모드면 버튼을 다시 눌러 취소 */
+ if(userMarkerMode){
+  userMarkerMode=false;
+  if(btn){btn.textContent="📍 지도에서 찍기";btn.classList.add("bg-sky-600");btn.classList.remove("bg-amber-500")}
+  document.getElementById("statusMessage").innerText="내 후보 추가를 취소했습니다.";
+  return
+ }
+
+ /* V61.3: 저장상권을 먼저 열어야 한다. 이후 찍는 후보는 무조건 그 상권 소속. */
  const activeArea=expandedSavedAreaId!=null?v620AreaById(expandedSavedAreaId):null;
- let area=null;
- if(activeArea){
-  const inside=(()=>{try{return Nt(+lat,+lng,F(activeArea.geometry||activeArea.path))}catch(e){return false}})();
-  if(!inside){alert(`현재 선택한 "${activeArea.name}" 펜스 밖입니다. 이 상권 후보로 저장하려면 펜스 안을 클릭해주세요.`);return}
-  area=activeArea
- }else area=v620BestContainingArea(lat,lng);
- if(!area&&!confirm("이 위치는 저장상권 펜스 안이 아닙니다. 독립 후보로 저장할까요?"))return;
- const name=prompt("후보 위치 이름을 입력하세요:","후보 위치");if(name===null)return;
- const memo=prompt("메모가 있으면 입력하세요. (없으면 빈칸)","");if(memo===null)return;
- const row={id:`um_${Date.now()}_${Math.random().toString(36).slice(2,7)}`,name:name.trim()||"후보 위치",memo:memo.trim(),lat:+lat,lng:+lng,areaId:area?String(area.id):"",areaNameCache:area?.name||"",savedAt:new Date().toISOString()};
- userMarkers.push(row);v610SaveUserMarkers();v610RenderUserMarkers();userMarkerMode=false;
- const btn=document.getElementById("btnUserMarkerMode");if(btn){btn.textContent="📍 지도에서 찍기";btn.classList.add("bg-sky-600");btn.classList.remove("bg-amber-500")}
- document.getElementById("statusMessage").innerText=area?`📌 ${row.name} · ${area.name} 상권 후보로 저장했습니다.`:`📌 ${row.name} · 독립 후보로 저장했습니다.`
+ if(!activeArea){
+  alert("먼저 저장상권 말풍선을 눌러 TOP3를 연 뒤 후보 위치를 추가해주세요. 후보는 현재 열린 저장상권에 자동 저장됩니다.");
+  return
+ }
+
+ userMarkerMode=true;
+ if(btn){btn.textContent="✋ 펜스 안 위치 클릭";btn.classList.remove("bg-sky-600");btn.classList.add("bg-amber-500")}
+ document.getElementById("statusMessage").innerText=`📌 ${activeArea.name} 후보 추가 · 펜스 안 원하는 위치를 클릭하면 이 저장상권에 자동 포함됩니다.`
+}
+function v610AddUserMarkerAt(lat,lng,forcedAreaId=null){
+ const now=(window.performance?.now?.()||Date.now());
+ if(now-userMarkerAddGuardAt<260)return;
+ userMarkerAddGuardAt=now;
+
+ const activeArea=expandedSavedAreaId!=null?v620AreaById(expandedSavedAreaId):null;
+ const forcedArea=forcedAreaId!=null?v620AreaById(forcedAreaId):null;
+ /* 후보위치는 현재 TOP3를 열어둔 저장상권을 최우선으로 사용한다. */
+ const area=activeArea||forcedArea;
+
+ if(!area){
+  userMarkerMode=false;
+  const btn=document.getElementById("btnUserMarkerMode");
+  if(btn){btn.textContent="📍 지도에서 찍기";btn.classList.add("bg-sky-600");btn.classList.remove("bg-amber-500")}
+  alert("저장상권이 선택되어 있지 않습니다. 저장상권 말풍선을 먼저 눌러주세요.");
+  return
+ }
+
+ const inside=(()=>{try{return Nt(+lat,+lng,F(area.geometry||area.path))}catch(e){return false}})();
+ if(!inside){
+  alert(`현재 열린 "${area.name}" 펜스 밖입니다. 펜스 안 위치를 클릭해주세요.`);
+  return
+ }
+
+ const name=prompt("후보 위치 이름을 입력하세요:","후보 위치");
+ if(name===null)return;
+ const memo=prompt("메모가 있으면 입력하세요. (없으면 빈칸)","");
+ if(memo===null)return;
+
+ const row={
+  id:`um_${Date.now()}_${Math.random().toString(36).slice(2,7)}`,
+  name:name.trim()||"후보 위치",
+  memo:memo.trim(),
+  lat:+lat,
+  lng:+lng,
+  areaId:String(area.id),
+  areaNameCache:area.name||"",
+  savedAt:new Date().toISOString()
+ };
+
+ userMarkers.push(row);
+ v610SaveUserMarkers();
+ v610RenderUserMarkers();
+ userMarkerMode=false;
+
+ const btn=document.getElementById("btnUserMarkerMode");
+ if(btn){btn.textContent="📍 지도에서 찍기";btn.classList.add("bg-sky-600");btn.classList.remove("bg-amber-500")}
+
+ /* 이미 열려 있는 상권이므로 즉시 후보 표시. 다음에 이 상권 말풍선을 눌러도 함께 복원된다. */
+ v610ApplyUserMarkerVisibility(layerChecked("layer_user_markers",true));
+ applyMapDisplayFilters();
+ document.getElementById("statusMessage").innerText=`📌 ${row.name} · ${area.name} 저장상권 후보로 자동 저장했습니다.`
 }
 async function focusUserMarker(id){
  const m=userMarkers.find(x=>String(x.id)===String(id));if(!m)return;
@@ -1650,7 +1706,23 @@ for(const si of sis){
     const areaId=String(area.id),active=selectedSavedAreaIds.has(areaId)||activeKey===areaId,focused=focusKey===areaId,row=document.createElement("div");row.className=`flex items-center gap-1 py-1.5 px-1 rounded-lg border-b border-slate-100 last:border-0 ${focused?"bg-rose-50":active?"bg-rose-50/70":""}`;
     row.innerHTML=`<button class="min-w-0 flex-1 text-left font-extrabold ${focused?"text-rose-800":active?"text-rose-700":"text-slate-700"} hover:text-rose-600 truncate" data-area-select="${V(areaId)}">${focused?"▶":active?"●":"○"} ${V(area.name)}</button><button data-area-rename="${V(areaId)}" title="이름 변경" class="text-[10px] px-1.5 py-1 rounded bg-slate-50 text-slate-500">이름</button><button data-area-redraw="${V(areaId)}" title="경계 수정" class="text-[10px] px-1.5 py-1 rounded bg-slate-50 text-slate-500">수정</button><button data-area-delete="${V(areaId)}" title="삭제" class="text-[10px] px-1.5 py-1 rounded bg-slate-50 text-slate-400">×</button>`;
     row.querySelector('[data-area-select]')?.addEventListener('click',()=>selectSavedPolygon(areaId));row.querySelector('[data-area-rename]')?.addEventListener('click',()=>renamePolygon(areaId));row.querySelector('[data-area-redraw]')?.addEventListener('click',()=>redrawPolygon(areaId));row.querySelector('[data-area-delete]')?.addEventListener('click',()=>deletePolygon(areaId));dongBody.appendChild(row);
-    const poly=W(area.geometry||area.path,{strokeWeight:active?5:focused?4:2,strokeColor:active?"#9f1239":focused?"#f43f5e":"#e11d48",strokeOpacity:active?1:focused?.9:.65,fillOpacity:active?.24:focused?.13:.075,fillColor:active?"#e11d48":focused?"#fb7185":"#f43f5e"},(()=>selectSavedPolygon(areaId)));poly.setMap(f);k[areaId]=poly;
+    const poly=W(
+ area.geometry||area.path,
+ {strokeWeight:active?5:focused?4:2,strokeColor:active?"#9f1239":focused?"#f43f5e":"#e11d48",strokeOpacity:active?1:focused?.9:.65,fillOpacity:active?.24:focused?.13:.075,fillColor:active?"#e11d48":focused?"#fb7185":"#f43f5e"},
+ (mouseEvent=>{
+  /* V61.2: 후보위치 추가 모드에서는 상권 선택/해제보다 후보 생성이 우선 */
+  if(userMarkerMode){
+   const p=mouseEvent?.latLng;
+   if(p){
+    const targetAreaId=expandedSavedAreaId!=null?String(expandedSavedAreaId):areaId;
+    v610AddUserMarkerAt(p.getLat(),p.getLng(),targetAreaId);
+    return
+   }
+  }
+  selectSavedPolygon(areaId)
+ })
+);
+poly.setMap(f);k[areaId]=poly;
     const bubbleCenter=K(area.geometry||area.path),wrap=document.createElement("div"),btn=document.createElement("button"),icon=document.createElement("span"),label=document.createElement("span");
     wrap.className="poly-nametag-wrap";wrap.style.transform=active?"translateY(-42px)":"translateY(0)";wrap.style.transition="transform .16s ease, opacity .16s ease";wrap.style.opacity=active?".92":"1";btn.type="button";btn.className=`poly-nametag${active?" active":""}`;btn.setAttribute("aria-pressed",active?"true":"false");icon.className=active?"poly-nametag-check":"poly-nametag-pin";icon.textContent=active?"✓":"📍";label.className="poly-nametag-text";label.textContent=area.name;btn.append(icon,label);wrap.appendChild(btn);btn.addEventListener("click",ev=>{ev.preventDefault();ev.stopPropagation();ev.stopImmediatePropagation?.();selectSavedPolygon(areaId)});
     const ov=new kakao.maps.CustomOverlay({position:new kakao.maps.LatLng(bubbleCenter.lat,bubbleCenter.lng),content:wrap,xAnchor:.5,yAnchor:1,zIndex:active?90:110});ov.setMap(f);x[areaId]=ov;savedBubbleEls[areaId]={wrap,button:btn,icon,label,overlay:ov}
@@ -2730,7 +2802,7 @@ v620MigrateExistingUserMarkersToAreas();
 Ct();
 v610RenderUserMarkers();
 v572GoNational();
-document.getElementById("statusMessage").innerText="🗺️ 새로고침 시 대한민국 전체 지도부터 시작합니다. 저장상권 말풍선은 여러 개 선택할 수 있고 같은 말풍선을 다시 누르면 그 상권만 해제됩니다. 표시 메뉴에서 끈 레이어는 지도 확대·축소 후에도 그대로 유지됩니다. 저장상권의 TOP3·유동인구는 상권 본체에도 함께 저장됩니다. 내 후보 마커도 저장상권에 귀속되어 해당 펜스 말풍선을 누르면 함께 표시되고 백업에 보존됩니다.";
+document.getElementById("statusMessage").innerText="🗺️ 새로고침 시 대한민국 전체 지도부터 시작합니다. 저장상권 말풍선은 여러 개 선택할 수 있고 같은 말풍선을 다시 누르면 그 상권만 해제됩니다. 표시 메뉴에서 끈 레이어는 지도 확대·축소 후에도 그대로 유지됩니다. 저장상권의 TOP3·유동인구는 상권 본체에도 함께 저장됩니다. 내 후보는 TOP3가 열린 저장상권에 자동 귀속되며, 작은 점 + 상단 이름표로 표시됩니다. 해당 상권 말풍선을 누르면 함께 복원되고 백업에도 보존됩니다.";
 Ft();
 setTimeout(()=>{v569NormalizeSavedRegions().catch(err=>console.warn("saved region normalize failed",err))},350);
 /* 전국 수량은 저장상권/TOP3 복원보다 뒤에, 한 브랜드씩 순차 실행한다. */
