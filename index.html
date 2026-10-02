@@ -397,7 +397,7 @@ details[open]>summary::before{color:#6d63ff!important}
 <div id="premiumSidebar" class="w-full md:w-1/4 bg-white border-r border-gray-200 p-6 flex flex-col shadow-lg z-20 overflow-y-auto">
 <h1 id="premiumHeader" class="text-xl font-extrabold text-slate-800 border-b-4 border-indigo-500 pb-3 mb-4 flex justify-between items-center">
 <span class="premium-brand"><span class="premium-brand-kicker">LENS ME</span><span class="premium-brand-title">상권 분석 지도</span></span>
-<span class="premium-version text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded-full font-bold">V60.0</span>
+<span class="premium-version text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded-full font-bold">V60.2</span>
 </h1>
 
 <div class="mb-3">
@@ -497,9 +497,9 @@ details[open]>summary::before{color:#6d63ff!important}
 </div>
 <p class="text-xs font-extrabold text-slate-800 mb-2 border-b pb-1 mt-3 flex justify-between"><span>🌿 핵심 집객시설</span><span class="text-[10px] text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded">기본 OFF</span></p>
 <div class="space-y-2">
-<label class="flex items-center space-x-2 cursor-pointer"><input type="checkbox" id="f_olive" onchange="refreshBrandVisibility()" class="chk-green"><span class="text-[13px] font-bold text-green-600 flex-grow">🟩 일반 올리브영</span><span id="cnt_olive" class="text-[12px] font-bold text-slate-500">(-)</span></label>
+<label class="flex items-center space-x-2 cursor-pointer"><input type="checkbox" id="f_olive" onchange="refreshBrandVisibility()" class="chk-green" checked><span class="text-[13px] font-bold text-green-600 flex-grow">🟩 일반 올리브영</span><span id="cnt_olive" class="text-[12px] font-bold text-slate-500">(-)</span></label>
 <label class="flex items-center space-x-2 cursor-pointer"><input type="checkbox" id="f_olive_hapa" onchange="refreshBrandVisibility()" class="chk-green"><span class="text-[13px] font-bold text-teal-700 flex-grow">🌿 올영(하파크리스틴)</span><span id="cnt_olive_hapa" class="text-[12px] font-bold text-teal-600">확인목록</span></label>
-<label class="flex items-center space-x-2 cursor-pointer"><input type="checkbox" id="f_daiso" onchange="refreshBrandVisibility()" class="chk-red"><span class="text-[13px] font-bold text-rose-600 flex-grow">🟥 다이소</span><span id="cnt_daiso" class="text-[12px] font-bold text-slate-500">(-)</span></label>
+<label class="flex items-center space-x-2 cursor-pointer"><input type="checkbox" id="f_daiso" onchange="refreshBrandVisibility()" class="chk-red" checked><span class="text-[13px] font-bold text-rose-600 flex-grow">🟥 다이소</span><span id="cnt_daiso" class="text-[12px] font-bold text-slate-500">(-)</span></label>
 <label class="flex items-center space-x-2 cursor-pointer"><input type="checkbox" id="f_davich" onchange="refreshBrandVisibility()" class="chk-blue"><span class="text-[13px] font-bold text-blue-700 flex-grow">🟦 다비치안경</span><span id="cnt_davich" class="text-[12px] font-bold text-slate-500">(-)</span></label>
 </div>
 </div>
@@ -523,6 +523,8 @@ details[open]>summary::before{color:#6d63ff!important}
 <script src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=c045609510f8b75252389123f086be48&libraries=services,drawing"></script>
 
 <script>
+/* V60.2: V60.0 프리미엄 UI 기반. 올리브영/다이소 현재 화면 지도표시 복구.
+   기존 저장상권·TOP3·전국 브랜드 수량 로직은 유지한다. */
 /* V60.0: V59.5 전체 기능 그대로 유지.
    - 저장상권 말풍선 가독성 개선
    - 행정구역 탐색 말풍선 ON/OFF 추가
@@ -597,13 +599,88 @@ function U(t){if(t!==O||r?.signal.aborted)throw new DOMException("분석 취소"
 function $(t){T=t;const b=document.getElementById("cancelAnalysisBtn");b&&b.classList.toggle("hidden",!t)}
 function cancelAnalysis(){O++,r?.abort(),Rt(),document.getElementById("rankingResultBox").classList.add("hidden"),
 document.getElementById("statusMessage").textContent="취소했습니다. 현재 요청 정리가 끝나면 다시 분석할 수 있습니다."}
+const V601_ANCHOR_VIEW_KEYS=["f_olive","f_daiso"];
+const V602_ANCHOR_CACHE_KEY="lensmeNationwideAnchorsV60_2";
+const V602_ANCHOR_CACHE_TTL=7*24*60*60*1000;
+let v601AnchorViewportSeq=0,v602AnchorNationCache=new Map(),v602AnchorNationLoading=new Map(),v602AnchorStore={};
+try{const raw=JSON.parse(localStorage.getItem(V602_ANCHOR_CACHE_KEY)||"{}");if(raw&&typeof raw==="object")v602AnchorStore=raw}catch(e){}
+function v601CurrentMapRect(){
+ const bounds=f.getBounds(),sw=bounds.getSouthWest(),ne=bounds.getNorthEast();
+ return{south:sw.getLat(),west:sw.getLng(),north:ne.getLat(),east:ne.getLng()}
+}
+function v602LoadAnchorCache(){
+ const now=Date.now();
+ for(const key of V601_ANCHOR_VIEW_KEYS){
+  const rec=v602AnchorStore?.[key];
+  if(rec?.version===2&&rec?.complete===true&&rec?.savedAt&&Array.isArray(rec.rows)&&now-rec.savedAt<V602_ANCHOR_CACHE_TTL){
+   v602AnchorNationCache.set(key,rec.rows);
+  }
+ }
+ v602ApplyFixedAnchorCounts();
+}
+function v602SaveAnchorCache(key,rows){
+ try{
+  v602AnchorStore[key]={version:2,complete:true,savedAt:Date.now(),rows:(rows||[]).map(v595Compact)};
+  localStorage.setItem(V602_ANCHOR_CACHE_KEY,JSON.stringify(v602AnchorStore));
+ }catch(err){console.warn("올리브영/다이소 전국 마커 캐시 저장 실패",err)}
+}
+async function v602EnsureNationwideAnchor(key){
+ if(v602AnchorNationCache.has(key))return v602AnchorNationCache.get(key);
+ if(v602AnchorNationLoading.has(key))return v602AnchorNationLoading.get(key);
+ const task=(async()=>{
+  const keyword=J[key]?.kw;if(!keyword)return[];
+  const progress={visited:0,splits:0,leaves:0,raw:0};
+  try{
+   const raw=await v595CollectTile(keyword,V595_KOREA,0,progress);
+   const rows=v595Dedupe(key,raw);
+   v602AnchorNationCache.set(key,rows);
+   v602SaveAnchorCache(key,rows);
+   return rows;
+  }catch(err){
+   console.warn("올리브영/다이소 전국 마커 수집 실패",key,err);
+   throw err;
+  }
+ })().finally(()=>v602AnchorNationLoading.delete(key));
+ v602AnchorNationLoading.set(key,task);
+ return task
+}
+function v602RenderNationwideAnchor(key){
+ for(const row of v602AnchorNationCache.get(key)||[])jt(row,key);
+}
+async function v602ShowNationwideAnchor(key){
+ const rows=await v602EnsureNationwideAnchor(key);
+ if(!document.getElementById(key)?.checked)return rows;
+ v602RenderNationwideAnchor(key);
+ A.forEach(({marker,brand})=>{try{marker.setMap(document.getElementById(brand)?.checked?f:null)}catch(e){}});
+ return rows
+}
+async function v601LoadVisibleAnchors(){
+ if(T||I||f.getLevel()>7)return;
+ const seq=++v601AnchorViewportSeq,rect=v601CurrentMapRect();
+ for(const key of V601_ANCHOR_VIEW_KEYS){
+  if(!document.getElementById(key)?.checked)continue;
+  try{
+   const progress={visited:0,splits:0,leaves:0,raw:0};
+   const raw=await v595CollectTile(J[key].kw,rect,0,progress);
+   if(seq!==v601AnchorViewportSeq)return;
+   const rows=v595Dedupe(key,raw);
+   rows.forEach(row=>jt(row,key));
+  }catch(err){console.warn("현재화면 앵커시설 표시 실패",key,err)}
+ }
+ A.forEach(({marker,brand})=>{try{marker.setMap(document.getElementById(brand)?.checked?f:null)}catch(e){}})
+}
 function refreshBrandVisibility(){
  A.forEach(({marker,brand})=>{try{marker.setMap(document.getElementById(brand)?.checked?f:null)}catch(e){}});
  for(const key of V595_NATION_KEYS){
   if(!document.getElementById(key)?.checked)continue;
   v595EnsureNationwide(key).then(()=>{v595RenderNationwide(key);A.forEach(({marker,brand})=>{try{marker.setMap(document.getElementById(brand)?.checked?f:null)}catch(e){}})}).catch(err=>console.warn("전국 브랜드 표시 실패",key,err));
  }
+ for(const key of V601_ANCHOR_VIEW_KEYS){
+  if(!document.getElementById(key)?.checked)continue;
+  v602ShowNationwideAnchor(key).catch(err=>console.warn("전국 앵커시설 표시 실패",key,err));
+ }
  if(document.getElementById("f_olive_hapa")?.checked)v575ResolveHapaOliveBranches().then(rows=>rows.forEach(row=>jt(row,"f_olive_hapa"))).catch(err=>console.warn("올영 내 하파 표시 실패",err));
+ if((document.getElementById("f_olive")?.checked||document.getElementById("f_daiso")?.checked)&&f.getLevel()<=7)v601LoadVisibleAnchors();
 }
 function B(t){return!t.queryMeta||t.queryMeta.failed||t.queryMeta.truncated}
 
@@ -764,13 +841,18 @@ u||a.nextPage()}),e.KAKAO_PAGE_DELAY_MS):m({truncated:!!a?.hasNextPage})):m({fai
 try{i[t](n,f,{...a,size:15})}catch(t){m({failed:!0,reason:t.message})}}))}
 const z=t=>new Promise((e=>setTimeout(e,t)));
 function V(t){return String(t??"").replace(/[&<>'"]/g,(t=>({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;",'"':"&quot;"}[t])))}
-/* ===== V59.5 전국 브랜드 수량 / 전국 마커 =====
-   카카오 키워드 한 검색에서 결과가 40개 이상이면 완전수집으로 인정하지 않는다.
-   해당 사각형을 4등분하고, 각 조각도 40개 이상이면 다시 4등분한다.
-   모든 말단 조각이 40개 미만 + 모든 페이지 정상완료일 때만 최종 수량을 확정한다.
-   올리브영/다이소는 전국 전수수집 대상에서 제외한다. */
-const q={olive:null,daiso:null};
-["olive","daiso"].forEach(id=>{const el=document.getElementById("cnt_"+id);if(el)el.innerText="(전국수집 제외)"});
+/* ===== V60.2 전국 브랜드 수량 / 전국 마커 =====
+   일반 렌즈 브랜드는 재귀 분할 수집값을 수량으로 사용한다.
+   올리브영/다이소는 사용자가 지정한 고정 수량을 화면에 표시하되,
+   필터를 켜면 동일한 재귀 분할 수집기로 전국 좌표를 별도 수집해 모든 마커를 표시한다. */
+const V602_FIXED_ANCHOR_COUNTS={f_olive:1369,f_daiso:1600};
+function v602ApplyFixedAnchorCounts(){
+ for(const [key,count] of Object.entries(V602_FIXED_ANCHOR_COUNTS)){
+  const id=key==="f_olive"?"olive":"daiso",el=document.getElementById("cnt_"+id);
+  if(el)el.innerText=`(${Number(count).toLocaleString()}개)`;
+ }
+}
+v602ApplyFixedAnchorCounts();
 
 const J={
 f_lensme:{kw:"렌즈미",hex:"%239333ea",isComp:!0,isLensme:!0},
@@ -828,11 +910,13 @@ function v595BrandMatch(key,row){const name=v595Clean(row?.place_name),cat=Strin
  if(key==="f_lensvery")return name.includes("렌즈베리");
  if(key==="f_lenstown")return name.includes("렌즈타운");
  if(key==="f_davich")return name.includes("다비치")&&(/안경|렌즈|콘택트/.test(`${row?.place_name||""} ${cat}`)||name.startsWith("다비치"));
+ if(key==="f_olive")return name.includes("올리브영");
+ if(key==="f_daiso")return name.includes("다이소");
  if(key==="f_olive_hapa")return !!row?.hapaOliveBranch||(name.includes("하파크리스틴")&&name.includes("올리브영"));
  return true}
 function v595Distance(a,b){const ay=+a?.y,ax=+a?.x,by=+b?.y,bx=+b?.x;return[ay,ax,by,bx].every(Number.isFinite)?Pt(ay,ax,by,bx):Infinity}
 function v595SamePhysical(a,b){if(!a||!b)return false;if(a.id&&b.id&&String(a.id)===String(b.id))return true;const d=v595Distance(a,b),ar=v595Clean(a.road_address_name),br=v595Clean(b.road_address_name),aj=v595Clean(a.address_name),bj=v595Clean(b.address_name);if(ar&&br&&ar===br&&d<=22)return true;if(aj&&bj&&aj===bj&&d<=22)return true;return d<=8}
-function v595RepScore(key,row){const raw=String(row?.place_name||"").trim(),name=v595Clean(raw),word={f_lensme:"렌즈미",f_olens:"오렌즈",f_hapa:"하파크리스틴",f_winc:"윙크",f_withlens:"위드렌즈",f_lensvery:"렌즈베리",f_lenstown:"렌즈타운",f_davich:"다비치"}[key]||"",brand=v595Clean(word);let s=0;if(brand&&name.startsWith(brand))s+=7;if(brand&&name.includes(brand))s+=3;if(/점$/.test(raw))s+=2;if(/안경|옵틱|아이웨어/.test(raw)&&brand&&!name.startsWith(brand))s-=1;return s}
+function v595RepScore(key,row){const raw=String(row?.place_name||"").trim(),name=v595Clean(raw),word={f_lensme:"렌즈미",f_olens:"오렌즈",f_hapa:"하파크리스틴",f_winc:"윙크",f_withlens:"위드렌즈",f_lensvery:"렌즈베리",f_lenstown:"렌즈타운",f_davich:"다비치",f_olive:"올리브영",f_daiso:"다이소"}[key]||"",brand=v595Clean(word);let s=0;if(brand&&name.startsWith(brand))s+=7;if(brand&&name.includes(brand))s+=3;if(/점$/.test(raw))s+=2;if(/안경|옵틱|아이웨어/.test(raw)&&brand&&!name.startsWith(brand))s-=1;return s}
 function v595Dedupe(key,rows){const idSeen=new Set(),raw=[];for(const row of rows||[]){if(!v595BrandMatch(key,row))continue;const id=String(row.id||`${row.place_name}|${row.x}|${row.y}`);if(idSeen.has(id))continue;idSeen.add(id);raw.push(row)}const groups=[];for(const row of raw){let g=groups.find(x=>v595SamePhysical(x[0],row));if(!g){g=[];groups.push(g)}g.push(row)}return groups.map(g=>{const arr=[...g].sort((a,b)=>v595RepScore(key,b)-v595RepScore(key,a)),rep={...arr[0]};rep.v595Aliases=[...new Set(g.map(r=>String(r.place_name||"").trim()).filter(Boolean))];rep.v595DuplicateCount=Math.max(0,g.length-1);return rep})}
 function v595Compact(r){return{id:r.id||"",place_name:r.place_name||"",x:String(r.x||""),y:String(r.y||""),address_name:r.address_name||"",road_address_name:r.road_address_name||"",phone:r.phone||"",place_url:r.place_url||"",category_name:r.category_name||"",v595Aliases:r.v595Aliases||[],v595DuplicateCount:r.v595DuplicateCount||0,hapaOliveBranch:r.hapaOliveBranch||""}}
 function v595SetCount(key,n,state=""){const id=V595_COUNT_ID[key],el=id&&document.getElementById("cnt_"+id);if(!el)return;if(Number.isFinite(+n))el.innerText=`(${Number(n).toLocaleString()}개)`;else el.innerText=`(${state||"전국수집 대기"})`;el.classList.remove("text-blue-500");el.classList.add("text-slate-500")}
@@ -1486,10 +1570,10 @@ h.keywordSearch(t,(function(t,n){
 if(e===d&&!T&&n===kakao.maps.services.Status.OK&&t.length){
 clearActivePolygon(!0);let e=t[0];g=new kakao.maps.LatLng(e.y,e.x),f.setCenter(g),f.setLevel(3),Ft(),
 document.getElementById("statusMessage").innerText="📍 이동 완료. [상권 경계 직접 그리기]로 경계를 저장한 뒤 선택하면 TOP3를 분석합니다."}}))}
-async function Ft(){I||w||T||f.getLevel()>5||(O++,A.clear(),y.forEach((t=>t.setMap(null))),y=[],await Ht())}
+async function Ft(){if(I||w||T||f.getLevel()>5)return;O++;A.clear();y.forEach((t=>t.setMap(null)));y=[];await Ht();await v601LoadVisibleAnchors()}
 function jt(t,e,n){
 const a=t.id||`${t.place_name}|${t.x}|${t.y}`;if(A.has(a))return!1;let o=!1;
-A.forEach(rec=>{if(o)return;if(rec?.brand!==e)return;const other=rec?.rawData;if(!other)return;if(V595_NATION_KEYS.includes(e)||e==="f_olive_hapa")o=v595SamePhysical(t,other);else o=Pt(parseFloat(t.y),parseFloat(t.x),parseFloat(other.y),parseFloat(other.x))<=3});if(o)return!1;
+A.forEach(rec=>{if(o)return;if(rec?.brand!==e)return;const other=rec?.rawData;if(!other)return;if(V595_NATION_KEYS.includes(e)||["f_olive","f_daiso","f_olive_hapa"].includes(e))o=v595SamePhysical(t,other);else o=Pt(parseFloat(t.y),parseFloat(t.x),parseFloat(other.y),parseFloat(other.x))<=3});if(o)return!1;
 let r=`<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24"><circle cx="12" cy="12" r="${n?"7":"10"}" fill="${n||(J[e]?J[e].hex:"%2394a3b8")}" stroke="white" stroke-width="2"/></svg>`,
 s=new kakao.maps.MarkerImage("data:image/svg+xml;utf-8,"+r,new kakao.maps.Size(24,24),{offset:new kakao.maps.Point(12,12)}),
 i=new kakao.maps.Marker({position:new kakao.maps.LatLng(t.y,t.x),image:s});
@@ -2234,9 +2318,10 @@ document.getElementById("statusMessage").textContent="✅ 펜스 완성 · 상�
 setTimeout((()=>{T||ce(w)}),60)}));
 
 kakao.maps.event.addListener(f,"zoom_changed",(()=>{applyMapDisplayFilters();v571ScheduleRegionLabels()}));
-kakao.maps.event.addListener(f,"idle",(async function(){I||w||T||f.getLevel()>5||await Ht();v571ScheduleRegionLabels()}));
+kakao.maps.event.addListener(f,"idle",(async function(){if(!I&&!w&&!T){if(f.getLevel()<=5){await Ht();await v601LoadVisibleAnchors()}else if(f.getLevel()<=7)await v601LoadVisibleAnchors()}v571ScheduleRegionLabels()}));
 v586InitLayerPrefs();
 v595LoadCache();
+v602LoadAnchorCache();
 Ct();
 v572GoNational();
 document.getElementById("statusMessage").innerText="🗺️ 새로고침 시 대한민국 전체 지도부터 시작합니다. 저장상권 말풍선은 여러 개 선택할 수 있고 같은 말풍선을 다시 누르면 그 상권만 해제됩니다. 표시 메뉴에서 끈 레이어는 지도 확대·축소 후에도 그대로 유지됩니다. 저장상권 계층과 기존 TOP3는 V58.8 저장키를 그대로 사용합니다.";
@@ -2244,6 +2329,12 @@ Ft();
 setTimeout(()=>{v569NormalizeSavedRegions().catch(err=>console.warn("saved region normalize failed",err))},350);
 /* 전국 수량은 저장상권/TOP3 복원보다 뒤에, 한 브랜드씩 순차 실행한다. */
 setTimeout(()=>{v595WarmCounts().catch(err=>console.warn("전국 브랜드 백그라운드 수집 실패",err))},1800);
+/* 올리브영/다이소는 표시 수량은 고정값, 지도 좌표만 전국 재귀분할로 별도 수집한다. */
+setTimeout(()=>{
+ for(const key of V601_ANCHOR_VIEW_KEYS){
+  if(document.getElementById(key)?.checked)v602ShowNationwideAnchor(key).catch(err=>console.warn("전국 앵커시설 초기 표시 실패",key,err));
+ }
+},2600);
 </script>
 </body>
 </html>
