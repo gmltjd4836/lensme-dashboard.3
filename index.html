@@ -575,14 +575,24 @@ function v586InitLayerPrefs(){
  ["layer_rank","layer_inflow","layer_flow","layer_names","layer_admin"].forEach(id=>{const el=document.getElementById(id);if(el)el.addEventListener("change",()=>{v586SaveLayerPrefs();if(id==="layer_admin")v572RefreshRegionNavigation();else applyMapDisplayFilters()})})
 }
 function v572AreaMatchesCurrentCity(area){
-/* V57.8: 시·군·구 단계에서는 저장상권을 절대 노출하지 않는다.
-   읍·면·동을 직접 선택해 dong 단계가 된 뒤에만 해당 동의 상권을 표시한다. */
-if(!area||mapDrillState.level!=="dong")return false;
+/* V60.4:
+   - 시·군·구 단계에서는 해당 구 안의 저장상권을 동 말풍선과 함께 표시한다.
+   - 읍·면·동 단계에서는 기존처럼 해당 동의 저장상권만 표시한다. */
+if(!area)return false;
 const sameSi=String(area.si||"")===String(mapDrillState.si||"");
 const areaMuni=v575NormalizeMuni(area.si||"",area.gu||""),stateMuni=v575NormalizeMuni(mapDrillState.si||"",mapDrillState.gu||"");
 const sameGu=String(areaMuni)===String(stateMuni);
+
+if(mapDrillState.level==="city"){
+return sameSi&&sameGu
+}
+
+if(mapDrillState.level==="dong"){
 const sameDong=String(area.dong||"")===String(mapDrillState.dong||"");
 return sameSi&&sameGu&&sameDong
+}
+
+return false
 }
 function applyMapDisplayFilters(){
 const analysisOpen=selectedSavedAreaIds.size>0||!!expandedSavedAreaId||(!b&&!!w),showRank=analysisOpen&&layerChecked("layer_rank",true),showInflow=analysisOpen&&layerChecked("layer_inflow",true),showFlow=analysisOpen&&layerChecked("layer_flow",false),showNames=layerChecked("layer_names",true),showAdmin=layerChecked("layer_admin",true),focusedKey=focusedSavedAreaId==null?null:String(focusedSavedAreaId),activeKey=expandedSavedAreaId==null?null:String(expandedSavedAreaId);
