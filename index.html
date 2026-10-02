@@ -397,7 +397,7 @@ details[open]>summary::before{color:#6d63ff!important}
 <div id="premiumSidebar" class="w-full md:w-1/4 bg-white border-r border-gray-200 p-6 flex flex-col shadow-lg z-20 overflow-y-auto">
 <h1 id="premiumHeader" class="text-xl font-extrabold text-slate-800 border-b-4 border-indigo-500 pb-3 mb-4 flex justify-between items-center">
 <span class="premium-brand"><span class="premium-brand-kicker">LENS ME</span><span class="premium-brand-title">상권 분석 지도</span></span>
-<span class="premium-version text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded-full font-bold">V60.2</span>
+<span class="premium-version text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded-full font-bold">V60.3</span>
 </h1>
 
 <div class="mb-3">
@@ -523,7 +523,7 @@ details[open]>summary::before{color:#6d63ff!important}
 <script src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=c045609510f8b75252389123f086be48&libraries=services,drawing"></script>
 
 <script>
-/* V60.2: V60.0 프리미엄 UI 기반. 올리브영/다이소 현재 화면 지도표시 복구.
+/* V60.3: V60.0 프리미엄 UI 기반. 올리브영/다이소 현재 화면 지도표시 복구.
    기존 저장상권·TOP3·전국 브랜드 수량 로직은 유지한다. */
 /* V60.0: V59.5 전체 기능 그대로 유지.
    - 저장상권 말풍선 가독성 개선
@@ -541,7 +541,9 @@ GAP_EMPTY_RADIUS_METERS:28,GAP_TARGET_SEPARATION_METERS:72,GAP_RECOVERY_MAX_CALL
 TOP3_MIN_CONFIDENCE:45,TOP3_MIN_SEPARATION_METERS:50,TOP3_WINDOW_METERS:28,TOP3_MIN_SCORE:52,ROAD_SNAP_MAX_METERS:18,
 ENTRY_CLUSTER_RADIUS:48,ENTRY_IDEAL_MIN:22,ENTRY_IDEAL_MAX:70,CROSSWALK_TRANSIT_RADIUS:65,CROSSWALK_ROUTE_RADIUS:18,
 CROSSWALK_ENTRY_MAX_ROUTE_METERS:140,CROSSWALK_AFTER_ENTRY_MAX_METERS:170,CROSSWALK_MAX_EFFECTIVE:3,COMMERCIAL_RADIUS:80,COMMERCIAL_HOTSPOT_RADIUS:90,
-COMMERCIAL_HOTSPOT_SEPARATION:130};
+COMMERCIAL_HOTSPOT_SEPARATION:130,
+EXTERNAL_INFLUENCE_RADIUS:320,EXTERNAL_CLUSTER_RADIUS:90,EXTERNAL_CLUSTER_MIN_SHOPS:6,EXTERNAL_CLUSTER_MAX:4,
+EXTERNAL_ROUTE_MAX:8,EXTERNAL_ROUTE_INSIDE_METERS:95,EXTERNAL_ROUTE_MATCH_RADIUS:16};
 if(!window.kakao?.maps?.services||!window.kakao?.maps?.drawing)throw document.getElementById("statusMessage").textContent="지도를 불러오지 못했습니다. 기존 등록 도메인에서 index.html을 교체하고 카카오 지도 키·네트워크 설정을 확인해주세요.",
 new Error("Kakao SDK unavailable");
 let n="new",a="",o=null,r=null,s=[],i=null,c=null,d=0,u=document.getElementById("map"),m=new kakao.maps.LatLng(36.15,127.75),g=m,f=new kakao.maps.Map(u,{center:m,
@@ -754,8 +756,8 @@ function v585PersistentHasFullVisual(snap){return !!(snap&&+snap.version>=2&&Arr
 function v585CacheHasDisplayData(cache){return !!(cache?.analysis?.topSegments?.length&&(v585PersistentHasFullVisual(cache)||(Array.isArray(cache.analysis?.segments)&&cache.analysis.segments.length>0)))}
 function v581BuildPersistentCache(fenceKey,analysis,html,fencePath,maxFlow=e.HEATMAP_MAX_SEGMENTS){
  const top=(analysis?.topSegments||[]).slice(0,3).map(v581CompactTopSegment).filter(Boolean);if(!top.length)return null;
- const flowSegments=v585CompactFlowSegments(analysis?.segments||[],maxFlow),inflows=v585BuildInflowSnapshot(analysis?.entryModel,fencePath||[]);
- return{version:2,fenceKey:String(fenceKey||""),savedAt:new Date().toISOString(),html:String(html||""),analysis:{topSegments:top,segments:[],entryModel:null,persistentSnapshot:true},visual:{flowSegments,inflows}}
+ const flowSegments=v585CompactFlowSegments(analysis?.segments||[],maxFlow),inflows=v585BuildInflowSnapshot(analysis?.entryModel,fencePath||[]),externalInflows=v603BuildExternalInflowSnapshot(analysis?.externalInflowModel,fencePath||[]);
+ return{version:3,fenceKey:String(fenceKey||""),savedAt:new Date().toISOString(),html:String(html||""),analysis:{topSegments:top,segments:[],entryModel:null,persistentSnapshot:true},visual:{flowSegments,inflows,externalInflows}}
 }
 function v581PersistAreaAnalysis(areaId,fenceKey,analysis,html,fencePath){
  const key=String(areaId||"");if(!key)return false;
@@ -841,7 +843,7 @@ u||a.nextPage()}),e.KAKAO_PAGE_DELAY_MS):m({truncated:!!a?.hasNextPage})):m({fai
 try{i[t](n,f,{...a,size:15})}catch(t){m({failed:!0,reason:t.message})}}))}
 const z=t=>new Promise((e=>setTimeout(e,t)));
 function V(t){return String(t??"").replace(/[&<>'"]/g,(t=>({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;",'"':"&quot;"}[t])))}
-/* ===== V60.2 전국 브랜드 수량 / 전국 마커 =====
+/* ===== V60.3 전국 브랜드 수량 / 전국 마커 =====
    일반 렌즈 브랜드는 재귀 분할 수집값을 수량으로 사용한다.
    올리브영/다이소는 사용자가 지정한 고정 수량을 화면에 표시하되,
    필터를 켜면 동일한 재귀 분할 수집기로 전국 좌표를 별도 수집해 모든 마커를 표시한다. */
@@ -1719,14 +1721,14 @@ return i}
 function fe(t){return 100}
 function tradeZoneLabel(t){return t?.zone==="entry"?"진입부":t?.zone==="middle"?"중간 핵심부":t?.zone==="inner"?"안쪽 핵심부":"핵심구간"}
 function candidateTypeLabel(t){
-const z=t?.candidateType||"flow";return z==="entry"?"진입부형":z==="commercial"?"상가밀집형":z==="access"?"교통거점형":z==="transportLink"?"교통유입형":z==="demand"?"목적시설형":z==="capture"?"길목형":"메인동선형"}
+const z=t?.candidateType||"flow";return z==="entry"?"진입부형":z==="commercial"?"상가밀집형":z==="access"?"교통거점형":z==="transportLink"?"교통유입형":z==="external"?"외부상권유입형":z==="demand"?"목적시설형":z==="capture"?"길목형":"메인동선형"}
 function ye(t,n,a=3){
 const eligible=[];
 for(const r of t){
 if(r.excluded||r.competition.teamKill||r.score<e.TOP3_MIN_SCORE||r.siteFeasible===false||(r.confidence||0)<e.TOP3_MIN_CONFIDENCE)continue;
-const support=(r.demand?.targetCount||0)+(r.commercial?.count60||0),direct=(r.routeHitIds||[]).length;
-if(support<2&&direct<1)continue;
-if(direct<1&&((r.confidence||0)<55||support<3))continue;
+const support=(r.demand?.targetCount||0)+(r.commercial?.count60||0),direct=(r.routeHitIds||[]).length,externalDirect=(r.externalInflow?.routeCount||0);
+if(support<2&&direct<1&&externalDirect<1)continue;
+if(direct<1&&externalDirect<1&&((r.confidence||0)<55||support<3))continue;
 const s=he(r,e.TOP3_WINDOW_METERS),p=s.center||r.mid;if(!Nt(s.a.lat,s.a.lng,n)||!Nt(s.b.lat,s.b.lng,n)||!Nt(p.lat,p.lng,n))continue;
 if(Number.isFinite(s.snapDistance)&&s.snapDistance>e.ROAD_SNAP_MAX_METERS)continue;
 r.recommendationWindow=s,r.displayPoint={...p},r.roadSnapDistance=s.snapDistance,r.roadRouteName=s.route?.name||r.roadName||"",eligible.push(r)}
@@ -1827,6 +1829,101 @@ for(const h of t.routeHits||[]){const en=n.routeEntries.get(h.route.id);if(!en)c
 let s;if(o.length){const q=o.reduce((x,y)=>x+y.w,0);s=o.reduce((x,y)=>x+y.d*y.w,0)/Math.max(.001,q)}else if(n.primary)s=Pt(t.mid.lat,t.mid.lng,n.primary.point.lat,n.primary.point.lng);else s=v56BoundaryDistance(t.mid,a);
 let i;s<8?i=55:s<e.ENTRY_IDEAL_MIN?i=55+30*(s-8)/(e.ENTRY_IDEAL_MIN-8):s<=e.ENTRY_IDEAL_MAX?i=100:s<=115?i=100-28*(s-e.ENTRY_IDEAL_MAX)/(115-e.ENTRY_IDEAL_MAX):s<=190?i=72-37*(s-115)/75:i=25;
 i=v56Clamp(i+Math.min(12,3*r));return{distance:s,index:Math.round(i),routeHits:r}}
+/* =========================
+   V60.3 외부상권 유입 모델
+   - 펜스 밖 320m의 음식점/주점 밀집지를 외부 유입원으로 탐색
+   - TMAP 실제 보행경로가 펜스 내부 후보도로를 통과할 때만 점수 반영
+   - 지도 유입 화살표와 결과표에 유입원/점포수/경로수 설명
+   ========================= */
+const V603_EXTERNAL_TERMS=[
+ {kw:"술집",type:"bar",weight:1.35},{kw:"호프",type:"bar",weight:1.35},{kw:"이자카야",type:"bar",weight:1.45},
+ {kw:"포차",type:"bar",weight:1.40},{kw:"먹자골목",type:"district",weight:1.55},{kw:"고기집",type:"food",weight:1.05},{kw:"맛집",type:"food",weight:1.0}
+];
+function v603DirectionName(bearing){const dirs=["북측","북동측","동측","남동측","남측","남서측","서측","북서측"];return dirs[Math.round(((bearing%360)+360)%360/45)%8]}
+function v603ExternalClassify(row,forcedType=null){
+ const s=`${row?.place_name||""} ${row?.category_name||""}`.toLowerCase();
+ if(forcedType)return forcedType;
+ if(/술집|호프|이자카야|포차|주점|bar|펍/.test(s))return"bar";
+ return"food"
+}
+function v603ExternalWeight(type){return type==="district"?1.55:type==="bar"?1.35:1}
+function v603ExternalPhysicalKey(row){return String(row?.id||`${row?.place_name||""}|${row?.x||""}|${row?.y||""}`)}
+function v603IsSameExternal(a,b){
+ if(a?.id&&b?.id&&String(a.id)===String(b.id))return true;
+ const d=Pt(+a.y,+a.x,+b.y,+b.x);if(!Number.isFinite(d))return false;
+ const ar=String(a.road_address_name||"").replace(/\s+/g,""),br=String(b.road_address_name||"").replace(/\s+/g,"");
+ const aj=String(a.address_name||"").replace(/\s+/g,""),bj=String(b.address_name||"").replace(/\s+/g,"");
+ return (ar&&br&&ar===br&&d<=18)||(aj&&bj&&aj===bj&&d<=18)||d<=6
+}
+function v603DedupeExternal(rows){
+ const out=[];for(const row of rows||[]){if(!Number.isFinite(+row.y)||!Number.isFinite(+row.x))continue;if(out.some(x=>v603IsSameExternal(x,row)))continue;out.push(row)}return out
+}
+async function v603CollectExternalClusters(centerLatLng,searchRadius,fencePath,statusEl,issues=[]){
+ const rows=[],seen=new Set,addRows=(list,forcedType=null)=>{for(const r of list||[]){if(!r||!Number.isFinite(+r.y)||!Number.isFinite(+r.x))continue;const id=v603ExternalPhysicalKey(r);if(seen.has(id))continue;const outside=!Nt(+r.y,+r.x,fencePath),bd=v56BoundaryDistance({lat:+r.y,lng:+r.x},fencePath);if(!outside||bd>e.EXTERNAL_INFLUENCE_RADIUS)continue;seen.add(id);rows.push({...r,externalType:v603ExternalClassify(r,forcedType)})}};
+ statusEl&&(statusEl.innerText="🌃 펜스 밖 먹자골목·주점 유입상권 조사 중...");
+ try{const food=await tt("FD6",{location:centerLatLng,radius:searchRadius,sort:kakao.maps.services.SortBy.DISTANCE},3);B(food)&&issues.push("외부 음식점: 일부 표본만 수집");addRows(food,"food")}catch(err){issues.push("외부 음식점 조회 실패")}
+ for(const spec of V603_EXTERNAL_TERMS){try{const q=await Z(spec.kw,{location:centerLatLng,radius:searchRadius,sort:kakao.maps.services.SortBy.DISTANCE},2);B(q)&&issues.push(`${spec.kw}: 일부 표본만 수집`);addRows(q,spec.type)}catch(err){}await z(18)}
+ const clean=v603DedupeExternal(rows),n=clean.length,visited=new Array(n).fill(false),clusters=[];
+ for(let i=0;i<n;i++){
+  if(visited[i])continue;const queue=[i],members=[];visited[i]=true;
+  while(queue.length){const idx=queue.shift(),a=clean[idx];members.push(a);for(let j=0;j<n;j++){if(visited[j])continue;const b=clean[j];if(Pt(+a.y,+a.x,+b.y,+b.x)<=e.EXTERNAL_CLUSTER_RADIUS){visited[j]=true;queue.push(j)}}}
+  if(members.length<e.EXTERNAL_CLUSTER_MIN_SHOPS)continue;
+  let wsum=0,lat=0,lng=0,bar=0,food=0,district=0;
+  for(const m of members){const typ=m.externalType||"food",w=v603ExternalWeight(typ);wsum+=w;lat+=+m.y*w;lng+=+m.x*w;if(typ==="bar")bar++;else if(typ==="district")district++;else food++}
+  const center={lat:lat/Math.max(.001,wsum),lng:lng/Math.max(.001,wsum)};let origin=members[0],best=Infinity;for(const m of members){const d=Pt(center.lat,center.lng,+m.y,+m.x);if(d<best){best=d;origin=m}}
+  const boundaryDistance=v56BoundaryDistance(center,fencePath),fenceCenter=K(fencePath),bearing=Ut(fenceCenter.lat,fenceCenter.lng,center.lat,center.lng),direction=v603DirectionName(bearing),diversity=(bar>0?1:0)+(food>0?1:0)+(district>0?1:0),strength=wsum*(1+Math.min(.35,.12*Math.max(0,diversity-1)))*Math.max(.45,1-boundaryDistance/(e.EXTERNAL_INFLUENCE_RADIUS*1.35));
+  clusters.push({id:`EXTC${clusters.length+1}`,center,origin:{lat:+origin.y,lng:+origin.x,name:origin.place_name||"외부상권"},members,shopCount:members.length,barCount:bar,foodCount:food,districtCount:district,boundaryDistance,direction,strength,sampleNames:members.slice(0,4).map(x=>x.place_name).filter(Boolean)})
+ }
+ clusters.sort((a,b)=>b.strength-a.strength);
+ const top=clusters.slice(0,e.EXTERNAL_CLUSTER_MAX),max=Math.max(1,...top.map(c=>c.strength));top.forEach((c,idx)=>{c.id=`EXTC${idx+1}`;c.strengthIndex=Math.round(100*c.strength/max);c.label=`${c.direction} 먹자·주점권`});
+ return{places:clean,clusters:top}
+}
+function v603PickInternalDestinations(destinations,fencePath){
+ const inside=(destinations||[]).filter(d=>Number.isFinite(+d.lat)&&Number.isFinite(+d.lng)&&Nt(+d.lat,+d.lng,fencePath));
+ const ranked=[...inside].sort((a,b)=>(zt(b.kind||"center")||.5)-(zt(a.kind||"center")||.5));
+ const out=[];for(const d of ranked){if(out.some(x=>Pt(+d.lat,+d.lng,+x.lat,+x.lng)<55))continue;out.push(d);if(out.length>=4)break}
+ const center=K(fencePath);if(center&&Number.isFinite(center.lat)&&!out.some(x=>Pt(center.lat,center.lng,+x.lat,+x.lng)<45))out.push({lat:center.lat,lng:center.lng,kind:"center",name:"상권 내부 중심"});return out
+}
+async function v603BuildExternalInflowModel(clusterResult,destinations,fencePath,statusEl){
+ const clusters=clusterResult?.clusters||[],internal=v603PickInternalDestinations(destinations,fencePath),routes=[];let rid=1;
+ if(!clusters.length||!internal.length)return{clusters,routes,available:false,routeCount:0};
+ for(let ci=0;ci<clusters.length;ci++){
+  const cluster=clusters[ci],targets=[...internal].sort((a,b)=>{const wa=zt(a.kind||"center"),wb=zt(b.kind||"center");return (wb-wa)*120+Pt(cluster.origin.lat,cluster.origin.lng,+a.lat,+a.lng)-Pt(cluster.origin.lat,cluster.origin.lng,+b.lat,+b.lng)}).slice(0,2);
+  for(const dest of targets){if(routes.length>=e.EXTERNAL_ROUTE_MAX)break;statusEl&&(statusEl.innerText=`🌃 ${cluster.label} → 펜스 내부 실제 보행 유입경로 확인 중... (${routes.length+1}/${Math.min(e.EXTERNAL_ROUTE_MAX,clusters.length*2)})`);const coords=Xt(await Wt(cluster.origin.lng,cluster.origin.lat,+dest.lng,+dest.lat));if(coords.length<2){await z(e.TMAP_DELAY_MS);continue}
+   const route={id:`EXT${rid++}`,coords,cluster,dest,weight:.72+Math.min(.78,(cluster.strengthIndex||0)/100*.78),name:`${cluster.label} → ${dest.name||"상권 내부"}`,kind:"external_inflow"},entry=v56RouteEntry(route,fencePath);if(!entry){await z(e.TMAP_DELAY_MS);continue}route.entry=entry;route.insideLength=v569InsideRouteLength(coords,fencePath);if(route.insideLength<18){await z(e.TMAP_DELAY_MS);continue}routes.push(route);await z(e.TMAP_DELAY_MS)}
+ }
+ return{clusters,routes,available:routes.length>0,routeCount:routes.length,totalShops:clusters.reduce((s,c)=>s+c.shopCount,0)}
+}
+function v603ExternalMetric(seg,model){
+ if(!model?.available)return{raw:0,routeCount:0,clusterCount:0,sources:[]};let raw=0;const routeIds=new Set,sourceMap=new Map;
+ for(const route of model.routes||[]){const d=v568DistanceToRoute(seg,route);if(d>e.EXTERNAL_ROUTE_MATCH_RADIUS)continue;const prox=Math.max(.25,1-d/e.EXTERNAL_ROUTE_MATCH_RADIUS),c=route.cluster,clusterPower=.45+.55*((c.strengthIndex||0)/100);raw+=(route.weight||1)*clusterPower*prox;routeIds.add(route.id);let s=sourceMap.get(c.id);if(!s){s={id:c.id,label:c.label,direction:c.direction,shopCount:c.shopCount,barCount:c.barCount,foodCount:c.foodCount,boundaryDistance:c.boundaryDistance,routeCount:0,sampleNames:c.sampleNames||[]};sourceMap.set(c.id,s)}s.routeCount++}
+ return{raw,routeCount:routeIds.size,clusterCount:sourceMap.size,sources:[...sourceMap.values()].sort((a,b)=>b.routeCount-a.routeCount||b.shopCount-a.shopCount)}
+}
+function v603ExternalProfile(model,segments){
+ if(!model?.available)return 0;const totalShops=model.clusters.reduce((s,c)=>s+c.shopCount,0),barShops=model.clusters.reduce((s,c)=>s+c.barCount,0),peak=[...(segments||[])].map(s=>s.externalInflowIndex||0).sort((a,b)=>b-a).slice(0,Math.max(1,Math.ceil((segments||[]).length*.12))),peakAvg=peak.reduce((a,b)=>a+b,0)/Math.max(1,peak.length);return Math.round(v56Clamp(.35*v56Sat(totalShops,22)+.15*v56Sat(barShops,10)+.30*v56Sat(model.routes.length,4)+.20*peakAvg))
+}
+function v603TrimExternalRoute(route,fencePath){
+ const entry=route?.entry;if(!entry?.point||!route?.coords?.length)return[];const before=route.coords.slice(0,Math.max(1,entry.segmentIndex+1)).map(p=>({...p}));before.push({...entry.point});const after=v563WalkAfterEntry(entry,e.EXTERNAL_ROUTE_INSIDE_METERS);for(const p of after.slice(1)){const last=before.at(-1);if(!last||Pt(last.lat,last.lng,p.lat,p.lng)>.5)before.push(p)}return before
+}
+function v603RenderExternalInflows(model,fencePath){
+ if(!model?.available)return;const bestByCluster=[];for(const c of model.clusters||[]){const r=(model.routes||[]).find(x=>x.cluster?.id===c.id);if(r)bestByCluster.push(r)}
+ for(const route of bestByCluster.slice(0,3)){const path=v603TrimExternalRoute(route,fencePath);if(path.length<2)continue;const color="#7c3aed",line=new kakao.maps.Polyline({path:path.map(p=>new kakao.maps.LatLng(p.lat,p.lng)),strokeWeight:4,strokeColor:color,strokeOpacity:.82,strokeStyle:"solid",endArrow:true,zIndex:129});line.setMap(f);_.push(line);inflowOverlays.push(line);v588TrackSavedOverlay(line,"inflow");const c=route.cluster,sourceLabel=new kakao.maps.CustomOverlay({position:new kakao.maps.LatLng(c.origin.lat,c.origin.lng),xAnchor:.5,yAnchor:1.3,zIndex:142,content:`<div style="pointer-events:none;background:rgba(255,255,255,.96);border:1px solid #c4b5fd;color:#5b21b6;font-size:9px;font-weight:1000;border-radius:999px;padding:4px 8px;box-shadow:0 5px 14px rgba(91,33,182,.16);white-space:nowrap">🌃 ${V(c.label)} · ${c.shopCount}곳</div>`});sourceLabel.setMap(f);_.push(sourceLabel);inflowOverlays.push(sourceLabel);v588TrackSavedOverlay(sourceLabel,"inflow");const ep=route.entry.point,entryLabel=new kakao.maps.CustomOverlay({position:new kakao.maps.LatLng(ep.lat,ep.lng),xAnchor:.5,yAnchor:1.45,zIndex:140,content:`<div style="pointer-events:none;background:#6d28d9;color:#fff;font-size:8px;font-weight:1000;border-radius:999px;padding:3px 7px;box-shadow:0 4px 10px rgba(109,40,217,.22);white-space:nowrap">외부상권 유입</div>`});entryLabel.setMap(f);_.push(entryLabel);inflowOverlays.push(entryLabel);v588TrackSavedOverlay(entryLabel,"inflow")}
+ applyMapDisplayFilters()
+}
+function v603BuildExternalInflowSnapshot(model,fencePath){
+ if(!model?.available)return[];const out=[],used=new Set;for(const route of model.routes||[]){const cid=route.cluster?.id;if(!cid||used.has(cid))continue;used.add(cid);const path=v603TrimExternalRoute(route,fencePath);if(path.length<2)continue;const c=route.cluster;out.push({label:c.label,shopCount:c.shopCount,barCount:c.barCount,foodCount:c.foodCount,direction:c.direction,path:path.map(p=>[v585RoundCoord(p.lat),v585RoundCoord(p.lng)]).filter(p=>p[0]!=null&&p[1]!=null)});if(out.length>=3)break}return out
+}
+function v603RenderSavedExternalInflows(items){
+ for(const item of(items||[]).slice(0,3)){const path=(item.path||[]).map(p=>({lat:+p[0],lng:+p[1]})).filter(p=>Number.isFinite(p.lat)&&Number.isFinite(p.lng));if(path.length<2)continue;const line=new kakao.maps.Polyline({path:path.map(p=>new kakao.maps.LatLng(p.lat,p.lng)),strokeWeight:4,strokeColor:"#7c3aed",strokeOpacity:.82,strokeStyle:"solid",endArrow:true,zIndex:129});line.setMap(f);_.push(line);inflowOverlays.push(line);v588TrackSavedOverlay(line,"inflow");const src=path[0],label=new kakao.maps.CustomOverlay({position:new kakao.maps.LatLng(src.lat,src.lng),xAnchor:.5,yAnchor:1.3,zIndex:142,content:`<div style="pointer-events:none;background:rgba(255,255,255,.96);border:1px solid #c4b5fd;color:#5b21b6;font-size:9px;font-weight:1000;border-radius:999px;padding:4px 8px;box-shadow:0 5px 14px rgba(91,33,182,.16);white-space:nowrap">🌃 ${V(item.label||"외부상권")} · ${item.shopCount||0}곳</div>`});label.setMap(f);_.push(label);inflowOverlays.push(label);v588TrackSavedOverlay(label,"inflow")}
+ applyMapDisplayFilters()
+}
+function v603ExternalSourceHtml(seg,model){
+ const sources=seg?.externalInflow?.sources||[];if(!model?.available)return`<div class="rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-2 text-[9.5px] text-slate-500 mb-2"><b>🌃 외부상권 유입</b><br>펜스 밖 320m에서 후보도로로 연결되는 유효 먹자·주점 보행경로가 확인되지 않았습니다.</div>`;
+ if(!sources.length)return`<div class="rounded-lg border border-violet-100 bg-violet-50/50 px-2.5 py-2 text-[9.5px] text-violet-700 mb-2"><b>🌃 외부상권 유입</b><br>주변 외부 먹자·주점권은 확인됐지만 이 후보구간을 직접 통과하는 TMAP 유입경로는 없습니다.</div>`;
+ const rows=sources.slice(0,2).map(s=>`<div class="mt-1"><b>${V(s.label)}</b> · 점포 ${s.shopCount}곳(주점 ${s.barCount} / 음식점 ${s.foodCount}) · 후보구간 통과경로 ${s.routeCount}개 · 펜스까지 약 ${Math.round(s.boundaryDistance)}m${s.sampleNames?.length?`<br><span class="text-slate-500">예: ${s.sampleNames.slice(0,3).map(V).join(" · ")}</span>`:""}</div>`).join("");
+ return`<div class="rounded-lg border border-violet-200 bg-gradient-to-br from-violet-50 to-white px-2.5 py-2 text-[9.5px] text-violet-800 mb-2"><b>🌃 외부 유입 근거</b>${rows}<div class="mt-1 text-[9px] text-slate-500">외부상권 → 펜스 내부 목적지의 실제 TMAP 보행경로가 이 후보도로를 통과할 때만 점수에 반영합니다.</div></div>`
+}
+
 function v56Profile(t,n,a,o,r,s){
 const i=v56FenceArea(t),l=i/1e4,c=(r?.length||0)/Math.max(.25,l),d=(a||[]).filter(x=>Nt(x.lat,x.lng,t)),u=d.reduce((q,x)=>q+Yt(x.type),0),m=d.some(x=>["subway_exit","subway"].includes(x.type)),
 g=(o||[]).filter(x=>{const y=+x.y,z=+x.x;return Nt(y,z,t)&&(x.isStealth||(x.brandKey&&J[x.brandKey]&&(J[x.brandKey].isOlive||J[x.brandKey].isDaiso)))}).length,
@@ -1836,11 +1933,11 @@ transport=v56Clamp(.72*v56Sat(u,6)+(m?22:0)),destination=v56Clamp(v56Sat(g/Math.
 return{mainFlow:Math.round(flow),commercial:Math.round(commercial),transport:Math.round(transport),destination:Math.round(destination)}}
 function v56CompleteProfile(t,n){const a=t.entries.length,o=t.topShare||0,r=n||1,s=v56Clamp((.55*o+.45*Math.min(1,a/Math.max(3,r*.65)))*100);return Math.round(s)}
 function v56Weights(t){
-const linked=!!t.transportLinkAvailable,base={flow:27,demand:19,commercial:17,access:10,transportLink:linked?8:0,entry:9,capture:10},raw={
+const linked=!!t.transportLinkAvailable,externalAvailable=!!t.externalAvailable,externalWeight=externalAvailable?v56Clamp(10+(t.external-50)*.08,6,14):0,base={flow:27,demand:19,commercial:17,access:10,transportLink:linked?8:0,entry:9,capture:10},raw={
 flow:v56Clamp(base.flow+(t.mainFlow-50)*.12,22,34),demand:v56Clamp(base.demand+(t.destination-50)*.10,14,24),commercial:v56Clamp(base.commercial+(t.commercial-50)*.10,12,22),access:v56Clamp(base.access+(t.transport-50)*.08,7,15),transportLink:linked?v56Clamp(base.transportLink+(t.transportLink-50)*.08,5,13):0,entry:v56Clamp(base.entry+(t.entry-50)*.08,5,14)};
-const sum=raw.flow+raw.demand+raw.commercial+raw.access+raw.transportLink+raw.entry,scale=90/sum;for(const k of Object.keys(raw))raw[k]*=scale;
-return{flow:raw.flow,demand:raw.demand,commercial:raw.commercial,access:raw.access,transportLink:raw.transportLink,entry:raw.entry,capture:10}}
-function v56CandidateType(t){const q={flow:t.flowIndex||0,commercial:t.commercialIndex||0,access:t.accessIndex||0,transportLink:t.transportLinkIndex||0,demand:t.demandIndex||0,capture:t.captureIndex||0,entry:(t.entryIndex||0)+(t.zone==="entry"?7:0)};return Object.entries(q).sort((a,b)=>b[1]-a[1])[0][0]}
+const sum=raw.flow+raw.demand+raw.commercial+raw.access+raw.transportLink+raw.entry,scale=(90-externalWeight)/Math.max(.001,sum);for(const k of Object.keys(raw))raw[k]*=scale;
+return{flow:raw.flow,demand:raw.demand,commercial:raw.commercial,access:raw.access,transportLink:raw.transportLink,entry:raw.entry,capture:10,external:externalWeight}}
+function v56CandidateType(t){const q={flow:t.flowIndex||0,commercial:t.commercialIndex||0,access:t.accessIndex||0,transportLink:t.transportLinkIndex||0,external:t.externalInflowIndex||0,demand:t.demandIndex||0,capture:t.captureIndex||0,entry:(t.entryIndex||0)+(t.zone==="entry"?7:0)};return Object.entries(q).sort((a,b)=>b[1]-a[1])[0][0]}
 function v56Structure(t,n,a){
 const usable=t.filter(x=>!x.excluded&&!x.competition.teamKill),vals=usable.map(x=>x.entryDistance).filter(Number.isFinite).sort((x,y)=>x-y),p90=vals.length?vals[Math.floor(.9*(vals.length-1))]:220,depth=Math.max(120,p90);
 usable.forEach(x=>{x.progressRatio=v56Clamp((x.entryDistance||0)/depth,0,1.25);x.zone=x.progressRatio<=.28?"entry":x.progressRatio<=.72?"middle":"inner"});
@@ -1900,7 +1997,7 @@ const candidates=v566InflowCandidates(entryModel,fencePath);if(candidates[0])v56
 
 function v568RoadBBox(path){let south=90,north=-90,west=180,east=-180;(path||[]).forEach(p=>{south=Math.min(south,p.lat);north=Math.max(north,p.lat);west=Math.min(west,p.lng);east=Math.max(east,p.lng)});return{south,west,north,east}}
 function v568RoadAllowed(tags={}){const h=tags.highway||"";if(!h)return false;if(["motorway","motorway_link","trunk","trunk_link","raceway","construction","proposed","steps","cycleway","bridleway","track"].includes(h))return false;if(tags.access==="private"||tags.access==="no"||tags.foot==="no")return false;if(h==="service"&&["parking_aisle","driveway"].includes(tags.service))return false;return true}
-function v568RoadSiteFeasible(seg){const t=seg.osmTags||{},h=t.highway||"";if(t.access==="private"||t.access==="no"||t.foot==="no")return false;if(["motorway","motorway_link","trunk","trunk_link","steps","cycleway","bridleway","track"].includes(h))return false;if(t.footway==="crossing"||t.crossing||t.service==="parking_aisle"||t.service==="driveway")return false;const support=(seg.commercial?.count60||0)+(seg.demand?.targetCount||0);return support>=1||(seg.routeHitIds||[]).length>=1}
+function v568RoadSiteFeasible(seg){const t=seg.osmTags||{},h=t.highway||"";if(t.access==="private"||t.access==="no"||t.foot==="no")return false;if(["motorway","motorway_link","trunk","trunk_link","steps","cycleway","bridleway","track"].includes(h))return false;if(t.footway==="crossing"||t.crossing||t.service==="parking_aisle"||t.service==="driveway")return false;const support=(seg.commercial?.count60||0)+(seg.demand?.targetCount||0),external=seg.externalInflow?.routeCount||0;return support>=1||(seg.routeHitIds||[]).length>=1||external>=1}
 function v568WayPriority(tags={}){const h=tags.highway||"";return h==="pedestrian"?6:h==="living_street"?5.5:h==="footway"?5:h==="primary"||h==="secondary"||h==="tertiary"?4.6:h==="residential"||h==="unclassified"?4.2:h==="service"?3.2:4}
 async function v568FetchOsmWays(fencePath,statusEl){
 const b=v568RoadBBox(fencePath);if(!Number.isFinite(b.south))return[];
@@ -1927,8 +2024,8 @@ for(const gap of gaps){let source=null,best=-Infinity;for(const g of gates){cons
 if(coords.length>=2){const end=coords.at(-1),endDist=Pt(end.lat,end.lng,gap.point.lat,gap.point.lng),insideLen=v569InsideRouteLength(coords,fencePath),touchGap=coords.some(p=>Pt(p.lat,p.lng,gap.point.lat,gap.point.lng)<=e.GAP_EMPTY_RADIUS_METERS+14);if(endDist<=e.GAP_ENDPOINT_MAX_METERS&&insideLen>=e.GAP_MIN_INSIDE_LENGTH&&touchGap){recovered.push({id:`G${id++}`,gate:source,dest:{lat:gap.point.lat,lng:gap.point.lng,kind:"gap_recovery",name:"내부 공백길 직접검증"},coords,samples:Gt(coords,e.SEGMENT_NODE_SPACING),weight:Math.max(.82,(Yt(source.type)||1)*.82),name:`${source.name} → 내부 공백길`,kind:"gap_recovery",gapScore:gap.score})}}
 await z(e.TMAP_DELAY_MS)}return{routes:recovered,targets:gaps,attempted}}
 
-function v568ApplyEvidence(segments){for(const seg of segments||[]){const direct=(seg.routeHitIds||[]).length,commerce=seg.commercial?.count60||0,demand=seg.demand?.targetCount||0,access=seg.accessIndex||0;let conf=(seg.osmWayId?20:12)+Math.min(45,direct*18)+Math.min(18,commerce*3)+Math.min(10,demand*3)+(access>=50?7:access>=25?4:0);seg.confidence=Math.round(v56Clamp(conf));seg.siteFeasible=v568RoadSiteFeasible(seg);seg.roadEvidence=direct>=2?"TMAP 다중검증":direct===1?"TMAP 직접검증":seg.osmWayId?"도로망 기반추정":"경로 기반추정"}}
-function v568FlowEstimate(seg){return Math.round(v56Clamp(.38*(seg.flowIndex||0)+.22*(seg.commercialIndex||0)+.10*(seg.demandIndex||0)+.10*(seg.accessIndex||0)+.07*(seg.transportLinkIndex||0)+.07*(seg.entryIndex||0)+.06*(seg.captureIndex||0)))}
+function v568ApplyEvidence(segments){for(const seg of segments||[]){const direct=(seg.routeHitIds||[]).length,commerce=seg.commercial?.count60||0,demand=seg.demand?.targetCount||0,access=seg.accessIndex||0,external=seg.externalInflow?.routeCount||0;let conf=(seg.osmWayId?20:12)+Math.min(45,direct*18)+Math.min(18,commerce*3)+Math.min(10,demand*3)+(access>=50?7:access>=25?4:0)+Math.min(6,external*2);seg.confidence=Math.round(v56Clamp(conf));seg.siteFeasible=v568RoadSiteFeasible(seg);seg.roadEvidence=direct>=2?"TMAP 다중검증":direct===1?"TMAP 직접검증":external>=1?"외부상권 TMAP 검증":seg.osmWayId?"도로망 기반추정":"경로 기반추정"}}
+function v568FlowEstimate(seg){const base=.38*(seg.flowIndex||0)+.22*(seg.commercialIndex||0)+.10*(seg.demandIndex||0)+.10*(seg.accessIndex||0)+.07*(seg.transportLinkIndex||0)+.07*(seg.entryIndex||0)+.06*(seg.captureIndex||0),ext=seg.externalInflowIndex||0;return Math.round(v56Clamp(ext>0?base*.90+ext*.10:base))}
 
 function v566RenderFlowLinesFromSegments(segments,fencePath){
 [...(segments||[])].slice(0,e.HEATMAP_MAX_SEGMENTS).forEach(seg=>{
@@ -1968,7 +2065,7 @@ function v586AppendSavedAreaAnalysis(cache,fencePath,areaId,primary=false){
  try{
   const persistentFull=v585PersistentHasFullVisual(cache),restoredSegments=persistentFull?v585ExpandFlowSegments(cache.visual.flowSegments):cache.analysis.segments||[],analysis={...cache.analysis,segments:restoredSegments,entryModel:persistentFull?null:cache.analysis.entryModel};
   v566RenderFlowLinesFromSegments(restoredSegments,fencePath);
-  if(persistentFull)v585RenderSavedInflows(cache.visual.inflows);else v564RenderInflows(analysis.entryModel,fencePath);
+  if(persistentFull){v585RenderSavedInflows(cache.visual.inflows);v603RenderSavedExternalInflows(cache.visual.externalInflows||[])}else{v564RenderInflows(analysis.entryModel,fencePath);v603RenderExternalInflows(analysis.externalInflowModel,fencePath)}
   (analysis.topSegments||[]).forEach((seg,idx)=>ie(seg,idx));
   renderedSavedAreaIds.add(String(areaId||""));
   if(primary){
@@ -2003,7 +2100,7 @@ function v566RestoreCachedAnalysis(cache,fencePath,areaId){
  if(!cache?.analysis)return false;Rt();const ok=v586AppendSavedAreaAnalysis(cache,fencePath,areaId,true);applyMapDisplayFilters();return ok
 }
 
-function v56ProfileTop(t){const m={mainFlow:"메인동선",commercial:"상가밀집",transport:"교통접근",transportLink:"교통연계",entry:"진입효과",destination:"목적시설"};return Object.entries(t).filter(([k,v])=>m[k]&&Number.isFinite(v)).sort((a,b)=>b[1]-a[1]).slice(0,3).map(([k,v])=>`${m[k]} ${v}`).join(" · ")}
+function v56ProfileTop(t){const m={mainFlow:"메인동선",commercial:"상가밀집",transport:"교통접근",transportLink:"교통연계",external:"외부상권유입",entry:"진입효과",destination:"목적시설"};return Object.entries(t).filter(([k,v])=>m[k]&&Number.isFinite(v)).sort((a,b)=>b[1]-a[1]).slice(0,3).map(([k,v])=>`${m[k]} ${v}`).join(" · ")}
 
 
 async function ce(t){
@@ -2037,6 +2134,8 @@ for(const code of["CE7","FD6","CS2","MT1"]){
 const rows=await tt(code,{bounds:fenceBounds},2);U(u);
 B(rows)&&l.push(`상업활성 ${code}: 일부 표본만 수집`);rows.forEach((q=>{const id=q.id||`${q.place_name}|${q.x}|${q.y}`;
 if(!commerceSeen.has(id)&&Nt(+q.y,+q.x,t)){commerceSeen.add(id),commerceRaw.push(q)}}));await z(15)}
+const externalSearchRadius=Math.min(e.SEARCH_RADIUS_MAX,Math.ceil(h+e.EXTERNAL_INFLUENCE_RADIUS+120));
+const externalClusterResult=await v603CollectExternalClusters(g,externalSearchRadius,t,m,l);U(u);
 m.innerText="🎯 렌즈샵·앵커·타깃 시설을 조사 중...";
 const x=[],I=new Set,S=Object.keys(J).filter(key=>key!=="f_olive_hapa");
 for(const t of S){
@@ -2073,7 +2172,9 @@ let C=[];
 T.forEach((t=>{const e=+t.y,n=+t.x;
 if(t.brandKey&&J[t.brandKey]){const a=J[t.brandKey];a.isOlive?C.push({lat:e,lng:n,kind:"olive",name:t.place_name}):a.isDaiso&&C.push({lat:e,lng:n,kind:"daiso",name:t.place_name})}
 else t.isStealth&&t.stealthData&&C.push({lat:e,lng:n,kind:t.stealthData.type,name:t.place_name})})),
-C.push(...me(t,commerceRaw,3)),C.length||C.push({lat:r,lng:c,kind:"center",name:"펜스 중심부"}),C=Qt(C,r,c),m.innerText="🌐 핵심 시설·상업밀집지를 연결하는 보행 네트워크 생성 중...";
+C.push(...me(t,commerceRaw,3)),C.length||C.push({lat:r,lng:c,kind:"center",name:"펜스 중심부"}),C=Qt(C,r,c);
+const externalInflowModel=await v603BuildExternalInflowModel(externalClusterResult,C,t,m);U(u);
+m.innerText="🌐 핵심 시설·상업밀집지를 연결하는 보행 네트워크 생성 중...";
 
 const R=await async function(t,n,a,o,r,s){
 const i=function(t,n,a,o){
@@ -2200,25 +2301,25 @@ return n.some((n=>"f_lensme"===n.brandKey&&!isRelocationStore(n,a)&&Dt(+n.x,+n.y
 t.excluded&&(t.score=0)}));
 
 // V56.3: 횡단보도 자체가 아니라 교통시설→횡단→펜스진입→내부길목으로 실제 보행경로가 이어질 때만 교통-횡단 연계를 반영한다.
-N.forEach(seg=>{const em=v56EntryMetric(seg,entryModel,t);seg.entryDistance=em.distance;seg.entryIndex=em.index;seg.entryRouteHits=em.routeHits;seg.transportLink=v562TransportLinkMetric(seg,transportCrosswalkModel,entryModel)});
-const tlRaw=N.map(x=>x.transportLink?.raw||0);
-N.forEach(seg=>{seg.transportLinkIndex=transportCrosswalkModel.validCount?Math.round(100*oe(tlRaw,seg.transportLink?.raw||0)):0});
+N.forEach(seg=>{const em=v56EntryMetric(seg,entryModel,t);seg.entryDistance=em.distance;seg.entryIndex=em.index;seg.entryRouteHits=em.routeHits;seg.transportLink=v562TransportLinkMetric(seg,transportCrosswalkModel,entryModel);seg.externalInflow=v603ExternalMetric(seg,externalInflowModel)});
+const tlRaw=N.map(x=>x.transportLink?.raw||0),externalRaw=N.map(x=>x.externalInflow?.raw||0);
+N.forEach(seg=>{seg.transportLinkIndex=transportCrosswalkModel.validCount?Math.round(100*oe(tlRaw,seg.transportLink?.raw||0)):0;seg.externalInflowIndex=externalInflowModel.available?Math.round(100*oe(externalRaw,seg.externalInflow?.raw||0)):0});
 v568ApplyEvidence(N);
 const structure=v56Structure(N,entryModel,t);
-const profile=v56Profile(t,N,L,T,commerceRaw,{length:R.length,entryModel});profile.entry=v56CompleteProfile(entryModel,R.length);profile.transportLink=v562TransportLinkProfile(transportCrosswalkModel,N);profile.transportLinkAvailable=transportCrosswalkModel.validCount>0;
+const profile=v56Profile(t,N,L,T,commerceRaw,{length:R.length,entryModel});profile.entry=v56CompleteProfile(entryModel,R.length);profile.transportLink=v562TransportLinkProfile(transportCrosswalkModel,N);profile.transportLinkAvailable=transportCrosswalkModel.validCount>0;profile.external=v603ExternalProfile(externalInflowModel,N);profile.externalAvailable=!!externalInflowModel.available;
 const weights=v56Weights(profile);
 N.forEach(seg=>{
 if(!seg.zone){seg.progressRatio=v56Clamp((seg.entryDistance||0)/Math.max(120,structure.depth),0,1.25);seg.zone=seg.progressRatio<=.28?"entry":seg.progressRatio<=.72?"middle":"inner"}
-let score=(weights.flow*seg.flowIndex+weights.demand*seg.demandIndex+weights.commercial*seg.commercialIndex+weights.access*seg.accessIndex+weights.transportLink*seg.transportLinkIndex+weights.entry*seg.entryIndex+weights.capture*seg.captureIndex)/100;
-seg.compositeContrib={flow:weights.flow*seg.flowIndex/100,demand:weights.demand*seg.demandIndex/100,commercial:weights.commercial*seg.commercialIndex/100,access:weights.access*seg.accessIndex/100,transportLink:weights.transportLink*seg.transportLinkIndex/100,entry:weights.entry*seg.entryIndex/100,capture:weights.capture*seg.captureIndex/100};
+let score=(weights.flow*seg.flowIndex+weights.demand*seg.demandIndex+weights.commercial*seg.commercialIndex+weights.access*seg.accessIndex+weights.transportLink*seg.transportLinkIndex+weights.external*(seg.externalInflowIndex||0)+weights.entry*seg.entryIndex+weights.capture*seg.captureIndex)/100;
+seg.compositeContrib={flow:weights.flow*seg.flowIndex/100,demand:weights.demand*seg.demandIndex/100,commercial:weights.commercial*seg.commercialIndex/100,access:weights.access*seg.accessIndex/100,transportLink:weights.transportLink*seg.transportLinkIndex/100,external:weights.external*(seg.externalInflowIndex||0)/100,entry:weights.entry*seg.entryIndex/100,capture:weights.capture*seg.captureIndex/100};
 seg.candidateType=v56CandidateType(seg);seg.competition.teamKill&&(score=0);seg.excluded&&(score=0);seg.score=v56Clamp(score)});
 const $=N.filter((t=>!t.excluded)).map((t=>t.score)).sort(((t,e)=>t-e));
 N.forEach((t=>{t.topPercent=Math.max(1,101-Math.round(100*ae($,t.score)))})),
 v566RenderFlowLinesFromSegments(N,w||t);
 
-v564RenderInflows(entryModel,t);
+v564RenderInflows(entryModel,t);v603RenderExternalInflows(externalInflowModel,t);
 const H=ye(N,t,3);
-i={context:s,qualityIssues:l,segments:N,topSegments:H,routeCount:R.length,roadSegmentCount:osmSegments.length,coverageRouteCount:coverageRoutes.length,gapRecoveryCount:gapRecovery.routes.length,gapTargetCount:gapRecovery.targets.length,profile,weights,structure,entryModel,transportCrosswalkModel};
+i={context:s,qualityIssues:l,segments:N,topSegments:H,routeCount:R.length,roadSegmentCount:osmSegments.length,coverageRouteCount:coverageRoutes.length,gapRecoveryCount:gapRecovery.routes.length,gapTargetCount:gapRecovery.targets.length,profile,weights,structure,entryModel,transportCrosswalkModel,externalInflowModel};
 const F=H.length?Math.round(H.reduce(((t,e)=>t+e.score),0)/H.length):0;
 
 let j=`
@@ -2234,8 +2335,9 @@ let j=`
 <div class="rounded bg-teal-50 px-1 py-1"><span class="block text-slate-400">교통연계</span><b class="text-teal-700">${profile.transportLinkAvailable?profile.transportLink:"-"}</b></div>
 <div class="rounded bg-amber-50 px-1 py-1"><span class="block text-slate-400">진입</span><b class="text-amber-700">${profile.entry}</b></div>
 <div class="rounded bg-pink-50 px-1 py-1"><span class="block text-slate-400">목적</span><b class="text-pink-700">${profile.destination}</b></div>
+<div class="rounded bg-violet-50 px-1 py-1"><span class="block text-slate-400">외부상권</span><b class="text-violet-700">${profile.externalAvailable?profile.external:"-"}</b></div>
 </div>
-<div class="mt-2 rounded-lg bg-white/80 border border-indigo-100 px-2 py-1.5 text-[9.5px] text-slate-600 font-bold">지도 표시 필터에서 순위·유입 화살표·유동인구를 필요한 것만 켜서 볼 수 있습니다.</div>
+<div class="mt-2 rounded-lg bg-white/80 border border-indigo-100 px-2 py-1.5 text-[9.5px] text-slate-600 font-bold">지도 표시의 ‘유입 화살표’를 켜면 메인/보조 유입과 함께 <span class="text-violet-700">펜스 밖 먹자·주점권 → 내부 유입경로</span>를 볼 수 있습니다.</div>
 <p class="text-[9px] text-slate-400 mt-1.5">가중치는 상권 성격에 따라 제한적으로 조정됩니다. 전체 도로망을 기본 후보로 사용하고, OSM에 없는 내부 공백도 자동 탐지해 최대 4곳을 TMAP으로 직접 검증합니다.</p>
 ${l.length?`<p class="text-[9.5px] text-amber-700 mt-1"><b>데이터 주의:</b> ${V([...new Set(l)].join(" · "))}</p>`:""}
 </div>`;
@@ -2259,6 +2361,7 @@ j+=`
 <div class="bg-cyan-50 rounded p-2"><span class="text-slate-500">🏬 상업활성</span><b class="float-right text-cyan-700">${e.compositeContrib.commercial.toFixed(1)}/${weights.commercial.toFixed(0)}</b></div>
 <div class="bg-emerald-50 rounded p-2"><span class="text-slate-500">🚇 교통접근</span><b class="float-right text-emerald-700">${e.compositeContrib.access.toFixed(1)}/${weights.access.toFixed(0)}</b></div>
 <div class="bg-teal-50 rounded p-2"><span class="text-slate-500">🚦 교통-횡단연계</span><b class="float-right text-teal-700">${e.compositeContrib.transportLink.toFixed(1)}/${weights.transportLink.toFixed(0)}</b></div>
+<div class="bg-violet-50 rounded p-2"><span class="text-slate-500">🌃 외부상권 유입</span><b class="float-right text-violet-700">${e.compositeContrib.external.toFixed(1)}/${weights.external.toFixed(0)}</b></div>
 <div class="bg-amber-50 rounded p-2"><span class="text-slate-500">🚪 진입효과</span><b class="float-right text-amber-700">${e.compositeContrib.entry.toFixed(1)}/${weights.entry.toFixed(0)}</b></div>
 <div class="bg-orange-50 rounded p-2"><span class="text-slate-500">🔀 길목성</span><b class="float-right text-orange-700">${e.compositeContrib.capture.toFixed(1)}/10</b></div>
 </div>
@@ -2272,10 +2375,12 @@ j+=`
 <div class="flex justify-between"><span>보행 분기방향</span><b>${e.junction.armCount}방향</b></div>
 <div class="flex justify-between"><span>대표 진입부부터</span><b>${Number.isFinite(e.entryDistance)?Math.round(e.entryDistance)+"m":"-"}</b></div>
 <div class="flex justify-between"><span>교통-횡단 연계</span><b class="text-teal-700">${e.transportLink?.routeCount?`${e.transportLink.routeCount}경로 · 유효횡단 ${e.transportLink.crosswalkCount}곳`:"없음"}</b></div>
-<div class="flex justify-between"><span>표시 위치</span><b class="text-emerald-700">${e.routeHitIds.length?"도로망 + TMAP 검증":"전체 도로망 기반"}</b></div>
+<div class="flex justify-between"><span>외부상권 직접 유입</span><b class="text-violet-700">${e.externalInflow?.routeCount?`${e.externalInflow.routeCount}경로 · ${e.externalInflow.clusterCount}개 유입권`:"직접 통과 없음"}</b></div>
+<div class="flex justify-between"><span>표시 위치</span><b class="text-emerald-700">${e.routeHitIds.length||e.externalInflow?.routeCount?"도로망 + TMAP 검증":"전체 도로망 기반"}</b></div>
 <div class="flex justify-between"><span>경쟁 환경</span><b>${i}</b></div>
 </div>
 ${s?`<div class="bg-blue-50/70 rounded-lg p-2 text-[9.5px] text-blue-700 mb-2"><b>주요 통과경로</b><br>${s}</div>`:""}
+${v603ExternalSourceHtml(e,externalInflowModel)}
 <div class="bg-indigo-50/70 rounded-lg p-2 text-[10.5px] text-indigo-700 leading-snug mb-2">${V(r)}</div>
 <div class="flex items-center justify-between gap-2 mb-2"><button onclick="focusTopCandidate(${t})" class="text-[10px] font-black bg-slate-800 text-white rounded px-2.5 py-1.5">📍 지도에서 보기</button><span class="text-[9px] text-slate-400">후보구간 약 ${Math.round(e.recommendationWindow?.length||28)}m</span></div>
 <div class="rounded-lg border border-slate-200 bg-white p-2 text-[9.5px] text-slate-600">
@@ -2288,7 +2393,7 @@ H.length||(j+=`<div class="text-xs text-rose-600 font-bold">TOP 후보를 만들
 U(u),P.innerHTML=j,document.getElementById("rankingResultBox").classList.remove("hidden"),applyMapDisplayFilters(),
 lastAnalyzedFenceKey=analysisFenceKey,lastAnalyzedSavedId=expandedSavedAreaId!=null?String(expandedSavedAreaId):(b!=null?String(b):null);
 if(lastAnalyzedSavedId){savedAreaAnalysisCache.set(String(lastAnalyzedSavedId),{fenceKey:analysisFenceKey,analysis:i,html:P.innerHTML});if(H.length)v581PersistAreaAnalysis(String(lastAnalyzedSavedId),analysisFenceKey,i,P.innerHTML,t)}
-m.innerText=`TOP3 완료 · 전체도로 ${osmSegments.length}구간 · TMAP ${R.length}경로 · 공백검증 ${gapRecovery.targets.length}곳/복구 ${gapRecovery.routes.length}경로 · 유효 교통-횡단 ${transportCrosswalkModel.validCount}곳 · 후보 ${H.length}곳${lastAnalyzedSavedId&&H.length?" · 순위 저장완료":""}`;
+m.innerText=`TOP3 완료 · 전체도로 ${osmSegments.length}구간 · 내부 TMAP ${R.length}경로 · 외부상권 ${externalInflowModel.clusters.length}개/유입 ${externalInflowModel.routes.length}경로 · 공백검증 ${gapRecovery.targets.length}곳/복구 ${gapRecovery.routes.length}경로 · 후보 ${H.length}곳${lastAnalyzedSavedId&&H.length?" · 순위 저장완료":""}`;
 }catch(t){
 if("AbortError"===t.name)return void(m.textContent="입지 분석을 취소했습니다.");
 const detail=String(t?.message||t||"알 수 없는 오류").slice(0,140);console.error("V59.5 분석 에러:",t);
