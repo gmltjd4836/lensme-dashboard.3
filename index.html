@@ -537,7 +537,7 @@ details[open]>summary::before{color:#6d63ff!important}
 <script src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=c045609510f8b75252389123f086be48&libraries=services,drawing"></script>
 
 <script>
-/* V61.3: 저장상권 선택 후 후보위치를 찍으면 현재 저장상권에 자동 귀속. 후보 마커 소형화/라벨 가림 개선.
+/* V61.4: 저장상권 선택 후 후보위치를 찍으면 현재 저장상권에 자동 귀속. 후보 마커 소형화/라벨 가림 개선.
    V60.0 프리미엄 UI 기반. 올리브영/다이소 현재 화면 지도표시 복구.
    기존 저장상권·TOP3·전국 브랜드 수량 로직은 유지한다. */
 /* V60.0: V59.5 전체 기능 그대로 유지.
@@ -566,7 +566,7 @@ level:12}),h=new kakao.maps.services.Places,p=new kakao.maps.services.Geocoder,y
 }),w=null,b=null,k={},x={},I=!1,S=null,T=!1,O=0,R=null,analysisLines=[],rankOverlays=[],inflowOverlays=[],flowLines=[],expandedSavedAreaId=null,focusedSavedAreaId=null,selectedSavedAreaIds=new Set(),renderedSavedAreaIds=new Set(),savedAreaOverlayGroups=new Map(),currentRenderSavedAreaId=null,lastSavedAreaToggleKey="",lastSavedAreaToggleAt=0,lastAnalyzedSavedId=null,lastAnalyzedFenceKey="",savedAreaAnalysisCache=new Map,savedAreaPersistentAnalysis=v581LoadPersistentAnalysisStore(),savedBubbleEls={},provinceLabelOverlays=[],cityLabelOverlays=[],dongLabelOverlays=[],adminFocusOverlay=null,regionLabelTimer=null,regionLabelRequestSeq=0,mapDrillState={level:"national",si:null,gu:null,dong:null},lastAutoRegionKey="",regionFanoutToken=0,municipalityCenterCache=new Map,hapaOlivePlaceCache=new Map,legalDongTreePromise=null,legalDongTreeData=null;
 
 const V610_USER_MARKER_KEY="lensmeUserMarkersV61_0";
-let userMarkers=v610LoadUserMarkers(),userMarkerObjects=new Map(),userMarkerMode=false,userMarkerOpenId=null,userMarkerAddGuardAt=0;
+let userMarkers=v610LoadUserMarkers(),userMarkerObjects=new Map(),userMarkerMode=false,userMarkerOpenId=null,userMarkerAddGuardAt=0,userMarkerCaptureEl=null;
 
 /* V61.3: 내 후보 마커는 현재 열린 저장상권에 자동 귀속한다.
    - 선택한 저장상권 안에서 찍으면 해당 상권 후보로 자동 저장
@@ -699,28 +699,86 @@ function v610ApplyUserMarkerVisibility(show=true){
   if(!visible&&String(userMarkerOpenId||"")===String(key))userMarkerOpenId=null
  }
 }
+
+function v614RemoveCandidateCapture(){
+ if(userMarkerCaptureEl){
+  try{userMarkerCaptureEl.remove()}catch(e){}
+  userMarkerCaptureEl=null
+ }
+}
+function v614InstallCandidateCapture(){
+ v614RemoveCandidateCapture();
+ const mapEl=document.getElementById("map");
+ if(!mapEl||!f)return false;
+
+ const layer=document.createElement("div");
+ layer.id="v614CandidateCapture";
+ layer.style.cssText="position:absolute;inset:0;z-index:999999;cursor:crosshair;background:rgba(14,165,233,.015);touch-action:none;";
+
+ const guide=document.createElement("div");
+ guide.style.cssText="position:absolute;left:50%;top:14px;transform:translateX(-50%);pointer-events:none;background:rgba(15,23,42,.92);color:white;border:1px solid rgba(255,255,255,.75);border-radius:999px;padding:8px 13px;font:900 11px Pretendard,sans-serif;box-shadow:0 8px 22px rgba(15,23,42,.25);white-space:nowrap;";
+ const area=expandedSavedAreaId!=null?v620AreaById(expandedSavedAreaId):null;
+ guide.textContent=area?`📌 ${area.name} · 펜스 안 후보 위치를 클릭하세요`:"📌 후보 위치를 클릭하세요";
+ layer.appendChild(guide);
+
+ layer.addEventListener("click",ev=>{
+  if(!userMarkerMode)return;
+  ev.preventDefault();
+  ev.stopPropagation();
+  ev.stopImmediatePropagation?.();
+
+  const rect=mapEl.getBoundingClientRect();
+  const x=ev.clientX-rect.left;
+  const y=ev.clientY-rect.top;
+
+  try{
+   const projection=f.getProjection();
+   const latLng=projection.coordsFromContainerPoint(new kakao.maps.Point(x,y));
+   if(!latLng)throw new Error("좌표 변환 실패");
+   v610AddUserMarkerAt(latLng.getLat(),latLng.getLng(),expandedSavedAreaId)
+  }catch(err){
+   console.error("후보 위치 좌표 변환 실패",err);
+   alert("후보 위치 좌표를 읽지 못했습니다. 지도를 한 번 이동한 뒤 다시 시도해주세요.")
+  }
+ },true);
+
+ /* #map은 이미 지도 컨테이너라 absolute 자식 배치 가능 */
+ const computed=getComputedStyle(mapEl);
+ if(computed.position==="static")mapEl.style.position="relative";
+ mapEl.appendChild(layer);
+ userMarkerCaptureEl=layer;
+ return true
+}
+
 function toggleUserMarkerMode(){
- if(T||I)return alert("분석 또는 상권 그리기가 끝난 뒤 내 후보를 추가해주세요.");
+ if(I)return alert("상권 경계 그리기를 끝낸 뒤 후보 위치를 추가해주세요.");
  const btn=document.getElementById("btnUserMarkerMode");
 
- /* 이미 후보 추가 모드면 버튼을 다시 눌러 취소 */
+ /* 이미 후보 추가 모드면 취소 */
  if(userMarkerMode){
   userMarkerMode=false;
+  v614RemoveCandidateCapture();
   if(btn){btn.textContent="📍 지도에서 찍기";btn.classList.add("bg-sky-600");btn.classList.remove("bg-amber-500")}
   document.getElementById("statusMessage").innerText="내 후보 추가를 취소했습니다.";
   return
  }
 
- /* V61.3: 저장상권을 먼저 열어야 한다. 이후 찍는 후보는 무조건 그 상권 소속. */
+ /* 반드시 저장상권을 먼저 열고 그 상권에 귀속 */
  const activeArea=expandedSavedAreaId!=null?v620AreaById(expandedSavedAreaId):null;
  if(!activeArea){
-  alert("먼저 저장상권 말풍선을 눌러 TOP3를 연 뒤 후보 위치를 추가해주세요. 후보는 현재 열린 저장상권에 자동 저장됩니다.");
+  alert("먼저 저장상권 말풍선을 눌러 TOP3를 연 뒤 후보 위치를 추가해주세요.");
   return
  }
 
  userMarkerMode=true;
- if(btn){btn.textContent="✋ 펜스 안 위치 클릭";btn.classList.remove("bg-sky-600");btn.classList.add("bg-amber-500")}
- document.getElementById("statusMessage").innerText=`📌 ${activeArea.name} 후보 추가 · 펜스 안 원하는 위치를 클릭하면 이 저장상권에 자동 포함됩니다.`
+ if(btn){btn.textContent="✋ 지도에서 위치 선택 중";btn.classList.remove("bg-sky-600");btn.classList.add("bg-amber-500")}
+ document.getElementById("statusMessage").innerText=`📌 ${activeArea.name} · 펜스 안 원하는 곳을 한 번 클릭하세요.`;
+
+ if(!v614InstallCandidateCapture()){
+  userMarkerMode=false;
+  if(btn){btn.textContent="📍 지도에서 찍기";btn.classList.add("bg-sky-600");btn.classList.remove("bg-amber-500")}
+  alert("지도 클릭 레이어를 만들지 못했습니다. 새로고침 후 다시 시도해주세요.")
+ }
 }
 function v610AddUserMarkerAt(lat,lng,forcedAreaId=null){
  const now=(window.performance?.now?.()||Date.now());
@@ -734,6 +792,7 @@ function v610AddUserMarkerAt(lat,lng,forcedAreaId=null){
 
  if(!area){
   userMarkerMode=false;
+  v614RemoveCandidateCapture();
   const btn=document.getElementById("btnUserMarkerMode");
   if(btn){btn.textContent="📍 지도에서 찍기";btn.classList.add("bg-sky-600");btn.classList.remove("bg-amber-500")}
   alert("저장상권이 선택되어 있지 않습니다. 저장상권 말풍선을 먼저 눌러주세요.");
@@ -766,6 +825,7 @@ function v610AddUserMarkerAt(lat,lng,forcedAreaId=null){
  v610SaveUserMarkers();
  v610RenderUserMarkers();
  userMarkerMode=false;
+ v614RemoveCandidateCapture();
 
  const btn=document.getElementById("btnUserMarkerMode");
  if(btn){btn.textContent="📍 지도에서 찍기";btn.classList.add("bg-sky-600");btn.classList.remove("bg-amber-500")}
@@ -1711,14 +1771,7 @@ for(const si of sis){
  {strokeWeight:active?5:focused?4:2,strokeColor:active?"#9f1239":focused?"#f43f5e":"#e11d48",strokeOpacity:active?1:focused?.9:.65,fillOpacity:active?.24:focused?.13:.075,fillColor:active?"#e11d48":focused?"#fb7185":"#f43f5e"},
  (mouseEvent=>{
   /* V61.2: 후보위치 추가 모드에서는 상권 선택/해제보다 후보 생성이 우선 */
-  if(userMarkerMode){
-   const p=mouseEvent?.latLng;
-   if(p){
-    const targetAreaId=expandedSavedAreaId!=null?String(expandedSavedAreaId):areaId;
-    v610AddUserMarkerAt(p.getLat(),p.getLng(),targetAreaId);
-    return
-   }
-  }
+  if(userMarkerMode)return;
   selectSavedPolygon(areaId)
  })
 );
@@ -2792,7 +2845,7 @@ document.getElementById("statusMessage").textContent="✅ 펜스 완성 · 상�
 setTimeout((()=>{T||ce(w)}),60)}));
 
 kakao.maps.event.addListener(f,"zoom_changed",(()=>{applyMapDisplayFilters();v571ScheduleRegionLabels()}));
-kakao.maps.event.addListener(f,"click",(mouseEvent=>{if(!userMarkerMode||T||I)return;const p=mouseEvent.latLng;v610AddUserMarkerAt(p.getLat(),p.getLng())}));
+kakao.maps.event.addListener(f,"click",(mouseEvent=>{if(!userMarkerMode||I||userMarkerCaptureEl)return;const p=mouseEvent.latLng;v610AddUserMarkerAt(p.getLat(),p.getLng(),expandedSavedAreaId)}));
 kakao.maps.event.addListener(f,"idle",(async function(){if(!I&&!w&&!T){if(f.getLevel()<=5){await Ht();await v601LoadVisibleAnchors()}else if(f.getLevel()<=7)await v601LoadVisibleAnchors()}v571ScheduleRegionLabels()}));
 v586InitLayerPrefs();
 v595LoadCache();
@@ -2802,7 +2855,7 @@ v620MigrateExistingUserMarkersToAreas();
 Ct();
 v610RenderUserMarkers();
 v572GoNational();
-document.getElementById("statusMessage").innerText="🗺️ 새로고침 시 대한민국 전체 지도부터 시작합니다. 저장상권 말풍선은 여러 개 선택할 수 있고 같은 말풍선을 다시 누르면 그 상권만 해제됩니다. 표시 메뉴에서 끈 레이어는 지도 확대·축소 후에도 그대로 유지됩니다. 저장상권의 TOP3·유동인구는 상권 본체에도 함께 저장됩니다. 내 후보는 TOP3가 열린 저장상권에 자동 귀속되며, 작은 점 + 상단 이름표로 표시됩니다. 해당 상권 말풍선을 누르면 함께 복원되고 백업에도 보존됩니다.";
+document.getElementById("statusMessage").innerText="🗺️ 새로고침 시 대한민국 전체 지도부터 시작합니다. 저장상권 말풍선은 여러 개 선택할 수 있고 같은 말풍선을 다시 누르면 그 상권만 해제됩니다. 표시 메뉴에서 끈 레이어는 지도 확대·축소 후에도 그대로 유지됩니다. 저장상권의 TOP3·유동인구는 상권 본체에도 함께 저장됩니다. 내 후보는 TOP3가 열린 저장상권에 자동 귀속되며, 클릭 전용 레이어로 위치를 정확히 찍고 작은 점 + 상단 이름표로 표시됩니다. 해당 상권 말풍선을 누르면 함께 복원되고 백업에도 보존됩니다.";
 Ft();
 setTimeout(()=>{v569NormalizeSavedRegions().catch(err=>console.warn("saved region normalize failed",err))},350);
 /* 전국 수량은 저장상권/TOP3 복원보다 뒤에, 한 브랜드씩 순차 실행한다. */
