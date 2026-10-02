@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>렌즈미 상권 분석 지도 V61.10 PREMIUM</title>
+<title>렌즈미 상권 분석 지도 V61.11 PREMIUM</title>
 <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css" rel="stylesheet">
 <script src="https://cdn.tailwindcss.com"></script>
 <style>
@@ -316,7 +316,7 @@ details[open]>summary::before{color:#6d63ff!important}
 .region-crumb.current{background:#eeefff!important;border-color:#dfe1ff!important;color:#534fd8!important}
 .region-nav-meta{font-size:8.5px!important;color:#95a0b1!important}
 
-/* V61.10 유동인구 범례 - 지도색을 가리지 않는 심플 가로형 */
+/* V61.11 유동인구 범례 - 지도색을 가리지 않는 심플 가로형 */
 .flow-legend{
   right:18px!important;bottom:18px!important;width:230px!important;padding:10px 12px!important;
   border-radius:14px!important;background:rgba(255,255,255,.93)!important;border:1px solid rgba(226,232,240,.96)!important;
@@ -405,13 +405,24 @@ details[open]>summary::before{color:#6d63ff!important}
 
 
 
+
+/* V61.11 저장상권 펜스 역할색 분리 */
+.poly-nametag.active{
+  background:linear-gradient(135deg,#eef2ff,#f5f3ff)!important;
+  color:#4338ca!important;
+  border-color:#a5b4fc!important;
+  box-shadow:0 0 0 4px rgba(79,70,229,.07),0 10px 24px rgba(49,46,129,.11)!important;
+}
+.poly-nametag.active::after{border-color:#a5b4fc!important}
+.poly-nametag-check{background:#e0e7ff!important;color:#4338ca!important}
+
 </style>
 </head>
 <body class="flex flex-col md:flex-row h-screen text-slate-800">
 <div id="premiumSidebar" class="w-full md:w-1/4 bg-white border-r border-gray-200 p-6 flex flex-col shadow-lg z-20 overflow-y-auto">
 <h1 id="premiumHeader" class="text-xl font-extrabold text-slate-800 border-b-4 border-indigo-500 pb-3 mb-4 flex justify-between items-center">
 <span class="premium-brand"><span class="premium-brand-kicker">LENS ME</span><span class="premium-brand-title">상권 분석 지도</span></span>
-<span class="premium-version text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded-full font-bold">V61.10</span>
+<span class="premium-version text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded-full font-bold">V61.11</span>
 </h1>
 
 <div class="mb-3">
@@ -576,7 +587,7 @@ level:12}),h=new kakao.maps.services.Places,p=new kakao.maps.services.Geocoder,y
 const V610_USER_MARKER_KEY="lensmeUserMarkersV61_0";
 let userMarkers=v610LoadUserMarkers(),userMarkerObjects=new Map(),userMarkerMode=false,userMarkerOpenId=null,userMarkerAddGuardAt=0,userMarkerCaptureEl=null;
 
-/* V61.10: 서울 상권단위 유동인구 패널 제거.
+/* V61.11: 서울 상권단위 유동인구 패널 제거.
    기존 호출부 호환을 위해 no-op 함수만 유지한다. */
 function v616HideSeoulPanel(){}
 function v616UpdateSeoulPanel(){return Promise.resolve(null)}
@@ -922,7 +933,20 @@ document.getElementById("heatLegend")?.classList.toggle("hidden",!showFlow);
 function v571EnableAnalysisLayers(){/* V58.8: 최초 기본값은 모두 ON. 사용자가 직접 끈 뒤에는 줌/이동/상권선택으로 다시 켜지지 않는다. */}
 
 function v564HideAnalysis(){_.forEach(o=>{try{o.setMap(null)}catch(e){}});flowLines.forEach(o=>{try{o.setMap(null)}catch(e){}});document.getElementById("heatLegend")?.classList.add("hidden");document.getElementById("rankingResultBox")?.classList.add("hidden")}
-function v564SetSavedAreaVisual(activeId=expandedSavedAreaId){const activeKey=activeId==null?null:String(activeId),focusKey=focusedSavedAreaId==null?null:String(focusedSavedAreaId);Object.entries(k).forEach(([id,poly])=>{const key=String(id),selected=selectedSavedAreaIds.has(key)||key===activeKey,focused=key===focusKey;poly.setOptions({fillColor:focused?"#e11d48":selected?"#fb7185":"#f43f5e",fillOpacity:focused?.26:selected?.18:.075,strokeColor:focused?"#9f1239":selected?"#e11d48":"#e11d48",strokeOpacity:focused?1:selected?.92:.65,strokeWeight:focused?5:selected?4:2})})}
+function v564SetSavedAreaVisual(activeId=expandedSavedAreaId){
+ const activeKey=activeId==null?null:String(activeId),focusKey=focusedSavedAreaId==null?null:String(focusedSavedAreaId);
+ Object.entries(k).forEach(([id,poly])=>{
+  const key=String(id),selected=selectedSavedAreaIds.has(key)||key===activeKey,focused=key===focusKey;
+  poly.setOptions({
+   fillColor:focused?"#6366f1":selected?"#818cf8":"#cbd5e1",
+   fillOpacity:focused?.075:selected?.05:.012,
+   strokeColor:focused?"#3730a3":selected?"#4f46e5":"#94a3b8",
+   strokeOpacity:focused?1:selected?.96:.52,
+   strokeWeight:focused?4:selected?3:1.4,
+   strokeStyle:selected||focused?"solid":"shortdash"
+  })
+ })
+}
 function isRelocationStore(t,ctx){return !!(ctx&&ctx.mode==="reloc"&&Array.isArray(ctx.relocationStoreIds)&&ctx.relocationStoreIds.includes(D(t)))}
 function U(t){if(t!==O||r?.signal.aborted)throw new DOMException("분석 취소","AbortError")}
 function $(t){T=t;const b=document.getElementById("cancelAnalysisBtn");b&&b.classList.toggle("hidden",!t)}
@@ -1670,7 +1694,7 @@ function v571ScheduleRegionLabels(){clearTimeout(regionLabelTimer);regionLabelTi
 
 let vt=new kakao.maps.drawing.DrawingManager({
 map:f,drawingMode:[kakao.maps.drawing.OverlayType.POLYGON],guideTooltip:["그리기 시작: 클릭","완료: 더블클릭"],
-polygonOptions:{draggable:!1,removable:!1,editable:!0,strokeColor:"#be185d",strokeWeight:3,fillColor:"#f43f5e",fillOpacity:.2}
+polygonOptions:{draggable:!1,removable:!1,editable:!0,strokeColor:"#4f46e5",strokeWeight:3,strokeOpacity:.96,strokeStyle:"solid",fillColor:"#818cf8",fillOpacity:.055}
 }),Lt=function(){
 try{const t=JSON.parse(localStorage.getItem("lensmePolygonsV43_2")||"[]");if(!Array.isArray(t))throw new Error("invalid");
 return t.filter((t=>t?.id&&t?.name&&j(H(t.geometry||t.path))))}
@@ -1778,12 +1802,12 @@ for(const si of sis){
   for(const dong of Object.keys(grouped[si][gu]).sort((a,b)=>a.localeCompare(b,"ko"))){
    const dongEl=document.createElement("details");dongEl.open=!0;dongEl.innerHTML=`<summary>${V(dong)}</summary><div class="tree-indent"></div>`;const dongBody=dongEl.querySelector(".tree-indent");
    for(const area of grouped[si][gu][dong].sort((a,b)=>String(a.name).localeCompare(String(b.name),"ko"))){
-    const areaId=String(area.id),active=selectedSavedAreaIds.has(areaId)||activeKey===areaId,focused=focusKey===areaId,row=document.createElement("div");row.className=`flex items-center gap-1 py-1.5 px-1 rounded-lg border-b border-slate-100 last:border-0 ${focused?"bg-rose-50":active?"bg-rose-50/70":""}`;
-    row.innerHTML=`<button class="min-w-0 flex-1 text-left font-extrabold ${focused?"text-rose-800":active?"text-rose-700":"text-slate-700"} hover:text-rose-600 truncate" data-area-select="${V(areaId)}">${focused?"▶":active?"●":"○"} ${V(area.name)}</button><button data-area-rename="${V(areaId)}" title="이름 변경" class="text-[10px] px-1.5 py-1 rounded bg-slate-50 text-slate-500">이름</button><button data-area-redraw="${V(areaId)}" title="경계 수정" class="text-[10px] px-1.5 py-1 rounded bg-slate-50 text-slate-500">수정</button><button data-area-delete="${V(areaId)}" title="삭제" class="text-[10px] px-1.5 py-1 rounded bg-slate-50 text-slate-400">×</button>`;
+    const areaId=String(area.id),active=selectedSavedAreaIds.has(areaId)||activeKey===areaId,focused=focusKey===areaId,row=document.createElement("div");row.className=`flex items-center gap-1 py-1.5 px-1 rounded-lg border-b border-slate-100 last:border-0 ${focused?"bg-indigo-50":active?"bg-indigo-50/70":""}`;
+    row.innerHTML=`<button class="min-w-0 flex-1 text-left font-extrabold ${focused?"text-indigo-800":active?"text-indigo-700":"text-slate-700"} hover:text-indigo-600 truncate" data-area-select="${V(areaId)}">${focused?"▶":active?"●":"○"} ${V(area.name)}</button><button data-area-rename="${V(areaId)}" title="이름 변경" class="text-[10px] px-1.5 py-1 rounded bg-slate-50 text-slate-500">이름</button><button data-area-redraw="${V(areaId)}" title="경계 수정" class="text-[10px] px-1.5 py-1 rounded bg-slate-50 text-slate-500">수정</button><button data-area-delete="${V(areaId)}" title="삭제" class="text-[10px] px-1.5 py-1 rounded bg-slate-50 text-slate-400">×</button>`;
     row.querySelector('[data-area-select]')?.addEventListener('click',()=>selectSavedPolygon(areaId));row.querySelector('[data-area-rename]')?.addEventListener('click',()=>renamePolygon(areaId));row.querySelector('[data-area-redraw]')?.addEventListener('click',()=>redrawPolygon(areaId));row.querySelector('[data-area-delete]')?.addEventListener('click',()=>deletePolygon(areaId));dongBody.appendChild(row);
     const poly=W(
  area.geometry||area.path,
- {strokeWeight:active?5:focused?4:2,strokeColor:active?"#9f1239":focused?"#f43f5e":"#e11d48",strokeOpacity:active?1:focused?.9:.65,fillOpacity:active?.24:focused?.13:.075,fillColor:active?"#e11d48":focused?"#fb7185":"#f43f5e"},
+ {strokeWeight:focused?4:active?3:1.4,strokeColor:focused?"#3730a3":active?"#4f46e5":"#94a3b8",strokeOpacity:focused?1:active?.96:.52,strokeStyle:focused||active?"solid":"shortdash",fillOpacity:focused?.075:active?.05:.012,fillColor:focused?"#6366f1":active?"#818cf8":"#cbd5e1"},
  (mouseEvent=>{
   /* V61.2: 후보위치 추가 모드에서는 상권 선택/해제보다 후보 생성이 우선 */
   if(userMarkerMode)return;
@@ -2584,7 +2608,7 @@ function v566RenderFlowLinesFromSegments(segments,fencePath){
    new kakao.maps.LatLng(seg.b.lat,seg.b.lng)
   ];
 
-  /* V61.10:
+  /* V61.11:
      도로 위에 얇은 녹색→노랑→주황→빨강 흐름선을 표시.
      파란색은 유입 화살표 전용으로 분리해 지도 판독성을 높인다. */
   v620AddPolylinePair(path,color,coreWeight,coreOpacity,72,false,"flow")
@@ -2994,7 +3018,7 @@ v618BindSeoulFilterEvents();
 Ct();
 v610RenderUserMarkers();
 v572GoNational();
-document.getElementById("statusMessage").innerText="🗺️ 새로고침 시 대한민국 전체 지도부터 시작합니다. 저장상권 말풍선은 여러 개 선택할 수 있고 같은 말풍선을 다시 누르면 그 상권만 해제됩니다. 표시 메뉴에서 끈 레이어는 지도 확대·축소 후에도 그대로 유지됩니다. 저장상권의 TOP3·유동인구는 상권 본체에도 함께 저장됩니다. 내 후보는 별도 목록 없이 현재 열린 저장상권 안에 바로 저장되며, 상권을 다시 열면 작은 점 + 상단 이름표로 지도에 표시됩니다. 유동인구는 도로 위 녹색→노랑→주황→빨강의 얇은 흐름선으로 표시하고, 유입경로는 흰색 테두리의 파란 화살표로 구분합니다. TOP3는 지하철역 중심 좌표를 피하고 실제 도로 후보에만 표시됩니다. 해당 상권 말풍선을 누르면 함께 복원되고 백업에도 보존됩니다.";
+document.getElementById("statusMessage").innerText="🗺️ 새로고침 시 대한민국 전체 지도부터 시작합니다. 저장상권 말풍선은 여러 개 선택할 수 있고 같은 말풍선을 다시 누르면 그 상권만 해제됩니다. 표시 메뉴에서 끈 레이어는 지도 확대·축소 후에도 그대로 유지됩니다. 저장상권의 TOP3·유동인구는 상권 본체에도 함께 저장됩니다. 내 후보는 별도 목록 없이 현재 열린 저장상권 안에 바로 저장되며, 상권을 다시 열면 작은 점 + 상단 이름표로 지도에 표시됩니다. 현재 분석 상권은 인디고 실선, 다른 저장상권은 연한 회색 점선으로 구분합니다. 유동인구는 녹색→노랑→주황→빨강, 유입경로는 파란 화살표로 표시하며 TOP3는 지하철역 중심 좌표를 피합니다. 해당 상권 말풍선을 누르면 함께 복원되고 백업에도 보존됩니다.";
 Ft();
 setTimeout(()=>{v569NormalizeSavedRegions().catch(err=>console.warn("saved region normalize failed",err))},350);
 /* 전국 수량은 저장상권/TOP3 복원보다 뒤에, 한 브랜드씩 순차 실행한다. */
