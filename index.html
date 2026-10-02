@@ -444,6 +444,54 @@ details[open]>summary::before{color:#6d63ff!important}
 <button onclick="clearActivePolygon()" id="btnClearPolygon" class="hidden text-[10px] bg-slate-100 text-slate-500 px-2 py-1 rounded font-bold">해제</button>
 </div>
 <button id="btnUserMarkerMode" onclick="toggleUserMarkerMode()" class="w-full mb-2 rounded-lg bg-sky-600 hover:bg-sky-700 text-white px-2 py-2 text-[11px] font-extrabold">📍 지도에서 찍기</button>
+
+<div id="seoulFlowPanel" class="hidden mb-2 rounded-xl border border-violet-200 bg-violet-50/70 p-2.5">
+<div class="flex items-start justify-between gap-2 mb-2">
+<div class="min-w-0">
+<p class="text-[10px] font-black text-violet-700">🏙 서울 공식 유동인구</p>
+<p id="seoulFlowAreaName" class="text-[11px] font-extrabold text-slate-700 truncate">공식 상권 매칭 중</p>
+</div>
+<span id="seoulFlowQuarter" class="shrink-0 rounded-full bg-white border border-violet-100 px-2 py-1 text-[9px] font-black text-violet-600">2026 Q2</span>
+</div>
+
+<div class="mb-2">
+<p class="text-[9px] font-black text-slate-500 mb-1">연령대</p>
+<div class="flex flex-wrap gap-1 text-[9px] font-bold">
+<label class="rounded bg-white border border-violet-100 px-1.5 py-1"><input type="checkbox" data-seoul-age="age10" checked onchange="v616UpdateSeoulStats()"> 10대</label>
+<label class="rounded bg-white border border-violet-100 px-1.5 py-1"><input type="checkbox" data-seoul-age="age20" checked onchange="v616UpdateSeoulStats()"> 20대</label>
+<label class="rounded bg-white border border-violet-100 px-1.5 py-1"><input type="checkbox" data-seoul-age="age30" checked onchange="v616UpdateSeoulStats()"> 30대</label>
+<label class="rounded bg-white border border-violet-100 px-1.5 py-1"><input type="checkbox" data-seoul-age="age40" onchange="v616UpdateSeoulStats()"> 40대</label>
+<label class="rounded bg-white border border-violet-100 px-1.5 py-1"><input type="checkbox" data-seoul-age="age50" onchange="v616UpdateSeoulStats()"> 50대</label>
+<label class="rounded bg-white border border-violet-100 px-1.5 py-1"><input type="checkbox" data-seoul-age="age60plus" onchange="v616UpdateSeoulStats()"> 60대+</label>
+</div>
+</div>
+
+<div class="mb-2">
+<p class="text-[9px] font-black text-slate-500 mb-1">시간대</p>
+<div class="flex flex-wrap gap-1 text-[9px] font-bold">
+<label class="rounded bg-white border border-violet-100 px-1.5 py-1"><input type="checkbox" data-seoul-time="time00_06" onchange="v616UpdateSeoulStats()"> 00~06</label>
+<label class="rounded bg-white border border-violet-100 px-1.5 py-1"><input type="checkbox" data-seoul-time="time06_11" onchange="v616UpdateSeoulStats()"> 06~11</label>
+<label class="rounded bg-white border border-violet-100 px-1.5 py-1"><input type="checkbox" data-seoul-time="time11_14" checked onchange="v616UpdateSeoulStats()"> 11~14</label>
+<label class="rounded bg-white border border-violet-100 px-1.5 py-1"><input type="checkbox" data-seoul-time="time14_17" checked onchange="v616UpdateSeoulStats()"> 14~17</label>
+<label class="rounded bg-white border border-violet-100 px-1.5 py-1"><input type="checkbox" data-seoul-time="time17_21" checked onchange="v616UpdateSeoulStats()"> 17~21</label>
+<label class="rounded bg-white border border-violet-100 px-1.5 py-1"><input type="checkbox" data-seoul-time="time21_24" onchange="v616UpdateSeoulStats()"> 21~24</label>
+</div>
+</div>
+
+<div class="flex items-center gap-2 mb-2">
+<label class="text-[9px] font-black text-slate-500">요일</label>
+<select id="seoulDayMode" onchange="v616UpdateSeoulStats()" class="flex-1 rounded-md border border-violet-100 bg-white px-2 py-1 text-[9px] font-bold text-slate-700">
+<option value="all">전체</option>
+<option value="weekday">평일(월~금)</option>
+<option value="weekend">주말(토·일)</option>
+</select>
+</div>
+
+<div id="seoulFlowStats" class="grid grid-cols-2 gap-1.5 text-[9px]"></div>
+<p id="seoulFlowMatchNote" class="mt-2 text-[8.5px] font-bold text-violet-600"></p>
+<p class="mt-1 text-[8px] leading-snug text-slate-400">※ 연령·시간·요일은 각각 별도 집계입니다. 세 조건의 교집합 인원으로 계산하지 않습니다. 출처: 서울특별시 상권분석서비스.</p>
+</div>
+
 <div id="relocAutoNotice" class="hidden mb-2 rounded-md bg-amber-50 border border-amber-100 px-2 py-1.5 text-[10px] font-bold text-amber-700">🚚 펜스 안 렌즈미를 이전 대상점으로 자동 적용합니다.</div>
 <div class="grid grid-cols-2 gap-2 text-[10px] mb-2">
 <div class="rounded-md bg-pink-50 px-2 py-1.5"><span class="text-slate-500">렌즈샵</span><b id="comp_count" class="float-right text-pink-600">-</b></div>
@@ -525,7 +573,7 @@ details[open]>summary::before{color:#6d63ff!important}
 <script src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=c045609510f8b75252389123f086be48&libraries=services,drawing"></script>
 
 <script>
-/* V61.5: 저장상권 선택 후 후보위치를 찍으면 현재 저장상권에 자동 귀속. 후보 마커 소형화/라벨 가림 개선.
+/* V61.6: 저장상권 선택 후 후보위치를 찍으면 현재 저장상권에 자동 귀속. 후보 마커 소형화/라벨 가림 개선.
    V60.0 프리미엄 UI 기반. 올리브영/다이소 현재 화면 지도표시 복구.
    기존 저장상권·TOP3·전국 브랜드 수량 로직은 유지한다. */
 /* V60.0: V59.5 전체 기능 그대로 유지.
@@ -555,6 +603,161 @@ level:12}),h=new kakao.maps.services.Places,p=new kakao.maps.services.Geocoder,y
 
 const V610_USER_MARKER_KEY="lensmeUserMarkersV61_0";
 let userMarkers=v610LoadUserMarkers(),userMarkerObjects=new Map(),userMarkerMode=false,userMarkerOpenId=null,userMarkerAddGuardAt=0,userMarkerCaptureEl=null;
+
+const V616_SEOUL_DATA_URLS=["./seoul_trade_area_flow_2026Q2_web.geojson","./seoul_trade_area_flow_2026Q2.geojson"];
+const V616_SEOUL_FILTER_KEY="lensmeSeoulFlowFiltersV61_6";
+let v616SeoulData=null,v616SeoulDataPromise=null,v616SeoulIndex=[],v616SeoulMatch=null,v616SeoulFenceKey="";
+
+function v616HideSeoulPanel(){
+ const el=document.getElementById("seoulFlowPanel");
+ if(el)el.classList.add("hidden");
+ v616SeoulMatch=null;v616SeoulFenceKey=""
+}
+function v616FenceCouldBeSeoul(path){
+ try{
+  const poly=H(path),b=turf.bbox(poly);
+  const seoul=[126.74,37.41,127.21,37.72];
+  return !(b[2]<seoul[0]||b[0]>seoul[2]||b[3]<seoul[1]||b[1]>seoul[3])
+ }catch(e){return false}
+}
+
+async function v616LoadSeoulData(){
+ if(v616SeoulData)return v616SeoulData;
+ if(v616SeoulDataPromise)return v616SeoulDataPromise;
+ v616SeoulDataPromise=(async()=>{
+  let lastErr=null;
+  for(const url of V616_SEOUL_DATA_URLS){
+   try{
+    const res=await fetch(url,{cache:"force-cache"});
+    if(!res.ok)throw new Error(`${url} HTTP ${res.status}`);
+    const data=await res.json();
+    if(!data?.features?.length)throw new Error("서울 상권 데이터가 비어 있습니다.");
+    v616SeoulData=data;
+    v616SeoulIndex=data.features.map(ft=>{
+     let bbox=null,area=Infinity;
+     try{bbox=turf.bbox(ft);area=turf.area(ft)}catch(e){}
+     return{ft,bbox,area}
+    }).filter(x=>x.bbox);
+    return data
+   }catch(err){lastErr=err}
+  }
+  throw lastErr||new Error("서울 상권 데이터 파일을 불러오지 못했습니다.")
+ })().catch(err=>{v616SeoulDataPromise=null;throw err});
+ return v616SeoulDataPromise
+}
+
+function v616FenceSamples(path){
+ try{
+  const poly=H(path);if(!poly||!window.turf)return[];
+  const bbox=turf.bbox(poly),pts=[],seen=new Set;
+  const add=(lng,lat)=>{
+   if(!Number.isFinite(lng)||!Number.isFinite(lat))return;
+   const key=`${lng.toFixed(6)},${lat.toFixed(6)}`;if(seen.has(key))return;
+   const pt=turf.point([lng,lat]);
+   if(turf.booleanPointInPolygon(pt,poly)){seen.add(key);pts.push(pt)}
+  };
+  try{const c=turf.centerOfMass(poly).geometry.coordinates;add(+c[0],+c[1])}catch(e){}
+  try{const c=turf.pointOnFeature(poly).geometry.coordinates;add(+c[0],+c[1])}catch(e){}
+  const [west,south,east,north]=bbox;
+  for(let iy=0;iy<6;iy++)for(let ix=0;ix<6;ix++){
+   const lng=west+(east-west)*(ix+.5)/6,lat=south+(north-south)*(iy+.5)/6;add(lng,lat)
+  }
+  const p=Array.isArray(path)?path:[];
+  const step=Math.max(1,Math.floor(p.length/10));
+  for(let k=0;k<p.length;k+=step)add(+p[k].lng,+p[k].lat);
+  return pts
+ }catch(e){return[]}
+}
+
+function v616MatchFence(path){
+ if(!v616SeoulIndex.length||!path?.length)return null;
+ const samples=v616FenceSamples(path);if(!samples.length)return null;
+ const counts=new Map;
+ for(const pt of samples){
+  const [lng,lat]=pt.geometry.coordinates;
+  for(const rec of v616SeoulIndex){
+   const b=rec.bbox;if(lng<b[0]||lng>b[2]||lat<b[1]||lat>b[3])continue;
+   let inside=false;try{inside=turf.booleanPointInPolygon(pt,rec.ft)}catch(e){}
+   if(inside){
+    const old=counts.get(rec)||0;counts.set(rec,old+1)
+   }
+  }
+ }
+ if(!counts.size)return null;
+ const rows=[...counts.entries()].map(([rec,count])=>({rec,count,share:count/samples.length}))
+   .sort((a,b)=>b.count-a.count||((Number.isFinite(a.rec.area)?a.rec.area:Infinity)-(Number.isFinite(b.rec.area)?b.rec.area:Infinity)));
+ const preferred=rows.find(x=>Number.isFinite(+x.rec.ft?.properties?.total))||rows[0];
+ return{feature:preferred.rec.ft,share:preferred.share,sampleCount:samples.length,hits:rows.slice(0,4)}
+}
+
+function v616Fmt(n){
+ n=Number(n);if(!Number.isFinite(n))return"-";
+ return Math.round(n).toLocaleString("ko-KR")
+}
+function v616Pct(part,total){
+ part=Number(part)||0;total=Number(total)||0;return total>0?`${(100*part/total).toFixed(1)}%`:"-"
+}
+function v616Sum(p,keys){return keys.reduce((s,k)=>s+(Number(p?.[k])||0),0)}
+function v616Checked(selector){return[...document.querySelectorAll(selector)].filter(x=>x.checked).map(x=>x.dataset.seoulAge||x.dataset.seoulTime).filter(Boolean)}
+
+function v616SaveFilterUi(){
+ try{
+  const row={ages:v616Checked("[data-seoul-age]"),times:v616Checked("[data-seoul-time]"),day:document.getElementById("seoulDayMode")?.value||"all"};
+  localStorage.setItem(V616_SEOUL_FILTER_KEY,JSON.stringify(row))
+ }catch(e){}
+}
+function v616RestoreFilterUi(){
+ try{
+  const s=JSON.parse(localStorage.getItem(V616_SEOUL_FILTER_KEY)||"null");if(!s)return;
+  if(Array.isArray(s.ages))document.querySelectorAll("[data-seoul-age]").forEach(x=>x.checked=s.ages.includes(x.dataset.seoulAge));
+  if(Array.isArray(s.times))document.querySelectorAll("[data-seoul-time]").forEach(x=>x.checked=s.times.includes(x.dataset.seoulTime));
+  const d=document.getElementById("seoulDayMode");if(d&&["all","weekday","weekend"].includes(s.day))d.value=s.day
+ }catch(e){}
+}
+
+function v616UpdateSeoulStats(){
+ v616SaveFilterUi();
+ const panel=document.getElementById("seoulFlowPanel"),stats=document.getElementById("seoulFlowStats");
+ if(!panel||!stats||!v616SeoulMatch?.feature)return;
+ const p=v616SeoulMatch.feature.properties||{},ageKeys=v616Checked("[data-seoul-age]"),timeKeys=v616Checked("[data-seoul-time]");
+ const allAge=["age10","age20","age30","age40","age50","age60plus"],allTime=["time00_06","time06_11","time11_14","time14_17","time17_21","time21_24"];
+ const dayMode=document.getElementById("seoulDayMode")?.value||"all",dayKeys=dayMode==="weekday"?["mon","tue","wed","thu","fri"]:dayMode==="weekend"?["sat","sun"]:["mon","tue","wed","thu","fri","sat","sun"];
+ const ageSum=v616Sum(p,ageKeys),ageTotal=v616Sum(p,allAge),timeSum=v616Sum(p,timeKeys),timeTotal=v616Sum(p,allTime),daySum=v616Sum(p,dayKeys),dayTotal=v616Sum(p,["mon","tue","wed","thu","fri","sat","sun"]);
+ const ageLabels={age10:"10대",age20:"20대",age30:"30대",age40:"40대",age50:"50대",age60plus:"60대+"},timeLabels={time00_06:"00~06",time06_11:"06~11",time11_14:"11~14",time14_17:"14~17",time17_21:"17~21",time21_24:"21~24"};
+ const maxAge=allAge.map(k=>[k,Number(p[k])||0]).sort((a,b)=>b[1]-a[1])[0],maxTime=allTime.map(k=>[k,Number(p[k])||0]).sort((a,b)=>b[1]-a[1])[0];
+ stats.innerHTML=`
+ <div class="rounded-lg bg-white border border-violet-100 p-2"><span class="block text-slate-400 font-bold">전체 유동인구</span><b class="block mt-0.5 text-[11px] text-violet-800">${v616Fmt(p.total)}</b></div>
+ <div class="rounded-lg bg-white border border-violet-100 p-2"><span class="block text-slate-400 font-bold">주요 연령</span><b class="block mt-0.5 text-[11px] text-violet-800">${ageLabels[maxAge?.[0]]||"-"}</b></div>
+ <div class="rounded-lg bg-white border border-violet-100 p-2"><span class="block text-slate-400 font-bold">선택 연령 합</span><b class="block mt-0.5 text-[11px] text-violet-800">${v616Fmt(ageSum)} <small class="text-[8px] text-slate-400">${v616Pct(ageSum,ageTotal)}</small></b></div>
+ <div class="rounded-lg bg-white border border-violet-100 p-2"><span class="block text-slate-400 font-bold">선택 시간 합</span><b class="block mt-0.5 text-[11px] text-violet-800">${v616Fmt(timeSum)} <small class="text-[8px] text-slate-400">${v616Pct(timeSum,timeTotal)}</small></b></div>
+ <div class="rounded-lg bg-white border border-violet-100 p-2"><span class="block text-slate-400 font-bold">${dayMode==="weekday"?"평일":dayMode==="weekend"?"주말":"요일 전체"} 합</span><b class="block mt-0.5 text-[11px] text-violet-800">${v616Fmt(daySum)} <small class="text-[8px] text-slate-400">${v616Pct(daySum,dayTotal)}</small></b></div>
+ <div class="rounded-lg bg-white border border-violet-100 p-2"><span class="block text-slate-400 font-bold">피크 시간</span><b class="block mt-0.5 text-[11px] text-violet-800">${timeLabels[maxTime?.[0]]||"-"}</b></div>`;
+ const nm=document.getElementById("seoulFlowAreaName"),q=document.getElementById("seoulFlowQuarter"),note=document.getElementById("seoulFlowMatchNote");
+ if(nm)nm.textContent=`${p.trade_area_name||"공식 상권"} · ${p.gu_name||""} ${p.dong_name||""}`.trim();
+ if(q)q.textContent=String(p.quarter||"20262")==="20262"?"2026 Q2":String(p.quarter||"");
+ if(note){
+  const multi=v616SeoulMatch.hits?.filter(x=>x.share>.08)||[];
+  note.textContent=`펜스 표본 기준 약 ${Math.round((v616SeoulMatch.share||0)*100)}% 매칭${multi.length>1?` · 겹치는 공식상권 ${multi.length}개`:""} · 서울에서만 표시`;
+ }
+ panel.classList.remove("hidden")
+}
+
+async function v616UpdateSeoulPanel(path){
+ if(!path||path.length<3||!v616FenceCouldBeSeoul(path)){v616HideSeoulPanel();return null}
+ const key=v564FenceKey(path);v616SeoulFenceKey=key;
+ const panel=document.getElementById("seoulFlowPanel"),nm=document.getElementById("seoulFlowAreaName"),stats=document.getElementById("seoulFlowStats");
+ try{
+  if(panel){panel.classList.remove("hidden");if(nm)nm.textContent="서울 공식 상권 확인 중...";if(stats)stats.innerHTML='<div class="col-span-2 text-[9px] font-bold text-slate-400 py-1">공식 상권 데이터를 불러오는 중입니다.</div>'}
+  await v616LoadSeoulData();
+  if(v616SeoulFenceKey!==key)return null;
+  const match=v616MatchFence(path);
+  if(!match){v616HideSeoulPanel();return null}
+  v616SeoulMatch=match;v616RestoreFilterUi();v616UpdateSeoulStats();return match
+ }catch(err){
+  console.warn("서울 공식 유동인구 로드 실패",err);v616HideSeoulPanel();return null
+ }
+}
+
 
 /* V61.3: 내 후보 마커는 현재 열린 저장상권에 자동 귀속한다.
    - 선택한 저장상권 안에서 찍으면 해당 상권 후보로 자동 저장
@@ -1699,7 +1902,7 @@ const analyzedPath=Array.isArray(w)&&w.length>=3?w:F(e),analyzedKey=v564FenceKey
 if(old)v581DeletePersistentAreaAnalysis(String(o));
 if(sameFence){const html=document.getElementById("rankingResultText")?.innerHTML||"";savedAreaAnalysisCache.set(String(o),{fenceKey:lastAnalyzedFenceKey,analysis:i,html});v581PersistAreaAnalysis(String(o),lastAnalyzedFenceKey,i,html,analyzedPath)}
 lastAnalyzedSavedId=sameFence?String(o):null;selectedSavedAreaIds.clear();expandedSavedAreaId=null;focusedSavedAreaId=null;b=null;w=null;R=null;
-redrawTarget=null,vt.clear(),I=!1,S=null,setDrawUi(!1),v564HideAnalysis(),Ct();
+redrawTarget=null,vt.clear(),I=!1,S=null,setDrawUi(!1),v616HideSeoulPanel(),v564HideAnalysis(),Ct();
 document.getElementById("targetLocationInput").innerText=`저장됨 · ${n.trim()}`;
 document.getElementById("btnClearPolygon").classList.add("hidden");
 document.getElementById("statusMessage").innerText=`✅ ${n.trim()} 저장 완료 · 지도 말풍선을 누르면 TOP3와 메인/보조 유입이 펼쳐집니다.`
@@ -1879,7 +2082,7 @@ if(selectedSavedAreaIds.has(key)){
  const remain=[...selectedSavedAreaIds].map(String).filter(id=>Lt.some(a=>String(a.id)===id));
  if(!remain.length){
   expandedSavedAreaId=null;focusedSavedAreaId=null;b=null;w=null;R=null;i=null;
-  v564HideAnalysis();Rt();
+  v616HideSeoulPanel();v564HideAnalysis();Rt();
   document.getElementById("targetLocationInput").innerText="선택 없음";
   document.getElementById("btnClearPolygon").classList.add("hidden");
   document.getElementById("rankingResultText").innerHTML="";
@@ -1891,6 +2094,7 @@ if(selectedSavedAreaIds.has(key)){
  const nextKey=current&&current!==key&&selectedSavedAreaIds.has(current)?current:remain.at(-1);
  const nextArea=Lt.find(a=>String(a.id)===String(nextKey));
  expandedSavedAreaId=nextKey;focusedSavedAreaId=nextKey;b=nextKey;w=nextArea?F(nextArea.geometry||nextArea.path):null;R=null;
+ if(w)v616UpdateSeoulPanel(w);else v616HideSeoulPanel();
  if(nextArea){
   mapDrillState={level:"dong",si:nextArea.si||null,gu:nextArea.gu||"",dong:nextArea.dong||null};
   lastAutoRegionKey=`dong|${nextArea.si||""}|${nextArea.gu||""}|${nextArea.dong||""}`
@@ -1905,6 +2109,7 @@ if(selectedSavedAreaIds.has(key)){
 
 /* 새 상권 추가 선택 */
 selectedSavedAreaIds.add(key);focusedSavedAreaId=key;expandedSavedAreaId=key;b=key;w=F(area.geometry||area.path);R=null;
+v616UpdateSeoulPanel(w);
 mapDrillState={level:"dong",si:area.si||null,gu:area.gu||"",dong:area.dong||null};
 lastAutoRegionKey=`dong|${area.si||""}|${area.gu||""}|${area.dong||""}`;
 v572ClearProvinceLabels();v572ClearCityLabels();v573ClearDongLabels();v572HideAdminFocus();v572UpdateBreadcrumb();
@@ -1939,6 +2144,7 @@ function v583EnsureActiveSavedRankVisible(areaId=expandedSavedAreaId){
 
 function clearActivePolygon(t=!1){
 if(T)return alert("분석이 끝난 후 해제하거나 먼저 취소해주세요.");
+v616HideSeoulPanel();
 selectedSavedAreaIds.clear();expandedSavedAreaId=null;focusedSavedAreaId=null;b=null,R=null,w=null,S=null,v564HideAnalysis(),
 document.getElementById("targetLocationInput").innerText="선택 없음",document.getElementById("btnClearPolygon").classList.add("hidden"),
 document.getElementById("comp_count").innerText="-개",document.getElementById("anchor_count").innerText="-개",document.getElementById("rankingResultText").innerHTML="",v564SetSavedAreaVisual(null),Ct(),
@@ -2515,6 +2721,7 @@ function v56ProfileTop(t){const m={mainFlow:"메인동선",commercial:"상가밀
 
 async function ce(t){
 if(T||!t||t.length<3)return;
+v616UpdateSeoulPanel(t);
 const analysisFenceKey=v564FenceKey(t);
 let s=Object.freeze({mode:n,relocationStoreIds:[]});o=s;const l=[];let d=!1;
 c=l,i=null,$(!0);const u=++O;r=new AbortController,Rt(),
@@ -2840,10 +3047,11 @@ v595LoadCache();
 v602LoadAnchorCache();
 v610MigrateExistingAnalysisIntoAreas();
 v620MigrateExistingUserMarkersToAreas();
+v616RestoreFilterUi();
 Ct();
 v610RenderUserMarkers();
 v572GoNational();
-document.getElementById("statusMessage").innerText="🗺️ 새로고침 시 대한민국 전체 지도부터 시작합니다. 저장상권 말풍선은 여러 개 선택할 수 있고 같은 말풍선을 다시 누르면 그 상권만 해제됩니다. 표시 메뉴에서 끈 레이어는 지도 확대·축소 후에도 그대로 유지됩니다. 저장상권의 TOP3·유동인구는 상권 본체에도 함께 저장됩니다. 내 후보는 별도 목록 없이 현재 열린 저장상권 안에 바로 저장되며, 상권을 다시 열면 작은 점 + 상단 이름표로 지도에 표시됩니다. 해당 상권 말풍선을 누르면 함께 복원되고 백업에도 보존됩니다.";
+document.getElementById("statusMessage").innerText="🗺️ 새로고침 시 대한민국 전체 지도부터 시작합니다. 저장상권 말풍선은 여러 개 선택할 수 있고 같은 말풍선을 다시 누르면 그 상권만 해제됩니다. 표시 메뉴에서 끈 레이어는 지도 확대·축소 후에도 그대로 유지됩니다. 저장상권의 TOP3·유동인구는 상권 본체에도 함께 저장됩니다. 내 후보는 별도 목록 없이 현재 열린 저장상권 안에 바로 저장되며, 상권을 다시 열면 작은 점 + 상단 이름표로 지도에 표시됩니다. 서울 펜스에서는 2026년 2분기 서울시 공식 유동인구 연령·시간·요일 필터가 자동으로 표시됩니다. 해당 상권 말풍선을 누르면 함께 복원되고 백업에도 보존됩니다.";
 Ft();
 setTimeout(()=>{v569NormalizeSavedRegions().catch(err=>console.warn("saved region normalize failed",err))},350);
 /* 전국 수량은 저장상권/TOP3 복원보다 뒤에, 한 브랜드씩 순차 실행한다. */
