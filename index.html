@@ -397,7 +397,7 @@ details[open]>summary::before{color:#6d63ff!important}
 <div id="premiumSidebar" class="w-full md:w-1/4 bg-white border-r border-gray-200 p-6 flex flex-col shadow-lg z-20 overflow-y-auto">
 <h1 id="premiumHeader" class="text-xl font-extrabold text-slate-800 border-b-4 border-indigo-500 pb-3 mb-4 flex justify-between items-center">
 <span class="premium-brand"><span class="premium-brand-kicker">LENS ME</span><span class="premium-brand-title">상권 분석 지도</span></span>
-<span class="premium-version text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded-full font-bold">V60.3</span>
+<span class="premium-version text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded-full font-bold">V61.0</span>
 </h1>
 
 <div class="mb-3">
@@ -432,7 +432,20 @@ details[open]>summary::before{color:#6d63ff!important}
 <label class="underline cursor-pointer">복원<input type="file" accept=".json" class="hidden" onchange="importAreas(this)"></label>
 </div>
 </div>
-<div id="savedPolygonTree" class="max-h-52 overflow-y-auto space-y-1 text-sm"></div><p class="text-[9.5px] text-slate-400 mt-2">저장목록·지도 말풍선 모두 해당 상권을 열어 TOP3를 표시합니다. 전국 지도에서는 시·도 → 시·군·구 → 상권 순서로 탐색할 수 있습니다.</p>
+<div id="savedPolygonTree" class="max-h-52 overflow-y-auto space-y-1 text-sm"></div><p class="text-[9.5px] text-slate-400 mt-2">저장목록·지도 말풍선 모두 해당 상권을 열어 TOP3를 표시합니다. 시·군·구 단계에서는 동 이름과 저장상권이 함께 표시됩니다.</p>
+</div>
+
+<div class="mb-3 bg-white p-3 rounded-xl border border-sky-200 shadow-sm">
+<div class="flex items-center justify-between mb-2">
+<label class="text-sm font-extrabold text-slate-700">📌 내 마커</label>
+<span id="userMarkerCount" class="text-[10px] font-black text-sky-700 bg-sky-50 px-2 py-1 rounded-full">0개</span>
+</div>
+<div class="flex gap-2 mb-2">
+<button id="btnUserMarkerMode" onclick="toggleUserMarkerMode()" class="flex-1 rounded-lg bg-sky-600 hover:bg-sky-700 text-white px-2 py-2 text-[11px] font-extrabold">📍 지도에서 찍기</button>
+<button onclick="clearAllUserMarkers()" class="rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 px-2 py-2 text-[10px] font-bold">전체삭제</button>
+</div>
+<div id="userMarkerList" class="max-h-32 overflow-y-auto space-y-1"></div>
+<p class="text-[9.5px] text-slate-400 mt-2">추천 TOP3와 별개로 원하는 위치를 직접 찍어 이름·메모를 저장할 수 있습니다. 백업/복원 파일에도 함께 포함됩니다.</p>
 </div>
 
 <div class="mb-2 bg-white p-3 rounded-xl border border-indigo-200 shadow-sm">
@@ -480,6 +493,7 @@ details[open]>summary::before{color:#6d63ff!important}
 <label class="map-layer-row"><input id="layer_flow" type="checkbox" checked onchange="applyMapDisplayFilters()"><span>유동인구</span></label>
 <label class="map-layer-row"><input id="layer_names" type="checkbox" checked onchange="applyMapDisplayFilters()"><span>상권명</span></label>
 <label class="map-layer-row"><input id="layer_admin" type="checkbox" checked><span>행정구역 탐색</span></label>
+<label class="map-layer-row"><input id="layer_user_markers" type="checkbox" checked onchange="applyMapDisplayFilters()"><span>내 마커</span></label>
 </div>
 </div>
 
@@ -523,7 +537,7 @@ details[open]>summary::before{color:#6d63ff!important}
 <script src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=c045609510f8b75252389123f086be48&libraries=services,drawing"></script>
 
 <script>
-/* V60.3: V60.0 프리미엄 UI 기반. 올리브영/다이소 현재 화면 지도표시 복구.
+/* V61.0: V60.0 프리미엄 UI 기반. 올리브영/다이소 현재 화면 지도표시 복구.
    기존 저장상권·TOP3·전국 브랜드 수량 로직은 유지한다. */
 /* V60.0: V59.5 전체 기능 그대로 유지.
    - 저장상권 말풍선 가독성 개선
@@ -550,6 +564,85 @@ let n="new",a="",o=null,r=null,s=[],i=null,c=null,d=0,u=document.getElementById(
 level:12}),h=new kakao.maps.services.Places,p=new kakao.maps.services.Geocoder,y=[],_=[],A=new Map,E=new Map,M=new kakao.maps.CustomOverlay({xAnchor:.5,yAnchor:1.5,zIndex:150
 }),w=null,b=null,k={},x={},I=!1,S=null,T=!1,O=0,R=null,analysisLines=[],rankOverlays=[],inflowOverlays=[],flowLines=[],expandedSavedAreaId=null,focusedSavedAreaId=null,selectedSavedAreaIds=new Set(),renderedSavedAreaIds=new Set(),savedAreaOverlayGroups=new Map(),currentRenderSavedAreaId=null,lastSavedAreaToggleKey="",lastSavedAreaToggleAt=0,lastAnalyzedSavedId=null,lastAnalyzedFenceKey="",savedAreaAnalysisCache=new Map,savedAreaPersistentAnalysis=v581LoadPersistentAnalysisStore(),savedBubbleEls={},provinceLabelOverlays=[],cityLabelOverlays=[],dongLabelOverlays=[],adminFocusOverlay=null,regionLabelTimer=null,regionLabelRequestSeq=0,mapDrillState={level:"national",si:null,gu:null,dong:null},lastAutoRegionKey="",regionFanoutToken=0,municipalityCenterCache=new Map,hapaOlivePlaceCache=new Map,legalDongTreePromise=null,legalDongTreeData=null;
 
+const V610_USER_MARKER_KEY="lensmeUserMarkersV61_0";
+let userMarkers=v610LoadUserMarkers(),userMarkerObjects=new Map(),userMarkerMode=false,userMarkerOpenId=null;
+
+function v610LoadUserMarkers(){
+ try{const rows=JSON.parse(localStorage.getItem(V610_USER_MARKER_KEY)||"[]");return Array.isArray(rows)?rows.filter(m=>m&&m.id&&Number.isFinite(+m.lat)&&Number.isFinite(+m.lng)):[]}
+ catch(err){console.warn("내 마커 읽기 실패",err);return[]}
+}
+function v610SaveUserMarkers(){
+ try{localStorage.setItem(V610_USER_MARKER_KEY,JSON.stringify(userMarkers||[]));return true}
+ catch(err){console.warn("내 마커 저장 실패",err);alert("내 마커 저장 공간이 부족합니다. 먼저 상권 백업을 내려받아주세요.");return false}
+}
+function v610MarkerIcon(){
+ const svg=`<svg xmlns="http://www.w3.org/2000/svg" width="34" height="42" viewBox="0 0 34 42"><path d="M17 1C8.7 1 2 7.7 2 16c0 10.8 15 25 15 25s15-14.2 15-25C32 7.7 25.3 1 17 1z" fill="#0284c7" stroke="white" stroke-width="2.5"/><circle cx="17" cy="16" r="6" fill="white"/><circle cx="17" cy="16" r="2.6" fill="#0284c7"/></svg>`;
+ return new kakao.maps.MarkerImage("data:image/svg+xml;charset=UTF-8,"+encodeURIComponent(svg),new kakao.maps.Size(34,42),{offset:new kakao.maps.Point(17,41)})
+}
+function v610CloseUserMarkerPopup(){
+ if(userMarkerOpenId&&userMarkerObjects.get(String(userMarkerOpenId))?.popup){try{userMarkerObjects.get(String(userMarkerOpenId)).popup.setMap(null)}catch(e){}}
+ userMarkerOpenId=null
+}
+function v610OpenUserMarker(id){
+ const key=String(id),m=userMarkers.find(x=>String(x.id)===key),rec=userMarkerObjects.get(key);if(!m||!rec)return;
+ v610CloseUserMarkerPopup();userMarkerOpenId=key;
+ const memo=V(m.memo||"").replace(/\n/g,"<br>");
+ const html=`<div style="min-width:190px;max-width:260px;background:white;border:1px solid #bae6fd;border-radius:14px;padding:10px 11px;box-shadow:0 12px 30px rgba(15,23,42,.18);font-family:Pretendard,sans-serif"><div style="font-size:12px;font-weight:1000;color:#0c4a6e;margin-bottom:4px">📌 ${V(m.name||"내 마커")}</div>${memo?`<div style="font-size:10px;color:#64748b;line-height:1.45;margin-bottom:7px">${memo}</div>`:""}<div style="display:flex;gap:5px"><button onclick="renameUserMarker('${key}')" style="border:0;border-radius:7px;padding:5px 7px;background:#e0f2fe;color:#0369a1;font-size:9px;font-weight:900;cursor:pointer">수정</button><button onclick="deleteUserMarker('${key}')" style="border:0;border-radius:7px;padding:5px 7px;background:#fff1f2;color:#be123c;font-size:9px;font-weight:900;cursor:pointer">삭제</button></div></div>`;
+ rec.popup.setContent(html);rec.popup.setMap(layerChecked("layer_user_markers",true)?f:null)
+}
+function v610RenderUserMarkers(){
+ for(const rec of userMarkerObjects.values()){try{rec.marker.setMap(null);rec.label.setMap(null);rec.popup.setMap(null)}catch(e){}}
+ userMarkerObjects.clear();userMarkerOpenId=null;
+ const icon=v610MarkerIcon();
+ for(const m of userMarkers){
+  const key=String(m.id),pos=new kakao.maps.LatLng(+m.lat,+m.lng),marker=new kakao.maps.Marker({position:pos,image:icon,zIndex:145});
+  const label=new kakao.maps.CustomOverlay({position:pos,xAnchor:.5,yAnchor:1.72,zIndex:144,content:`<button onclick="focusUserMarker('${key}')" style="border:1px solid #bae6fd;background:rgba(255,255,255,.96);color:#075985;border-radius:999px;padding:5px 8px;font:900 9px Pretendard,sans-serif;box-shadow:0 5px 14px rgba(15,23,42,.12);cursor:pointer;white-space:nowrap">📌 ${V(m.name||"내 마커")}</button>`});
+  const popup=new kakao.maps.CustomOverlay({position:pos,xAnchor:.5,yAnchor:1.38,zIndex:180,content:""});
+  kakao.maps.event.addListener(marker,"click",()=>v610OpenUserMarker(key));
+  userMarkerObjects.set(key,{marker,label,popup});marker.setMap(f);label.setMap(f)
+ }
+ v610RenderUserMarkerList();v610ApplyUserMarkerVisibility(layerChecked("layer_user_markers",true))
+}
+function v610RenderUserMarkerList(){
+ const box=document.getElementById("userMarkerList"),cnt=document.getElementById("userMarkerCount");if(cnt)cnt.textContent=`${userMarkers.length}개`;if(!box)return;
+ if(!userMarkers.length){box.innerHTML='<div class="text-[10px] text-slate-400 py-2 text-center">저장한 내 마커가 없습니다.</div>';return}
+ box.innerHTML=userMarkers.map(m=>`<div class="flex items-center gap-1 rounded-lg bg-sky-50/60 px-2 py-1.5"><button onclick="focusUserMarker('${String(m.id)}')" class="min-w-0 flex-1 text-left truncate text-[10px] font-extrabold text-sky-800">📌 ${V(m.name||"내 마커")}</button><button onclick="renameUserMarker('${String(m.id)}')" class="text-[9px] font-bold text-slate-500">수정</button><button onclick="deleteUserMarker('${String(m.id)}')" class="text-[9px] font-bold text-rose-600">삭제</button></div>`).join("")
+}
+function v610ApplyUserMarkerVisibility(show=true){
+ for(const rec of userMarkerObjects.values()){try{rec.marker.setMap(show?f:null);rec.label.setMap(show?f:null);if(!show)rec.popup.setMap(null)}catch(e){}}
+ if(!show)userMarkerOpenId=null
+}
+function toggleUserMarkerMode(){
+ if(T||I)return alert("분석 또는 상권 그리기가 끝난 뒤 내 마커를 추가해주세요.");
+ userMarkerMode=!userMarkerMode;const btn=document.getElementById("btnUserMarkerMode");
+ if(btn){btn.textContent=userMarkerMode?"✋ 지도에서 위치 클릭":"📍 지도에서 찍기";btn.classList.toggle("bg-sky-600",!userMarkerMode);btn.classList.toggle("bg-amber-500",userMarkerMode)}
+ document.getElementById("statusMessage").innerText=userMarkerMode?"📌 내 마커 추가 모드 · 지도에서 원하는 위치를 한 번 클릭하세요.":"내 마커 추가를 취소했습니다."
+}
+function v610AddUserMarkerAt(lat,lng){
+ const name=prompt("내 마커 이름을 입력하세요:","후보 위치");if(name===null)return;
+ const memo=prompt("메모가 있으면 입력하세요. (없으면 빈칸)","");if(memo===null)return;
+ const row={id:`um_${Date.now()}_${Math.random().toString(36).slice(2,7)}`,name:name.trim()||"내 마커",memo:memo.trim(),lat:+lat,lng:+lng,savedAt:new Date().toISOString()};
+ userMarkers.push(row);v610SaveUserMarkers();v610RenderUserMarkers();userMarkerMode=false;
+ const btn=document.getElementById("btnUserMarkerMode");if(btn){btn.textContent="📍 지도에서 찍기";btn.classList.add("bg-sky-600");btn.classList.remove("bg-amber-500")}
+ document.getElementById("statusMessage").innerText=`📌 ${row.name} 마커를 저장했습니다.`
+}
+function focusUserMarker(id){
+ const m=userMarkers.find(x=>String(x.id)===String(id));if(!m)return;f.panTo(new kakao.maps.LatLng(+m.lat,+m.lng));if(f.getLevel()>4)f.setLevel(4);setTimeout(()=>v610OpenUserMarker(id),120)
+}
+function renameUserMarker(id){
+ const key=String(id),idx=userMarkers.findIndex(x=>String(x.id)===key);if(idx<0)return;
+ const name=prompt("내 마커 이름 변경:",userMarkers[idx].name||"내 마커");if(name===null)return;
+ const memo=prompt("메모 변경:",userMarkers[idx].memo||"");if(memo===null)return;
+ userMarkers[idx]={...userMarkers[idx],name:name.trim()||"내 마커",memo:memo.trim(),updatedAt:new Date().toISOString()};v610SaveUserMarkers();v610RenderUserMarkers()
+}
+function deleteUserMarker(id){
+ const key=String(id),m=userMarkers.find(x=>String(x.id)===key);if(!m)return;if(!confirm(`"${m.name||"내 마커"}"를 삭제할까요?`))return;
+ userMarkers=userMarkers.filter(x=>String(x.id)!==key);v610SaveUserMarkers();v610RenderUserMarkers()
+}
+function clearAllUserMarkers(){
+ if(!userMarkers.length)return;if(!confirm(`내 마커 ${userMarkers.length}개를 모두 삭제할까요?`))return;userMarkers=[];v610SaveUserMarkers();v610RenderUserMarkers()
+}
+
 function D(t){return String(t.id||`${t.place_name}|${t.x}|${t.y}`)}
 function v564FenceKey(path){return(Array.isArray(path)?path:[]).map(p=>`${Number(p.lat).toFixed(6)},${Number(p.lng).toFixed(6)}`).join("|")}
 function layerChecked(id,defaultValue=true){const el=document.getElementById(id);return el?!!el.checked:defaultValue}
@@ -557,49 +650,45 @@ function toggleMapLayerMenu(ev){ev?.stopPropagation?.();document.getElementById(
 const V586_LAYER_PREFS_KEY="lensmeLayerPrefsV58_7";
 function v586SaveLayerPrefs(){
  try{
-  const prefs={};["layer_rank","layer_inflow","layer_flow","layer_names","layer_admin"].forEach(id=>{const el=document.getElementById(id);if(el)prefs[id]=!!el.checked});
+  const prefs={};["layer_rank","layer_inflow","layer_flow","layer_names","layer_admin","layer_user_markers"].forEach(id=>{const el=document.getElementById(id);if(el)prefs[id]=!!el.checked});
   localStorage.setItem(V586_LAYER_PREFS_KEY,JSON.stringify(prefs))
  }catch(e){}
 }
 function v586LoadLayerPrefs(){
- const defaults={layer_rank:true,layer_inflow:true,layer_flow:true,layer_names:true,layer_admin:true};
+ const defaults={layer_rank:true,layer_inflow:true,layer_flow:true,layer_names:true,layer_admin:true,layer_user_markers:true};
  let prefs=null;
  try{prefs=JSON.parse(localStorage.getItem(V586_LAYER_PREFS_KEY)||"null")}catch(e){prefs=null}
- ["layer_rank","layer_inflow","layer_flow","layer_names","layer_admin"].forEach(id=>{
+ ["layer_rank","layer_inflow","layer_flow","layer_names","layer_admin","layer_user_markers"].forEach(id=>{
   const el=document.getElementById(id);if(!el)return;
   el.checked=prefs&&typeof prefs[id]==="boolean"?prefs[id]:defaults[id]
  })
 }
 function v586InitLayerPrefs(){
  v586LoadLayerPrefs();
- ["layer_rank","layer_inflow","layer_flow","layer_names","layer_admin"].forEach(id=>{const el=document.getElementById(id);if(el)el.addEventListener("change",()=>{v586SaveLayerPrefs();if(id==="layer_admin")v572RefreshRegionNavigation();else applyMapDisplayFilters()})})
+ ["layer_rank","layer_inflow","layer_flow","layer_names","layer_admin","layer_user_markers"].forEach(id=>{const el=document.getElementById(id);if(el)el.addEventListener("change",()=>{v586SaveLayerPrefs();if(id==="layer_admin")v572RefreshRegionNavigation();else applyMapDisplayFilters()})})
 }
 function v572AreaMatchesCurrentCity(area){
-/* V60.4:
-   - 시·군·구 단계에서는 해당 구 안의 저장상권을 동 말풍선과 함께 표시한다.
-   - 읍·면·동 단계에서는 기존처럼 해당 동의 저장상권만 표시한다. */
+/* V61.0:
+   - 시·군·구 단계에서는 해당 구의 읍·면·동 말풍선과 저장상권을 함께 표시한다.
+   - 읍·면·동 단계에서는 해당 동의 저장상권만 표시한다. */
 if(!area)return false;
 const sameSi=String(area.si||"")===String(mapDrillState.si||"");
 const areaMuni=v575NormalizeMuni(area.si||"",area.gu||""),stateMuni=v575NormalizeMuni(mapDrillState.si||"",mapDrillState.gu||"");
 const sameGu=String(areaMuni)===String(stateMuni);
-
-if(mapDrillState.level==="city"){
-return sameSi&&sameGu
-}
-
+if(mapDrillState.level==="city")return sameSi&&sameGu;
 if(mapDrillState.level==="dong"){
-const sameDong=String(area.dong||"")===String(mapDrillState.dong||"");
-return sameSi&&sameGu&&sameDong
+ const sameDong=String(area.dong||"")===String(mapDrillState.dong||"");
+ return sameSi&&sameGu&&sameDong
 }
-
 return false
 }
 function applyMapDisplayFilters(){
-const analysisOpen=selectedSavedAreaIds.size>0||!!expandedSavedAreaId||(!b&&!!w),showRank=analysisOpen&&layerChecked("layer_rank",true),showInflow=analysisOpen&&layerChecked("layer_inflow",true),showFlow=analysisOpen&&layerChecked("layer_flow",false),showNames=layerChecked("layer_names",true),showAdmin=layerChecked("layer_admin",true),focusedKey=focusedSavedAreaId==null?null:String(focusedSavedAreaId),activeKey=expandedSavedAreaId==null?null:String(expandedSavedAreaId);
+const analysisOpen=selectedSavedAreaIds.size>0||!!expandedSavedAreaId||(!b&&!!w),showRank=analysisOpen&&layerChecked("layer_rank",true),showInflow=analysisOpen&&layerChecked("layer_inflow",true),showFlow=analysisOpen&&layerChecked("layer_flow",false),showNames=layerChecked("layer_names",true),showAdmin=layerChecked("layer_admin",true),showUserMarkers=layerChecked("layer_user_markers",true),focusedKey=focusedSavedAreaId==null?null:String(focusedSavedAreaId),activeKey=expandedSavedAreaId==null?null:String(expandedSavedAreaId);
 rankOverlays.forEach(o=>{try{o.setMap(showRank?f:null)}catch(e){}});inflowOverlays.forEach(o=>{try{o.setMap(showInflow?f:null)}catch(e){}});flowLines.forEach(o=>{try{o.setMap(showFlow?f:null)}catch(e){}});
 provinceLabelOverlays.forEach(o=>{try{o.setMap(showAdmin?f:null)}catch(e){}});cityLabelOverlays.forEach(o=>{try{o.setMap(showAdmin?f:null)}catch(e){}});dongLabelOverlays.forEach(o=>{try{o.setMap(showAdmin?f:null)}catch(e){}});if(adminFocusOverlay){try{adminFocusOverlay.setMap(showAdmin?f:null)}catch(e){}}
 Object.entries(x).forEach(([id,o])=>{try{const key=String(id),area=Lt.find(a=>String(a.id)===key),showByDong=v572AreaMatchesCurrentCity(area),keep=selectedSavedAreaIds.has(key)||key===focusedKey||key===activeKey||showByDong;o.setMap(showNames&&keep?f:null)}catch(e){}});
 Object.entries(k).forEach(([id,poly])=>{try{const key=String(id),area=Lt.find(a=>String(a.id)===key),showByDong=v572AreaMatchesCurrentCity(area),keep=selectedSavedAreaIds.has(key)||key===focusedKey||key===activeKey||showByDong;poly.setMap(keep?f:null)}catch(e){}});
+if(typeof v610ApplyUserMarkerVisibility==="function")v610ApplyUserMarkerVisibility(showUserMarkers);
 document.getElementById("heatLegend")?.classList.toggle("hidden",!showFlow);
 }
 function v571EnableAnalysisLayers(){/* V58.8: 최초 기본값은 모두 ON. 사용자가 직접 끈 뒤에는 줌/이동/상권선택으로 다시 켜지지 않는다. */}
@@ -726,12 +815,58 @@ path:t.map((t=>t.map((t=>new kakao.maps.LatLng(t[1],t[0])))))})));
 return n&&o.forEach((t=>kakao.maps.event.addListener(t,"click",n))),{setMap(t){o.forEach((e=>e.setMap(t)))},setOptions(t){o.forEach((e=>e.setOptions(t)))}}}
 const V581_ANALYSIS_STORAGE_KEY="lensmeSavedAnalysisV58_1";
 function v581LoadPersistentAnalysisStore(){
- try{const raw=JSON.parse(localStorage.getItem(V581_ANALYSIS_STORAGE_KEY)||"{}");return raw&&typeof raw==="object"&&!Array.isArray(raw)?raw:{}}
- catch(e){console.warn("저장상권 순위 데이터 읽기 실패",e);return{}}
+ let store={};
+ try{const raw=JSON.parse(localStorage.getItem(V581_ANALYSIS_STORAGE_KEY)||"{}");if(raw&&typeof raw==="object"&&!Array.isArray(raw))store=raw}
+ catch(e){console.warn("저장상권 순위 데이터 읽기 실패",e)}
+ /* V61.0: 상권 본체 안에도 compact 분석 스냅샷을 같이 넣어 둔다.
+    별도 분석 저장키가 사라지거나 구버전 코드로 교체돼도 상권이 남아 있으면 TOP3/유동인구를 복구할 수 있다. */
+ try{
+  const areas=JSON.parse(localStorage.getItem("lensmePolygonsV43_2")||"[]");
+  if(Array.isArray(areas))for(const area of areas){
+   const key=String(area?.id||""),snap=area?.analysisSnapshot;if(!key||!snap?.analysis?.topSegments?.length)continue;
+   const old=store[key],oldTime=Date.parse(old?.savedAt||0)||0,newTime=Date.parse(snap?.savedAt||0)||0;
+   if(!old?.analysis?.topSegments?.length||newTime>=oldTime)store[key]=snap
+  }
+ }catch(e){console.warn("상권 내 분석 스냅샷 복구 실패",e)}
+ return store
 }
 function v581WritePersistentAnalysisStore(){
  try{localStorage.setItem(V581_ANALYSIS_STORAGE_KEY,JSON.stringify(savedAreaPersistentAnalysis||{}));return true}
  catch(e){console.warn("저장상권 순위 영구저장 실패",e);return false}
+}
+function v610EmbedSnapshotIntoArea(areaId,snap){
+ const key=String(areaId||"");if(!key||!snap?.analysis?.topSegments?.length||!Array.isArray(Lt))return false;
+ const idx=Lt.findIndex(a=>String(a.id)===key);if(idx<0)return false;
+ const next=Lt.map((a,i)=>i===idx?{...a,analysisSnapshot:snap}:a);
+ try{localStorage.setItem("lensmePolygonsV43_2",JSON.stringify(next));Lt=next;return true}
+ catch(err){console.warn("상권 본체 분석 스냅샷 저장 실패",err);return false}
+}
+function v610RemoveEmbeddedSnapshot(areaId){
+ const key=String(areaId||"");if(!key||!Array.isArray(Lt))return;
+ const idx=Lt.findIndex(a=>String(a.id)===key);if(idx<0)return;
+ const next=Lt.map((a,i)=>{if(i!==idx)return a;const b={...a};delete b.analysisSnapshot;return b});
+ try{localStorage.setItem("lensmePolygonsV43_2",JSON.stringify(next));Lt=next}catch(err){console.warn("상권 본체 분석 스냅샷 삭제 실패",err)}
+}
+function v610CompactExistingSnapshot(snap,maxFlow=160){
+ if(!snap?.analysis?.topSegments?.length)return null;
+ const visual=snap.visual&&typeof snap.visual==="object"?{...snap.visual}:{};
+ if(Array.isArray(visual.flowSegments))visual.flowSegments=visual.flowSegments.slice(0,maxFlow);
+ return{...snap,visual}
+}
+function v610MigrateExistingAnalysisIntoAreas(){
+ if(!Array.isArray(Lt)||!Lt.length)return false;
+ let changed=false;
+ const next=Lt.map(area=>{
+  const key=String(area?.id||""),path=F(area?.geometry||area?.path),snap=savedAreaPersistentAnalysis?.[key];
+  if(!key||!snap?.analysis?.topSegments?.length||String(snap.fenceKey||"")!==String(v564FenceKey(path)))return area;
+  const embedded=area.analysisSnapshot;
+  const oldTime=Date.parse(embedded?.savedAt||0)||0,newTime=Date.parse(snap?.savedAt||0)||0;
+  if(embedded?.analysis?.topSegments?.length&&oldTime>=newTime)return area;
+  const compact=v610CompactExistingSnapshot(snap,160);if(!compact)return area;changed=true;return{...area,analysisSnapshot:compact}
+ });
+ if(!changed)return false;
+ try{localStorage.setItem("lensmePolygonsV43_2",JSON.stringify(next));Lt=next;return true}
+ catch(err){console.warn("기존 저장분석을 상권 본체로 자동 이관하지 못했습니다.",err);return false}
 }
 function v581PlainPoint(p){return p&&Number.isFinite(+p.lat)&&Number.isFinite(+p.lng)?{lat:+p.lat,lng:+p.lng}:null}
 function v581CompactTopSegment(seg){
@@ -771,11 +906,16 @@ function v581BuildPersistentCache(fenceKey,analysis,html,fencePath,maxFlow=e.HEA
 }
 function v581PersistAreaAnalysis(areaId,fenceKey,analysis,html,fencePath){
  const key=String(areaId||"");if(!key)return false;
- const previous=savedAreaPersistentAnalysis?.[key];
- for(const limit of [e.HEATMAP_MAX_SEGMENTS,1600,1000,600,300]){
+ const previous=savedAreaPersistentAnalysis?.[key];let separateOk=false;
+ /* V61.0: 많은 상권을 저장해도 브라우저 용량이 터지지 않도록
+    유동인구 선은 compact 스냅샷만 저장하고, 동일 스냅샷을 상권 본체에도 함께 보관한다. */
+ for(const limit of [320,220,160,100,60]){
   const snap=v581BuildPersistentCache(fenceKey,analysis,html,fencePath,limit);if(!snap)return false;
-  savedAreaPersistentAnalysis[key]=snap;if(v581WritePersistentAnalysisStore())return true
+  savedAreaPersistentAnalysis[key]=snap;
+  separateOk=v581WritePersistentAnalysisStore()||separateOk;
+  if(v610EmbedSnapshotIntoArea(key,snap))return true
  }
+ if(separateOk)return true;
  if(previous)savedAreaPersistentAnalysis[key]=previous;else delete savedAreaPersistentAnalysis[key];
  return false
 }
@@ -784,7 +924,7 @@ function v581GetPersistentAreaAnalysis(areaId,path){
  const fenceKey=v564FenceKey(path);return String(snap.fenceKey||"")===String(fenceKey)?snap:null
 }
 function v581DeletePersistentAreaAnalysis(areaId){
- const key=String(areaId||"");if(!key)return;delete savedAreaPersistentAnalysis[key];savedAreaAnalysisCache.delete(key);v581WritePersistentAnalysisStore()
+ const key=String(areaId||"");if(!key)return;delete savedAreaPersistentAnalysis[key];savedAreaAnalysisCache.delete(key);v581WritePersistentAnalysisStore();v610RemoveEmbeddedSnapshot(key)
 }
 /* V58.2: 예전 버전에서 이미 저장한 상권은 TOP3 스냅샷이 없을 수 있다.
    최초 클릭 시 기존 분석의 전체 후보군에서 안전 조건(렌즈미 50m 제외/입점가능)을 유지한 채
@@ -829,20 +969,50 @@ function v581PrunePersistentAnalysis(){
  for(const key of Object.keys(store)){if(!ids.has(String(key))){delete store[key];changed=true}}
  if(changed)v581WritePersistentAnalysisStore()
 }
-function X(t){try{return localStorage.setItem("lensmePolygonsV43_2",JSON.stringify(t)),Lt=t,v581PrunePersistentAnalysis(),!0}
-catch(t){return alert("상권을 저장하지 못했습니다. 브라우저 저장 공간을 확인하고 백업해주세요."),!1}}
+function X(t,skipPrune=false){
+ try{
+  const prevById=new Map((Lt||[]).map(a=>[String(a.id),a]));
+  const next=(Array.isArray(t)?t:[]).map(a=>{const prev=prevById.get(String(a?.id));return !a?.analysisSnapshot&&prev?.analysisSnapshot?{...a,analysisSnapshot:prev.analysisSnapshot}:a});
+  localStorage.setItem("lensmePolygonsV43_2",JSON.stringify(next));Lt=next;if(!skipPrune)v581PrunePersistentAnalysis();return true
+ }catch(err){alert("상권을 저장하지 못했습니다. 브라우저 저장 공간을 확인하고 백업해주세요.");return false}
+}
 function exportAreas(){
-const analysisSnapshots={};for(const area of Lt||[]){const snap=savedAreaPersistentAnalysis?.[String(area.id)];if(snap)analysisSnapshots[String(area.id)]=snap}
-const t=document.createElement("a"),e=URL.createObjectURL(new Blob([JSON.stringify({version:2,areas:Lt,analysisSnapshots},null,2)],{type:"application/json"}));
-t.href=e,t.download="lensme_trade_areas.json",t.click(),setTimeout((()=>URL.revokeObjectURL(e)),1e3)}
+const analysisSnapshots={};for(const area of Lt||[]){const snap=savedAreaPersistentAnalysis?.[String(area.id)]||area?.analysisSnapshot;if(snap)analysisSnapshots[String(area.id)]=snap}
+const payload={version:3,exportedAt:new Date().toISOString(),areas:Lt,analysisSnapshots,userMarkers};
+const t=document.createElement("a"),e=URL.createObjectURL(new Blob([JSON.stringify(payload,null,2)],{type:"application/json"}));
+t.href=e,t.download="lensme_trade_areas_full_backup.json",t.click(),setTimeout((()=>URL.revokeObjectURL(e)),1e3)}
 async function importAreas(t){
 if(T)return t.value="",alert("분석 종료 후 가져와주세요.");
-try{const e=JSON.parse(await t.files[0].text()),n=Array.isArray(e)?e:e.areas,importSnaps=!Array.isArray(e)&&e?.analysisSnapshots&&typeof e.analysisSnapshots==="object"?e.analysisSnapshots:{};
-if(!Array.isArray(n)||n.length>1e3||!n.every((t=>t?.name&&j(H(t.geometry||t.path)))))throw new Error("형식 또는 경위도 좌표를 확인하세요.");
-const a=[...Lt],idMap={};n.forEach(((t,eidx)=>{
-const n=H(t.geometry||t.path).geometry,o=F(n),r=K(o),originalId=String(t.id||""),s=/^[a-zA-Z0-9_-]+$/.test(originalId)?originalId:`import_${Date.now()}_${eidx}`,i={...t,id:s,geometry:n,path:o,centerLat:r.lat,
-centerLng:r.lng,si:t.si||"가져온 상권",gu:t.gu||"",dong:t.dong||"미분류"};if(a.findIndex((t=>t.id===s))<0){a.push(i);idMap[originalId]=s}})),X(a)&&(()=>{let changed=false;for(const[oldId,newId]of Object.entries(idMap)){const snap=importSnaps?.[oldId];if(!snap?.analysis?.topSegments?.length)continue;const area=a.find(x=>String(x.id)===String(newId));if(!area)continue;if(String(snap.fenceKey||"")!==String(v564FenceKey(F(area.geometry||area.path))))continue;savedAreaPersistentAnalysis[String(newId)]=snap;changed=true}if(changed)v581WritePersistentAnalysisStore();Ct();setTimeout(()=>v569NormalizeSavedRegions().catch(err=>console.warn("import region normalize failed",err)),80)})()}
-catch(t){alert("가져오기 실패: "+t.message)}finally{t.value=""}}
+try{
+ const data=JSON.parse(await t.files[0].text()),rows=Array.isArray(data)?data:data.areas,importSnaps=!Array.isArray(data)&&data?.analysisSnapshots&&typeof data.analysisSnapshots==="object"?data.analysisSnapshots:{},importMarkers=!Array.isArray(data)&&Array.isArray(data?.userMarkers)?data.userMarkers:[];
+ if(!Array.isArray(rows)||rows.length>1e3||!rows.every((x=>x?.name&&j(H(x.geometry||x.path)))))throw new Error("형식 또는 경위도 좌표를 확인하세요.");
+ const merged=[...Lt],idMap={};
+ rows.forEach((row,idx)=>{
+  const geometry=H(row.geometry||row.path).geometry,path=F(geometry),center=K(path),originalId=String(row.id||""),id=/^[a-zA-Z0-9_-]+$/.test(originalId)?originalId:`import_${Date.now()}_${idx}`;
+  const embedded=row.analysisSnapshot||importSnaps?.[originalId]||null;
+  const item={...row,id,geometry,path,centerLat:center.lat,centerLng:center.lng,si:row.si||"가져온 상권",gu:row.gu||"",dong:row.dong||"미분류"};
+  if(embedded?.analysis?.topSegments?.length)item.analysisSnapshot=embedded;
+  const existing=merged.findIndex(x=>String(x.id)===id);
+  if(existing<0)merged.push(item);else merged[existing]={...merged[existing],...item};
+  idMap[originalId]=id
+ });
+ if(X(merged)){
+  let changed=false;
+  for(const[oldId,newId]of Object.entries(idMap)){
+   const area=merged.find(x=>String(x.id)===String(newId)),snap=area?.analysisSnapshot||importSnaps?.[oldId];if(!snap?.analysis?.topSegments?.length||!area)continue;
+   if(String(snap.fenceKey||"")!==String(v564FenceKey(F(area.geometry||area.path))))continue;
+   savedAreaPersistentAnalysis[String(newId)]=snap;changed=true
+  }
+  if(changed)v581WritePersistentAnalysisStore();
+  if(importMarkers.length){
+   const byId=new Map(userMarkers.map(m=>[String(m.id),m]));
+   for(const m of importMarkers)if(m&&m.id&&Number.isFinite(+m.lat)&&Number.isFinite(+m.lng))byId.set(String(m.id),m);
+   userMarkers=[...byId.values()];v610SaveUserMarkers();v610RenderUserMarkers()
+  }
+  Ct();setTimeout(()=>v569NormalizeSavedRegions().catch(err=>console.warn("import region normalize failed",err)),80);
+ }
+}catch(err){alert("가져오기 실패: "+err.message)}finally{t.value=""}}
+
 
 async function Y(t,n,a,o){const r=O;return new Promise((s=>{
 const i=new kakao.maps.services.Places;let l=[],d=0,u=!1;
@@ -853,7 +1023,7 @@ u||a.nextPage()}),e.KAKAO_PAGE_DELAY_MS):m({truncated:!!a?.hasNextPage})):m({fai
 try{i[t](n,f,{...a,size:15})}catch(t){m({failed:!0,reason:t.message})}}))}
 const z=t=>new Promise((e=>setTimeout(e,t)));
 function V(t){return String(t??"").replace(/[&<>'"]/g,(t=>({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;",'"':"&quot;"}[t])))}
-/* ===== V60.3 전국 브랜드 수량 / 전국 마커 =====
+/* ===== V61.0 전국 브랜드 수량 / 전국 마커 =====
    일반 렌즈 브랜드는 재귀 분할 수집값을 수량으로 사용한다.
    올리브영/다이소는 사용자가 지정한 고정 수량을 화면에 표시하되,
    필터를 켜면 동일한 재귀 분할 수집기로 전국 좌표를 별도 수집해 모든 마커를 표시한다. */
@@ -1344,7 +1514,7 @@ if(T)return alert("분석 종료 후 경계를 수정해주세요.");
 const key=String(id),area=Lt.find(t=>String(t.id)===key);if(!area)return;
 if(!confirm(`\"${area.name}\" 경계를 다시 그릴까요?\n취소하면 기존 경계가 복원됩니다.`))return;
 redrawTarget=JSON.parse(JSON.stringify(area));
-X(Lt.filter(t=>String(t.id)!==key)),Ct(),clearActivePolygon(!0),startDrawing(),
+X(Lt.filter(t=>String(t.id)!==key),true),Ct(),clearActivePolygon(!0),startDrawing(),
 document.getElementById("statusMessage").innerText=`✏️ ${area.name}: 새 경계를 그린 뒤 꼭짓점을 조정하고 저장하세요.`
 }
 
@@ -1426,12 +1596,29 @@ async function v580EnsureSavedAreaAnalysis(key,area,path){
  const fenceKey=v564FenceKey(path),cached=savedAreaAnalysisCache.get(key),persistent=v581GetPersistentAreaAnalysis(key,path);
  v571EnableAnalysisLayers();
  if(cached?.fenceKey===fenceKey&&v585CacheHasDisplayData(cached)){
+  v610EmbedSnapshotIntoArea(key,v610CompactExistingSnapshot(cached,160)||cached);
   v566RestoreCachedAnalysis(cached,path,key);applyMapDisplayFilters();
   document.getElementById("statusMessage").innerText=`${area.name} · 저장된 TOP3·유입·유동인구를 다시 표시했습니다.`;return true
  }
- if(persistent?.analysis?.topSegments?.length&&v585PersistentHasFullVisual(persistent)){
+ if(persistent?.analysis?.topSegments?.length){
+  v610EmbedSnapshotIntoArea(key,v610CompactExistingSnapshot(persistent,160)||persistent);
   savedAreaAnalysisCache.set(String(key),persistent);v566RestoreCachedAnalysis(persistent,path,key);applyMapDisplayFilters();
-  document.getElementById("statusMessage").innerText=`${area.name} · 저장된 1·2·3위·유입·유동인구를 즉시 불러왔습니다.`;return true
+  if(v585PersistentHasFullVisual(persistent)){
+   document.getElementById("statusMessage").innerText=`${area.name} · 저장된 1·2·3위·유입·유동인구를 즉시 불러왔습니다.`;return true
+  }
+  /* 구형 스냅샷은 순위를 먼저 살리고, 유동인구는 같은 클릭에서 1회 재구성해 새 포맷으로 저장 */
+  document.getElementById("statusMessage").innerText=`${area.name} · 기존 순위는 복원했습니다. 유동인구·유입을 새 저장방식으로 1회 재구성 중입니다...`;
+  try{
+   await ce([...path.map(p=>({...p}))]);
+   if(expandedSavedAreaId!=null&&String(expandedSavedAreaId)===String(key)&&i?.topSegments?.length){
+    const html=document.getElementById("rankingResultText")?.innerHTML||persistent.html||"";
+    savedAreaAnalysisCache.set(String(key),{fenceKey,analysis:i,html});v581PersistAreaAnalysis(String(key),fenceKey,i,html,path);
+    v566RestoreCachedAnalysis(v581GetPersistentAreaAnalysis(key,path)||savedAreaAnalysisCache.get(String(key)),path,key);applyMapDisplayFilters();
+    document.getElementById("statusMessage").innerText=`${area.name} · 기존 순위와 유동인구를 새 저장방식으로 복구했습니다.`;return true
+   }
+  }catch(err){console.warn("구형 저장상권 시각화 재구성 실패",err)}
+  v566RestoreCachedAnalysis(persistent,path,key);applyMapDisplayFilters();
+  document.getElementById("statusMessage").innerText=`${area.name} · 기존 순위는 보존해 표시했습니다. 유동인구 재구성은 실패했지만 순위 데이터는 삭제하지 않았습니다.`;return true
  }
  if(lastAnalyzedFenceKey===fenceKey&&i?.topSegments?.length){
   const liveCache={fenceKey,analysis:i,html:document.getElementById("rankingResultText")?.innerHTML||""};
@@ -2068,7 +2255,7 @@ function v586GetSavedDisplayCache(areaId,area=null){
  const key=String(areaId||"");if(!key)return null;area=area||Lt.find(a=>String(a.id)===key);if(!area)return null;
  const path=F(area.geometry||area.path),fenceKey=v564FenceKey(path),cached=savedAreaAnalysisCache.get(key);
  if(cached?.fenceKey===fenceKey&&v585CacheHasDisplayData(cached))return cached;
- const persistent=v581GetPersistentAreaAnalysis(key,path);return v585PersistentHasFullVisual(persistent)?persistent:null
+ const persistent=v581GetPersistentAreaAnalysis(key,path);return persistent?.analysis?.topSegments?.length?persistent:null
 }
 function v586AppendSavedAreaAnalysis(cache,fencePath,areaId,primary=false){
  if(!cache?.analysis)return false;const prevRenderKey=currentRenderSavedAreaId;currentRenderSavedAreaId=String(areaId||"");
@@ -2433,13 +2620,16 @@ document.getElementById("statusMessage").textContent="✅ 펜스 완성 · 상�
 setTimeout((()=>{T||ce(w)}),60)}));
 
 kakao.maps.event.addListener(f,"zoom_changed",(()=>{applyMapDisplayFilters();v571ScheduleRegionLabels()}));
+kakao.maps.event.addListener(f,"click",(mouseEvent=>{if(!userMarkerMode||T||I)return;const p=mouseEvent.latLng;v610AddUserMarkerAt(p.getLat(),p.getLng())}));
 kakao.maps.event.addListener(f,"idle",(async function(){if(!I&&!w&&!T){if(f.getLevel()<=5){await Ht();await v601LoadVisibleAnchors()}else if(f.getLevel()<=7)await v601LoadVisibleAnchors()}v571ScheduleRegionLabels()}));
 v586InitLayerPrefs();
 v595LoadCache();
 v602LoadAnchorCache();
+v610MigrateExistingAnalysisIntoAreas();
 Ct();
+v610RenderUserMarkers();
 v572GoNational();
-document.getElementById("statusMessage").innerText="🗺️ 새로고침 시 대한민국 전체 지도부터 시작합니다. 저장상권 말풍선은 여러 개 선택할 수 있고 같은 말풍선을 다시 누르면 그 상권만 해제됩니다. 표시 메뉴에서 끈 레이어는 지도 확대·축소 후에도 그대로 유지됩니다. 저장상권 계층과 기존 TOP3는 V58.8 저장키를 그대로 사용합니다.";
+document.getElementById("statusMessage").innerText="🗺️ 새로고침 시 대한민국 전체 지도부터 시작합니다. 저장상권 말풍선은 여러 개 선택할 수 있고 같은 말풍선을 다시 누르면 그 상권만 해제됩니다. 표시 메뉴에서 끈 레이어는 지도 확대·축소 후에도 그대로 유지됩니다. 저장상권의 TOP3·유동인구는 상권 본체에도 함께 저장되어 코드 교체 후에도 복구되며, 내 마커도 별도로 유지됩니다.";
 Ft();
 setTimeout(()=>{v569NormalizeSavedRegions().catch(err=>console.warn("saved region normalize failed",err))},350);
 /* 전국 수량은 저장상권/TOP3 복원보다 뒤에, 한 브랜드씩 순차 실행한다. */
