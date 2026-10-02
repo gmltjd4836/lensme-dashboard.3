@@ -397,7 +397,7 @@ details[open]>summary::before{color:#6d63ff!important}
 <div id="premiumSidebar" class="w-full md:w-1/4 bg-white border-r border-gray-200 p-6 flex flex-col shadow-lg z-20 overflow-y-auto">
 <h1 id="premiumHeader" class="text-xl font-extrabold text-slate-800 border-b-4 border-indigo-500 pb-3 mb-4 flex justify-between items-center">
 <span class="premium-brand"><span class="premium-brand-kicker">LENS ME</span><span class="premium-brand-title">상권 분석 지도</span></span>
-<span class="premium-version text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded-full font-bold">V61.0</span>
+<span class="premium-version text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded-full font-bold">V61.1</span>
 </h1>
 
 <div class="mb-3">
@@ -437,7 +437,7 @@ details[open]>summary::before{color:#6d63ff!important}
 
 <div class="mb-3 bg-white p-3 rounded-xl border border-sky-200 shadow-sm">
 <div class="flex items-center justify-between mb-2">
-<label class="text-sm font-extrabold text-slate-700">📌 내 마커</label>
+<label class="text-sm font-extrabold text-slate-700">📌 내 후보 위치</label>
 <span id="userMarkerCount" class="text-[10px] font-black text-sky-700 bg-sky-50 px-2 py-1 rounded-full">0개</span>
 </div>
 <div class="flex gap-2 mb-2">
@@ -445,7 +445,7 @@ details[open]>summary::before{color:#6d63ff!important}
 <button onclick="clearAllUserMarkers()" class="rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 px-2 py-2 text-[10px] font-bold">전체삭제</button>
 </div>
 <div id="userMarkerList" class="max-h-32 overflow-y-auto space-y-1"></div>
-<p class="text-[9.5px] text-slate-400 mt-2">추천 TOP3와 별개로 원하는 위치를 직접 찍어 이름·메모를 저장할 수 있습니다. 백업/복원 파일에도 함께 포함됩니다.</p>
+<p class="text-[9.5px] text-slate-400 mt-2">저장상권을 연 뒤 펜스 안에 직접 후보를 찍으면 그 상권에 귀속됩니다. 상권 말풍선을 누를 때 해당 후보도 함께 표시되며 백업/복원에도 포함됩니다.</p>
 </div>
 
 <div class="mb-2 bg-white p-3 rounded-xl border border-indigo-200 shadow-sm">
@@ -537,7 +537,8 @@ details[open]>summary::before{color:#6d63ff!important}
 <script src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=c045609510f8b75252389123f086be48&libraries=services,drawing"></script>
 
 <script>
-/* V61.0: V60.0 프리미엄 UI 기반. 올리브영/다이소 현재 화면 지도표시 복구.
+/* V61.1: V61.0 기반. 저장상권별 사용자 후보 마커 귀속/표시 기능 추가.
+   V60.0 프리미엄 UI 기반. 올리브영/다이소 현재 화면 지도표시 복구.
    기존 저장상권·TOP3·전국 브랜드 수량 로직은 유지한다. */
 /* V60.0: V59.5 전체 기능 그대로 유지.
    - 저장상권 말풍선 가독성 개선
@@ -567,16 +568,97 @@ level:12}),h=new kakao.maps.services.Places,p=new kakao.maps.services.Geocoder,y
 const V610_USER_MARKER_KEY="lensmeUserMarkersV61_0";
 let userMarkers=v610LoadUserMarkers(),userMarkerObjects=new Map(),userMarkerMode=false,userMarkerOpenId=null;
 
+/* V61.1: 내 후보 마커를 저장상권에 귀속한다.
+   - 선택한 저장상권 안에서 찍으면 해당 상권 후보로 자동 저장
+   - 저장상권 말풍선을 누른 동안 그 상권 후보만 지도에 표시
+   - 기존 V61.0 마커는 좌표가 펜스 안이면 최초 1회 자동 귀속
+   - 마커는 별도 저장키 + 상권 본체(candidateMarkers)에 이중 저장 */
 function v610LoadUserMarkers(){
- try{const rows=JSON.parse(localStorage.getItem(V610_USER_MARKER_KEY)||"[]");return Array.isArray(rows)?rows.filter(m=>m&&m.id&&Number.isFinite(+m.lat)&&Number.isFinite(+m.lng)):[]}
- catch(err){console.warn("내 마커 읽기 실패",err);return[]}
+ const merged=new Map;
+ try{
+  const rows=JSON.parse(localStorage.getItem(V610_USER_MARKER_KEY)||"[]");
+  if(Array.isArray(rows))for(const m of rows)if(m&&m.id&&Number.isFinite(+m.lat)&&Number.isFinite(+m.lng))merged.set(String(m.id),m)
+ }catch(err){console.warn("내 마커 읽기 실패",err)}
+ try{
+  const areas=JSON.parse(localStorage.getItem("lensmePolygonsV43_2")||"[]");
+  if(Array.isArray(areas))for(const area of areas){
+   const areaId=String(area?.id||"");if(!areaId||!Array.isArray(area?.candidateMarkers))continue;
+   for(const row of area.candidateMarkers){
+    if(!row?.id||!Number.isFinite(+row.lat)||!Number.isFinite(+row.lng))continue;
+    const key=String(row.id),old=merged.get(key),oldTime=Date.parse(old?.updatedAt||old?.savedAt||0)||0,newTime=Date.parse(row?.updatedAt||row?.savedAt||0)||0;
+    if(!old||newTime>=oldTime)merged.set(key,{...row,areaId:row.areaId||areaId})
+   }
+  }
+ }catch(err){console.warn("상권 본체 후보 마커 복구 실패",err)}
+ return [...merged.values()]
+}
+function v620AreaById(areaId){const key=String(areaId||"");return (typeof Lt!=="undefined"&&Array.isArray(Lt))?Lt.find(a=>String(a.id)===key)||null:null}
+function v620AreaName(areaId){return v620AreaById(areaId)?.name||"독립 후보"}
+function v620ContainingAreas(lat,lng){
+ if(typeof Lt==="undefined"||!Array.isArray(Lt))return[];
+ return Lt.filter(area=>{try{return Nt(+lat,+lng,F(area.geometry||area.path))}catch(e){return false}})
+}
+function v620AreaSurface(area){try{return window.turf?.area?Math.abs(turf.area(H(area.geometry||area.path))):Number.POSITIVE_INFINITY}catch(e){return Number.POSITIVE_INFINITY}}
+function v620BestContainingArea(lat,lng){
+ const rows=v620ContainingAreas(lat,lng);if(!rows.length)return null;
+ const active=expandedSavedAreaId!=null?rows.find(a=>String(a.id)===String(expandedSavedAreaId)):null;if(active)return active;
+ const focused=focusedSavedAreaId!=null?rows.find(a=>String(a.id)===String(focusedSavedAreaId)):null;if(focused)return focused;
+ return [...rows].sort((a,b)=>v620AreaSurface(a)-v620AreaSurface(b))[0]||rows[0]
+}
+function v620EmbedUserMarkersIntoAreas(){
+ if(typeof Lt==="undefined"||!Array.isArray(Lt))return false;
+ const byArea=new Map;
+ for(const m of userMarkers||[]){const areaId=String(m?.areaId||"");if(!areaId)continue;if(!byArea.has(areaId))byArea.set(areaId,[]);byArea.get(areaId).push({...m})}
+ const next=Lt.map(area=>{
+  const rows=byArea.get(String(area.id))||[],old=Array.isArray(area.candidateMarkers)?area.candidateMarkers:[];
+  if(!rows.length&&!old.length)return area;
+  const copy={...area};if(rows.length)copy.candidateMarkers=rows;else delete copy.candidateMarkers;return copy
+ });
+ try{localStorage.setItem("lensmePolygonsV43_2",JSON.stringify(next));Lt=next;return true}catch(err){console.warn("상권 본체 후보 마커 저장 실패",err);return false}
 }
 function v610SaveUserMarkers(){
- try{localStorage.setItem(V610_USER_MARKER_KEY,JSON.stringify(userMarkers||[]));return true}
+ try{localStorage.setItem(V610_USER_MARKER_KEY,JSON.stringify(userMarkers||[]));v620EmbedUserMarkersIntoAreas();return true}
  catch(err){console.warn("내 마커 저장 실패",err);alert("내 마커 저장 공간이 부족합니다. 먼저 상권 백업을 내려받아주세요.");return false}
 }
-function v610MarkerIcon(){
- const svg=`<svg xmlns="http://www.w3.org/2000/svg" width="34" height="42" viewBox="0 0 34 42"><path d="M17 1C8.7 1 2 7.7 2 16c0 10.8 15 25 15 25s15-14.2 15-25C32 7.7 25.3 1 17 1z" fill="#0284c7" stroke="white" stroke-width="2.5"/><circle cx="17" cy="16" r="6" fill="white"/><circle cx="17" cy="16" r="2.6" fill="#0284c7"/></svg>`;
+function v620MigrateExistingUserMarkersToAreas(){
+ if(typeof Lt==="undefined"||!Array.isArray(Lt)||!Lt.length||!Array.isArray(userMarkers)||!userMarkers.length)return false;
+ let changed=false;
+ userMarkers=userMarkers.map(m=>{
+  if(m.areaId&&v620AreaById(m.areaId))return m;
+  const area=v620BestContainingArea(m.lat,m.lng);if(!area)return m;
+  changed=true;return{...m,areaId:String(area.id),areaNameCache:area.name,updatedAt:m.updatedAt||new Date().toISOString()}
+ });
+ if(changed)v610SaveUserMarkers();else v620EmbedUserMarkersIntoAreas();return changed
+}
+function v620DetachMarkersFromArea(areaId){
+ const key=String(areaId||"");let changed=false;
+ userMarkers=userMarkers.map(m=>String(m.areaId||"")===key?(changed=true,{...m,areaId:"",areaNameCache:"",updatedAt:new Date().toISOString()}):m);
+ if(changed)v610SaveUserMarkers();return changed
+}
+function v620MarkerVisibleForSelection(m){
+ const areaId=String(m?.areaId||"");
+ if(selectedSavedAreaIds.size>0)return !!areaId&&selectedSavedAreaIds.has(areaId);
+ if(expandedSavedAreaId!=null)return !!areaId&&areaId===String(expandedSavedAreaId);
+ /* 저장상권에 귀속되지 않은 독립 후보만 평상시에 표시 */
+ return !areaId
+}
+function v620MarkerAreaBadge(m){const areaId=String(m?.areaId||"");return areaId?`<span class="text-[8px] font-black text-indigo-600 bg-indigo-50 px-1.5 py-0.5 rounded-full">${V(v620AreaName(areaId))}</span>`:'<span class="text-[8px] font-black text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded-full">독립</span>'}
+function v620ChangeUserMarkerArea(id){
+ const key=String(id),idx=userMarkers.findIndex(m=>String(m.id)===key);if(idx<0)return;
+ const m=userMarkers[idx],areas=v620ContainingAreas(m.lat,m.lng).sort((a,b)=>v620AreaSurface(a)-v620AreaSurface(b));
+ if(!areas.length){if(confirm("이 마커 위치는 현재 어떤 저장상권 펜스 안에도 없습니다. 독립 후보로 변경할까요?")){userMarkers[idx]={...m,areaId:"",areaNameCache:"",updatedAt:new Date().toISOString()};v610SaveUserMarkers();v610RenderUserMarkers()}return}
+ let chosen=null;
+ if(areas.length===1)chosen=areas[0];
+ else{
+  const lines=areas.map((a,i)=>`${i+1}. ${a.name}`).join("\n"),answer=prompt(`이 후보를 넣을 저장상권 번호를 입력하세요.\n0. 독립 후보\n${lines}`,String(Math.max(1,areas.findIndex(a=>String(a.id)===String(m.areaId))+1)));
+  if(answer===null)return;const n=Number(answer);if(n===0){userMarkers[idx]={...m,areaId:"",areaNameCache:"",updatedAt:new Date().toISOString()};v610SaveUserMarkers();v610RenderUserMarkers();return}chosen=areas[n-1];if(!chosen)return alert("번호를 다시 확인해주세요.")
+ }
+ userMarkers[idx]={...m,areaId:String(chosen.id),areaNameCache:chosen.name,updatedAt:new Date().toISOString()};v610SaveUserMarkers();v610RenderUserMarkers();applyMapDisplayFilters();
+ document.getElementById("statusMessage").innerText=`📌 ${m.name||"후보 위치"} → ${chosen.name} 상권에 연결했습니다.`
+}
+function v610MarkerIcon(assigned=true){
+ const fill=assigned?"#0284c7":"#64748b";
+ const svg=`<svg xmlns="http://www.w3.org/2000/svg" width="34" height="42" viewBox="0 0 34 42"><path d="M17 1C8.7 1 2 7.7 2 16c0 10.8 15 25 15 25s15-14.2 15-25C32 7.7 25.3 1 17 1z" fill="${fill}" stroke="white" stroke-width="2.5"/><circle cx="17" cy="16" r="6" fill="white"/><circle cx="17" cy="16" r="2.6" fill="${fill}"/></svg>`;
  return new kakao.maps.MarkerImage("data:image/svg+xml;charset=UTF-8,"+encodeURIComponent(svg),new kakao.maps.Size(34,42),{offset:new kakao.maps.Point(17,41)})
 }
 function v610CloseUserMarkerPopup(){
@@ -586,61 +668,76 @@ function v610CloseUserMarkerPopup(){
 function v610OpenUserMarker(id){
  const key=String(id),m=userMarkers.find(x=>String(x.id)===key),rec=userMarkerObjects.get(key);if(!m||!rec)return;
  v610CloseUserMarkerPopup();userMarkerOpenId=key;
- const memo=V(m.memo||"").replace(/\n/g,"<br>");
- const html=`<div style="min-width:190px;max-width:260px;background:white;border:1px solid #bae6fd;border-radius:14px;padding:10px 11px;box-shadow:0 12px 30px rgba(15,23,42,.18);font-family:Pretendard,sans-serif"><div style="font-size:12px;font-weight:1000;color:#0c4a6e;margin-bottom:4px">📌 ${V(m.name||"내 마커")}</div>${memo?`<div style="font-size:10px;color:#64748b;line-height:1.45;margin-bottom:7px">${memo}</div>`:""}<div style="display:flex;gap:5px"><button onclick="renameUserMarker('${key}')" style="border:0;border-radius:7px;padding:5px 7px;background:#e0f2fe;color:#0369a1;font-size:9px;font-weight:900;cursor:pointer">수정</button><button onclick="deleteUserMarker('${key}')" style="border:0;border-radius:7px;padding:5px 7px;background:#fff1f2;color:#be123c;font-size:9px;font-weight:900;cursor:pointer">삭제</button></div></div>`;
- rec.popup.setContent(html);rec.popup.setMap(layerChecked("layer_user_markers",true)?f:null)
+ const memo=V(m.memo||"").replace(/\n/g,"<br>"),areaLabel=m.areaId?V(v620AreaName(m.areaId)):"독립 후보";
+ const html=`<div style="min-width:205px;max-width:275px;background:white;border:1px solid #bae6fd;border-radius:14px;padding:10px 11px;box-shadow:0 12px 30px rgba(15,23,42,.18);font-family:Pretendard,sans-serif"><div style="font-size:12px;font-weight:1000;color:#0c4a6e;margin-bottom:4px">📌 ${V(m.name||"내 후보")}</div><div style="font-size:9px;font-weight:900;color:#4f46e5;background:#eef2ff;border-radius:7px;padding:4px 6px;margin-bottom:6px">저장상권 · ${areaLabel}</div>${memo?`<div style="font-size:10px;color:#64748b;line-height:1.45;margin-bottom:7px">${memo}</div>`:""}<div style="display:flex;gap:5px;flex-wrap:wrap"><button onclick="renameUserMarker('${key}')" style="border:0;border-radius:7px;padding:5px 7px;background:#e0f2fe;color:#0369a1;font-size:9px;font-weight:900;cursor:pointer">수정</button><button onclick="v620ChangeUserMarkerArea('${key}')" style="border:0;border-radius:7px;padding:5px 7px;background:#eef2ff;color:#4338ca;font-size:9px;font-weight:900;cursor:pointer">상권변경</button><button onclick="deleteUserMarker('${key}')" style="border:0;border-radius:7px;padding:5px 7px;background:#fff1f2;color:#be123c;font-size:9px;font-weight:900;cursor:pointer">삭제</button></div></div>`;
+ rec.popup.setContent(html);rec.popup.setMap(layerChecked("layer_user_markers",true)&&v620MarkerVisibleForSelection(m)?f:null)
 }
 function v610RenderUserMarkers(){
  for(const rec of userMarkerObjects.values()){try{rec.marker.setMap(null);rec.label.setMap(null);rec.popup.setMap(null)}catch(e){}}
  userMarkerObjects.clear();userMarkerOpenId=null;
- const icon=v610MarkerIcon();
  for(const m of userMarkers){
-  const key=String(m.id),pos=new kakao.maps.LatLng(+m.lat,+m.lng),marker=new kakao.maps.Marker({position:pos,image:icon,zIndex:145});
-  const label=new kakao.maps.CustomOverlay({position:pos,xAnchor:.5,yAnchor:1.72,zIndex:144,content:`<button onclick="focusUserMarker('${key}')" style="border:1px solid #bae6fd;background:rgba(255,255,255,.96);color:#075985;border-radius:999px;padding:5px 8px;font:900 9px Pretendard,sans-serif;box-shadow:0 5px 14px rgba(15,23,42,.12);cursor:pointer;white-space:nowrap">📌 ${V(m.name||"내 마커")}</button>`});
+  const key=String(m.id),pos=new kakao.maps.LatLng(+m.lat,+m.lng),marker=new kakao.maps.Marker({position:pos,image:v610MarkerIcon(!!m.areaId),zIndex:145});
+  const label=new kakao.maps.CustomOverlay({position:pos,xAnchor:.5,yAnchor:1.72,zIndex:144,content:`<button onclick="focusUserMarker('${key}')" style="border:1px solid #bae6fd;background:rgba(255,255,255,.96);color:#075985;border-radius:999px;padding:5px 8px;font:900 9px Pretendard,sans-serif;box-shadow:0 5px 14px rgba(15,23,42,.12);cursor:pointer;white-space:nowrap">📌 ${V(m.name||"후보 위치")}</button>`});
   const popup=new kakao.maps.CustomOverlay({position:pos,xAnchor:.5,yAnchor:1.38,zIndex:180,content:""});
   kakao.maps.event.addListener(marker,"click",()=>v610OpenUserMarker(key));
-  userMarkerObjects.set(key,{marker,label,popup});marker.setMap(f);label.setMap(f)
+  userMarkerObjects.set(key,{marker,label,popup});
  }
  v610RenderUserMarkerList();v610ApplyUserMarkerVisibility(layerChecked("layer_user_markers",true))
 }
 function v610RenderUserMarkerList(){
  const box=document.getElementById("userMarkerList"),cnt=document.getElementById("userMarkerCount");if(cnt)cnt.textContent=`${userMarkers.length}개`;if(!box)return;
- if(!userMarkers.length){box.innerHTML='<div class="text-[10px] text-slate-400 py-2 text-center">저장한 내 마커가 없습니다.</div>';return}
- box.innerHTML=userMarkers.map(m=>`<div class="flex items-center gap-1 rounded-lg bg-sky-50/60 px-2 py-1.5"><button onclick="focusUserMarker('${String(m.id)}')" class="min-w-0 flex-1 text-left truncate text-[10px] font-extrabold text-sky-800">📌 ${V(m.name||"내 마커")}</button><button onclick="renameUserMarker('${String(m.id)}')" class="text-[9px] font-bold text-slate-500">수정</button><button onclick="deleteUserMarker('${String(m.id)}')" class="text-[9px] font-bold text-rose-600">삭제</button></div>`).join("")
+ if(!userMarkers.length){box.innerHTML='<div class="text-[10px] text-slate-400 py-2 text-center">저장한 내 후보가 없습니다.</div>';return}
+ const sorted=[...userMarkers].sort((a,b)=>String(v620AreaName(a.areaId)).localeCompare(String(v620AreaName(b.areaId)),"ko")||String(a.name||"").localeCompare(String(b.name||""),"ko"));
+ box.innerHTML=sorted.map(m=>`<div class="rounded-lg bg-sky-50/60 px-2 py-1.5"><div class="flex items-center gap-1"><button onclick="focusUserMarker('${String(m.id)}')" class="min-w-0 flex-1 text-left truncate text-[10px] font-extrabold text-sky-800">📌 ${V(m.name||"후보 위치")}</button><button onclick="v620ChangeUserMarkerArea('${String(m.id)}')" class="text-[9px] font-bold text-indigo-600">상권</button><button onclick="renameUserMarker('${String(m.id)}')" class="text-[9px] font-bold text-slate-500">수정</button><button onclick="deleteUserMarker('${String(m.id)}')" class="text-[9px] font-bold text-rose-600">삭제</button></div><div class="mt-1">${v620MarkerAreaBadge(m)}</div></div>`).join("")
 }
 function v610ApplyUserMarkerVisibility(show=true){
- for(const rec of userMarkerObjects.values()){try{rec.marker.setMap(show?f:null);rec.label.setMap(show?f:null);if(!show)rec.popup.setMap(null)}catch(e){}}
- if(!show)userMarkerOpenId=null
+ for(const [key,rec] of userMarkerObjects.entries()){
+  const m=userMarkers.find(x=>String(x.id)===String(key)),visible=!!show&&!!m&&v620MarkerVisibleForSelection(m);
+  try{rec.marker.setMap(visible?f:null);rec.label.setMap(visible?f:null);if(!visible)rec.popup.setMap(null)}catch(e){}
+  if(!visible&&String(userMarkerOpenId||"")===String(key))userMarkerOpenId=null
+ }
 }
 function toggleUserMarkerMode(){
- if(T||I)return alert("분석 또는 상권 그리기가 끝난 뒤 내 마커를 추가해주세요.");
- userMarkerMode=!userMarkerMode;const btn=document.getElementById("btnUserMarkerMode");
+ if(T||I)return alert("분석 또는 상권 그리기가 끝난 뒤 내 후보를 추가해주세요.");
+ userMarkerMode=!userMarkerMode;const btn=document.getElementById("btnUserMarkerMode"),activeArea=expandedSavedAreaId!=null?v620AreaById(expandedSavedAreaId):null;
  if(btn){btn.textContent=userMarkerMode?"✋ 지도에서 위치 클릭":"📍 지도에서 찍기";btn.classList.toggle("bg-sky-600",!userMarkerMode);btn.classList.toggle("bg-amber-500",userMarkerMode)}
- document.getElementById("statusMessage").innerText=userMarkerMode?"📌 내 마커 추가 모드 · 지도에서 원하는 위치를 한 번 클릭하세요.":"내 마커 추가를 취소했습니다."
+ document.getElementById("statusMessage").innerText=userMarkerMode?(activeArea?`📌 ${activeArea.name} 후보 추가 · 펜스 안 원하는 위치를 클릭하세요.`:"📌 내 후보 추가 · 저장상권 안을 클릭하면 그 상권에 자동으로 들어갑니다."):"내 후보 추가를 취소했습니다."
 }
 function v610AddUserMarkerAt(lat,lng){
- const name=prompt("내 마커 이름을 입력하세요:","후보 위치");if(name===null)return;
+ const activeArea=expandedSavedAreaId!=null?v620AreaById(expandedSavedAreaId):null;
+ let area=null;
+ if(activeArea){
+  const inside=(()=>{try{return Nt(+lat,+lng,F(activeArea.geometry||activeArea.path))}catch(e){return false}})();
+  if(!inside){alert(`현재 선택한 "${activeArea.name}" 펜스 밖입니다. 이 상권 후보로 저장하려면 펜스 안을 클릭해주세요.`);return}
+  area=activeArea
+ }else area=v620BestContainingArea(lat,lng);
+ if(!area&&!confirm("이 위치는 저장상권 펜스 안이 아닙니다. 독립 후보로 저장할까요?"))return;
+ const name=prompt("후보 위치 이름을 입력하세요:","후보 위치");if(name===null)return;
  const memo=prompt("메모가 있으면 입력하세요. (없으면 빈칸)","");if(memo===null)return;
- const row={id:`um_${Date.now()}_${Math.random().toString(36).slice(2,7)}`,name:name.trim()||"내 마커",memo:memo.trim(),lat:+lat,lng:+lng,savedAt:new Date().toISOString()};
+ const row={id:`um_${Date.now()}_${Math.random().toString(36).slice(2,7)}`,name:name.trim()||"후보 위치",memo:memo.trim(),lat:+lat,lng:+lng,areaId:area?String(area.id):"",areaNameCache:area?.name||"",savedAt:new Date().toISOString()};
  userMarkers.push(row);v610SaveUserMarkers();v610RenderUserMarkers();userMarkerMode=false;
  const btn=document.getElementById("btnUserMarkerMode");if(btn){btn.textContent="📍 지도에서 찍기";btn.classList.add("bg-sky-600");btn.classList.remove("bg-amber-500")}
- document.getElementById("statusMessage").innerText=`📌 ${row.name} 마커를 저장했습니다.`
+ document.getElementById("statusMessage").innerText=area?`📌 ${row.name} · ${area.name} 상권 후보로 저장했습니다.`:`📌 ${row.name} · 독립 후보로 저장했습니다.`
 }
-function focusUserMarker(id){
- const m=userMarkers.find(x=>String(x.id)===String(id));if(!m)return;f.panTo(new kakao.maps.LatLng(+m.lat,+m.lng));if(f.getLevel()>4)f.setLevel(4);setTimeout(()=>v610OpenUserMarker(id),120)
+async function focusUserMarker(id){
+ const m=userMarkers.find(x=>String(x.id)===String(id));if(!m)return;
+ if(m.areaId&&!selectedSavedAreaIds.has(String(m.areaId))){
+  const area=v620AreaById(m.areaId);if(area)await toggleSavedPolygonAnalysis(String(area.id))
+ }
+ f.panTo(new kakao.maps.LatLng(+m.lat,+m.lng));if(f.getLevel()>4)f.setLevel(4);setTimeout(()=>v610OpenUserMarker(id),140)
 }
 function renameUserMarker(id){
  const key=String(id),idx=userMarkers.findIndex(x=>String(x.id)===key);if(idx<0)return;
- const name=prompt("내 마커 이름 변경:",userMarkers[idx].name||"내 마커");if(name===null)return;
+ const name=prompt("후보 위치 이름 변경:",userMarkers[idx].name||"후보 위치");if(name===null)return;
  const memo=prompt("메모 변경:",userMarkers[idx].memo||"");if(memo===null)return;
- userMarkers[idx]={...userMarkers[idx],name:name.trim()||"내 마커",memo:memo.trim(),updatedAt:new Date().toISOString()};v610SaveUserMarkers();v610RenderUserMarkers()
+ userMarkers[idx]={...userMarkers[idx],name:name.trim()||"후보 위치",memo:memo.trim(),updatedAt:new Date().toISOString()};v610SaveUserMarkers();v610RenderUserMarkers();applyMapDisplayFilters()
 }
 function deleteUserMarker(id){
- const key=String(id),m=userMarkers.find(x=>String(x.id)===key);if(!m)return;if(!confirm(`"${m.name||"내 마커"}"를 삭제할까요?`))return;
- userMarkers=userMarkers.filter(x=>String(x.id)!==key);v610SaveUserMarkers();v610RenderUserMarkers()
+ const key=String(id),m=userMarkers.find(x=>String(x.id)===key);if(!m)return;if(!confirm(`"${m.name||"후보 위치"}"를 삭제할까요?`))return;
+ userMarkers=userMarkers.filter(x=>String(x.id)!==key);v610SaveUserMarkers();v610RenderUserMarkers();applyMapDisplayFilters()
 }
 function clearAllUserMarkers(){
- if(!userMarkers.length)return;if(!confirm(`내 마커 ${userMarkers.length}개를 모두 삭제할까요?`))return;userMarkers=[];v610SaveUserMarkers();v610RenderUserMarkers()
+ if(!userMarkers.length)return;if(!confirm(`내 후보 ${userMarkers.length}개를 모두 삭제할까요?`))return;userMarkers=[];v610SaveUserMarkers();v610RenderUserMarkers();applyMapDisplayFilters()
 }
 
 function D(t){return String(t.id||`${t.place_name}|${t.x}|${t.y}`)}
@@ -978,13 +1075,15 @@ function X(t,skipPrune=false){
 }
 function exportAreas(){
 const analysisSnapshots={};for(const area of Lt||[]){const snap=savedAreaPersistentAnalysis?.[String(area.id)]||area?.analysisSnapshot;if(snap)analysisSnapshots[String(area.id)]=snap}
-const payload={version:3,exportedAt:new Date().toISOString(),areas:Lt,analysisSnapshots,userMarkers};
+v620EmbedUserMarkersIntoAreas();
+const payload={version:4,exportedAt:new Date().toISOString(),areas:Lt,analysisSnapshots,userMarkers};
 const t=document.createElement("a"),e=URL.createObjectURL(new Blob([JSON.stringify(payload,null,2)],{type:"application/json"}));
 t.href=e,t.download="lensme_trade_areas_full_backup.json",t.click(),setTimeout((()=>URL.revokeObjectURL(e)),1e3)}
 async function importAreas(t){
 if(T)return t.value="",alert("분석 종료 후 가져와주세요.");
 try{
- const data=JSON.parse(await t.files[0].text()),rows=Array.isArray(data)?data:data.areas,importSnaps=!Array.isArray(data)&&data?.analysisSnapshots&&typeof data.analysisSnapshots==="object"?data.analysisSnapshots:{},importMarkers=!Array.isArray(data)&&Array.isArray(data?.userMarkers)?data.userMarkers:[];
+ const data=JSON.parse(await t.files[0].text()),rows=Array.isArray(data)?data:data.areas,importSnaps=!Array.isArray(data)&&data?.analysisSnapshots&&typeof data.analysisSnapshots==="object"?data.analysisSnapshots:{},importMarkers=!Array.isArray(data)&&Array.isArray(data?.userMarkers)?[...data.userMarkers]:[];
+ if(Array.isArray(rows))for(const area of rows||[])for(const m of (Array.isArray(area?.candidateMarkers)?area.candidateMarkers:[]))if(m?.id)importMarkers.push({...m,areaId:m.areaId||String(area.id||"")});
  if(!Array.isArray(rows)||rows.length>1e3||!rows.every((x=>x?.name&&j(H(x.geometry||x.path)))))throw new Error("형식 또는 경위도 좌표를 확인하세요.");
  const merged=[...Lt],idMap={};
  rows.forEach((row,idx)=>{
@@ -1006,8 +1105,8 @@ try{
   if(changed)v581WritePersistentAnalysisStore();
   if(importMarkers.length){
    const byId=new Map(userMarkers.map(m=>[String(m.id),m]));
-   for(const m of importMarkers)if(m&&m.id&&Number.isFinite(+m.lat)&&Number.isFinite(+m.lng))byId.set(String(m.id),m);
-   userMarkers=[...byId.values()];v610SaveUserMarkers();v610RenderUserMarkers()
+   for(const m of importMarkers)if(m&&m.id&&Number.isFinite(+m.lat)&&Number.isFinite(+m.lng)){const mappedArea=m.areaId&&idMap[String(m.areaId)]?idMap[String(m.areaId)]:m.areaId;byId.set(String(m.id),{...m,areaId:mappedArea||""})}
+   userMarkers=[...byId.values()];v620MigrateExistingUserMarkersToAreas();v610SaveUserMarkers();v610RenderUserMarkers()
   }
   Ct();setTimeout(()=>v569NormalizeSavedRegions().catch(err=>console.warn("import region normalize failed",err)),80);
  }
@@ -1577,7 +1676,7 @@ if(changed&&X(next))Ct()
 function deletePolygon(t){
  const key=String(t);if(!confirm("이 상권 경계를 삭제하시겠습니까?"))return;if(T)return alert("분석 종료 후 삭제해주세요.");
  if(!X(Lt.filter(e=>String(e.id)!==key)))return;
- selectedSavedAreaIds.delete(key);v581DeletePersistentAreaAnalysis(key);
+ v620DetachMarkersFromArea(key);selectedSavedAreaIds.delete(key);v581DeletePersistentAreaAnalysis(key);
  if(expandedSavedAreaId!=null&&String(expandedSavedAreaId)===key){
   const next=[...selectedSavedAreaIds].at(-1)||null;
   if(!next)return clearActivePolygon();
@@ -1706,7 +1805,8 @@ const ok=await v580EnsureSavedAreaAnalysis(key,area,w);
 if(ok){
  v586RenderAllSelectedSavedAreas(key);
  applyMapDisplayFilters();
- document.getElementById("statusMessage").innerText=`${area.name} · ${selectedSavedAreaIds.size}개 상권의 TOP3·유입·유동인구를 함께 표시했습니다.`;
+ const myCandidateCount=userMarkers.filter(m=>selectedSavedAreaIds.has(String(m.areaId||""))).length;
+ document.getElementById("statusMessage").innerText=`${area.name} · ${selectedSavedAreaIds.size}개 상권의 TOP3·유입·유동인구${myCandidateCount?` · 내 후보 ${myCandidateCount}곳`:""}을 함께 표시했습니다.`;
  setTimeout(()=>v583EnsureActiveSavedRankVisible(key),80);setTimeout(()=>v583EnsureActiveSavedRankVisible(key),320)
 }
 }
@@ -2626,10 +2726,11 @@ v586InitLayerPrefs();
 v595LoadCache();
 v602LoadAnchorCache();
 v610MigrateExistingAnalysisIntoAreas();
+v620MigrateExistingUserMarkersToAreas();
 Ct();
 v610RenderUserMarkers();
 v572GoNational();
-document.getElementById("statusMessage").innerText="🗺️ 새로고침 시 대한민국 전체 지도부터 시작합니다. 저장상권 말풍선은 여러 개 선택할 수 있고 같은 말풍선을 다시 누르면 그 상권만 해제됩니다. 표시 메뉴에서 끈 레이어는 지도 확대·축소 후에도 그대로 유지됩니다. 저장상권의 TOP3·유동인구는 상권 본체에도 함께 저장되어 코드 교체 후에도 복구되며, 내 마커도 별도로 유지됩니다.";
+document.getElementById("statusMessage").innerText="🗺️ 새로고침 시 대한민국 전체 지도부터 시작합니다. 저장상권 말풍선은 여러 개 선택할 수 있고 같은 말풍선을 다시 누르면 그 상권만 해제됩니다. 표시 메뉴에서 끈 레이어는 지도 확대·축소 후에도 그대로 유지됩니다. 저장상권의 TOP3·유동인구는 상권 본체에도 함께 저장됩니다. 내 후보 마커도 저장상권에 귀속되어 해당 펜스 말풍선을 누르면 함께 표시되고 백업에 보존됩니다.";
 Ft();
 setTimeout(()=>{v569NormalizeSavedRegions().catch(err=>console.warn("saved region normalize failed",err))},350);
 /* 전국 수량은 저장상권/TOP3 복원보다 뒤에, 한 브랜드씩 순차 실행한다. */
