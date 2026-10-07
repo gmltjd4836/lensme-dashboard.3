@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>렌즈미 상권 분석 지도 V61.13 PREMIUM</title>
+<title>렌즈미 상권 분석 지도 V61.14 PREMIUM</title>
 <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css" rel="stylesheet">
 <script src="https://cdn.tailwindcss.com"></script>
 <style>
@@ -316,7 +316,7 @@ details[open]>summary::before{color:#6d63ff!important}
 .region-crumb.current{background:#eeefff!important;border-color:#dfe1ff!important;color:#534fd8!important}
 .region-nav-meta{font-size:8.5px!important;color:#95a0b1!important}
 
-/* V61.13 유동인구 범례 - 지도색을 가리지 않는 심플 가로형 */
+/* V61.14 유동인구 범례 - 지도색을 가리지 않는 심플 가로형 */
 .flow-legend{
   right:18px!important;bottom:18px!important;width:230px!important;padding:10px 12px!important;
   border-radius:14px!important;background:rgba(255,255,255,.93)!important;border:1px solid rgba(226,232,240,.96)!important;
@@ -406,7 +406,7 @@ details[open]>summary::before{color:#6d63ff!important}
 
 
 
-/* V61.13 저장상권 펜스 역할색 분리 */
+/* V61.14 저장상권 펜스 역할색 분리 */
 .poly-nametag.active{
   background:linear-gradient(135deg,#eef2ff,#f5f3ff)!important;
   color:#4338ca!important;
@@ -416,13 +416,104 @@ details[open]>summary::before{color:#6d63ff!important}
 .poly-nametag.active::after{border-color:#a5b4fc!important}
 .poly-nametag-check{background:#e0e7ff!important;color:#4338ca!important}
 
+
+/* V61.14 독립 로드뷰 */
+#roadviewControl{
+  position:absolute;top:16px;right:92px;z-index:24;
+}
+.roadview-main-btn{
+  min-height:38px;padding:0 13px;border-radius:12px;
+  background:rgba(255,255,255,.92);border:1px solid rgba(255,255,255,.98);
+  color:#334155;font-size:11px;font-weight:1000;
+  box-shadow:0 9px 26px rgba(29,44,73,.12);
+  backdrop-filter:blur(15px);-webkit-backdrop-filter:blur(15px);
+  transition:.15s ease;
+}
+.roadview-main-btn:hover{transform:translateY(-1px);background:#fff}
+.roadview-main-btn.active{
+  background:#eef2ff;border-color:#a5b4fc;color:#4338ca;
+  box-shadow:0 0 0 3px rgba(99,102,241,.10),0 9px 26px rgba(29,44,73,.12);
+}
+#mapStage{
+  width:100%;height:100%;display:flex;gap:12px;min-width:0;min-height:0;
+}
+#mapPane{
+  flex:1 1 100%;min-width:0;height:100%;position:relative;
+  transition:flex-basis .18s ease,width .18s ease;
+}
+#roadviewPane{
+  display:none;position:relative;min-width:0;height:100%;overflow:hidden;
+  border-radius:24px;border:1px solid rgba(255,255,255,.96);
+  background:#eef2f7;
+  box-shadow:0 24px 60px rgba(35,48,78,.14),0 6px 20px rgba(35,48,78,.08);
+}
+#mapStage.rv-split #mapPane{flex:0 0 calc(50% - 6px)}
+#mapStage.rv-split #roadviewPane{display:block;flex:1 1 calc(50% - 6px)}
+#roadview{position:absolute;inset:0}
+#roadviewEmpty{
+  position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+  background:linear-gradient(180deg,#f8fafc,#eef2f7);z-index:2;
+  color:#64748b;text-align:center;padding:28px;font-size:12px;font-weight:850;
+}
+#roadviewEmpty.hidden{display:none}
+.roadview-toolbar{
+  position:absolute;top:14px;left:50%;transform:translateX(-50%);
+  z-index:10;display:flex;align-items:center;gap:6px;
+  padding:6px;border-radius:14px;background:rgba(15,23,42,.84);
+  border:1px solid rgba(255,255,255,.18);box-shadow:0 10px 30px rgba(15,23,42,.24);
+  backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
+}
+.roadview-toolbar button{
+  border:0;border-radius:9px;padding:7px 10px;
+  background:rgba(255,255,255,.12);color:#fff;
+  font-size:10px;font-weight:1000;white-space:nowrap;
+}
+.roadview-toolbar button:hover{background:rgba(255,255,255,.22)}
+.roadview-toolbar .rv-close{background:rgba(244,63,94,.78)}
+#roadviewHint{
+  position:absolute;left:50%;bottom:18px;transform:translateX(-50%);
+  z-index:9;padding:7px 11px;border-radius:999px;
+  background:rgba(255,255,255,.92);border:1px solid rgba(226,232,240,.96);
+  color:#64748b;font-size:9px;font-weight:900;white-space:nowrap;
+  box-shadow:0 8px 20px rgba(15,23,42,.12);
+}
+
+/* 로드뷰 전체화면: 대시보드 전체 위에 표시 */
+#premiumMapShell.rv-full{
+  position:fixed!important;inset:0!important;z-index:9999!important;
+  width:100vw!important;height:100vh!important;background:#0f172a!important;
+}
+#premiumMapShell.rv-full #premiumTopbar{display:none!important}
+#premiumMapShell.rv-full #tab-map{padding:0!important;background:#0f172a!important}
+#premiumMapShell.rv-full #mapStage{gap:0}
+#premiumMapShell.rv-full #mapPane{display:none!important}
+#premiumMapShell.rv-full #roadviewPane{
+  display:block!important;flex:1 1 100%!important;width:100%!important;height:100%!important;
+  border-radius:0!important;border:0!important;box-shadow:none!important;
+}
+#premiumMapShell.rv-full #regionNavigator,
+#premiumMapShell.rv-full #statusMessage,
+#premiumMapShell.rv-full #mapLayerControl,
+#premiumMapShell.rv-full #roadviewControl,
+#premiumMapShell.rv-full #brandFilterPanel,
+#premiumMapShell.rv-full #heatLegend{display:none!important}
+
+@media(max-width:900px){
+  #roadviewControl{right:76px;top:12px}
+  #mapStage.rv-split{flex-direction:column}
+  #mapStage.rv-split #mapPane{flex:0 0 calc(50% - 6px);width:100%}
+  #mapStage.rv-split #roadviewPane{flex:1 1 calc(50% - 6px);width:100%}
+  .roadview-toolbar{top:8px;gap:4px;padding:5px}
+  .roadview-toolbar button{padding:6px 8px;font-size:9px}
+}
+
 </style>
 </head>
 <body class="flex flex-col md:flex-row h-screen text-slate-800">
 <div id="premiumSidebar" class="w-full md:w-1/4 bg-white border-r border-gray-200 p-6 flex flex-col shadow-lg z-20 overflow-y-auto">
 <h1 id="premiumHeader" class="text-xl font-extrabold text-slate-800 border-b-4 border-indigo-500 pb-3 mb-4 flex justify-between items-center">
 <span class="premium-brand"><span class="premium-brand-kicker">LENS ME</span><span class="premium-brand-title">상권 분석 지도</span></span>
-<span class="premium-version text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded-full font-bold">V61.13</span>
+<span class="premium-version text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded-full font-bold">V61.14</span>
 </h1>
 
 <div class="mb-3">
@@ -499,6 +590,10 @@ details[open]>summary::before{color:#6d63ff!important}
 상권을 그리면 TOP3를 확인할 수 있고, 저장 후에는 상권명 말풍선을 눌러 분석을 펼치거나 접을 수 있습니다.
 </div>
 
+<div id="roadviewControl">
+<button id="btnRoadview" type="button" class="roadview-main-btn" onclick="toggleRoadviewPicker()">🛣 로드뷰</button>
+</div>
+
 <div id="mapLayerControl" class="absolute top-4 right-4 z-20 flex flex-col items-end gap-2">
 <button type="button" class="map-layer-btn" onclick="toggleMapLayerMenu(event)"><span>⚙</span><span>표시</span></button>
 <div id="mapLayerMenu" class="map-layer-menu hidden" onclick="event.stopPropagation()">
@@ -547,7 +642,28 @@ details[open]>summary::before{color:#6d63ff!important}
     <span class="text-[8px] font-extrabold text-slate-500">주요 유입 경로</span>
   </div>
 </div>
-<div id="map" class="w-full h-full"></div>
+<div id="mapStage">
+  <div id="mapPane">
+    <div id="map" class="w-full h-full"></div>
+  </div>
+  <div id="roadviewPane">
+    <div class="roadview-toolbar">
+      <button type="button" onclick="v621EnableRoadviewPick()">📍 다른 위치</button>
+      <button type="button" onclick="v621SetRoadviewView('split')">↔ 분할보기</button>
+      <button type="button" onclick="v621SetRoadviewView('full')">⛶ 전체화면</button>
+      <button type="button" class="rv-close" onclick="v621CloseRoadview()">✕ 닫기</button>
+    </div>
+    <div id="roadview"></div>
+    <div id="roadviewEmpty">
+      <div>
+        <div style="font-size:28px;margin-bottom:8px">🛣️</div>
+        <div>지도에서 로드뷰로 볼 위치를 클릭하세요.</div>
+        <div style="font-size:9px;color:#94a3b8;margin-top:5px">가장 가까운 카카오 로드뷰 촬영 지점을 찾습니다.</div>
+      </div>
+    </div>
+    <div id="roadviewHint">지도에서 다른 위치를 클릭하면 로드뷰가 바로 변경됩니다.</div>
+  </div>
+</div>
 </div>
 </div>
 
@@ -585,7 +701,7 @@ level:12}),h=new kakao.maps.services.Places,p=new kakao.maps.services.Geocoder,y
 }),w=null,b=null,k={},x={},I=!1,S=null,T=!1,O=0,R=null,analysisLines=[],rankOverlays=[],inflowOverlays=[],flowLines=[],expandedSavedAreaId=null,focusedSavedAreaId=null,selectedSavedAreaIds=new Set(),renderedSavedAreaIds=new Set(),savedAreaOverlayGroups=new Map(),currentRenderSavedAreaId=null,lastSavedAreaToggleKey="",lastSavedAreaToggleAt=0,lastAnalyzedSavedId=null,lastAnalyzedFenceKey="",savedAreaAnalysisCache=new Map,savedAreaPersistentAnalysis=v581LoadPersistentAnalysisStore(),savedBubbleEls={},provinceLabelOverlays=[],cityLabelOverlays=[],dongLabelOverlays=[],adminFocusOverlay=null,regionLabelTimer=null,regionLabelRequestSeq=0,mapDrillState={level:"national",si:null,gu:null,dong:null},lastAutoRegionKey="",regionFanoutToken=0,municipalityCenterCache=new Map,hapaOlivePlaceCache=new Map,legalDongTreePromise=null,legalDongTreeData=null;
 
 
-/* V61.13: 저장하지 않은 마지막 임시 상권 1개도 자동 보존 */
+/* V61.14: 저장하지 않은 마지막 임시 상권 1개도 자동 보존 */
 const V612_TEMP_ANALYSIS_KEY="lensmeTempAnalysisV61_12";
 let v612TempFenceOverlay=null,v612RestoringTemp=false;
 
@@ -782,10 +898,173 @@ function v612RestoreTempDraft(){
  }
 }
 
+
+/* V61.14: 펜스와 무관한 자유 로드뷰 */
+let v621Roadview=null,
+    v621RoadviewClient=null,
+    v621RoadviewMarker=null,
+    v621RoadviewPickMode=false,
+    v621RoadviewOpen=false,
+    v621RoadviewOverlayOn=false,
+    v621RoadviewLastPosition=null;
+
+function v621EnsureRoadview(){
+ if(v621Roadview&&v621RoadviewClient)return true;
+ const el=document.getElementById("roadview");
+ if(!el||!window.kakao?.maps?.Roadview||!window.kakao?.maps?.RoadviewClient)return false;
+
+ v621Roadview=new kakao.maps.Roadview(el);
+ v621RoadviewClient=new kakao.maps.RoadviewClient();
+ v621RoadviewMarker=new kakao.maps.Marker({zIndex:210});
+
+ kakao.maps.event.addListener(v621Roadview,"position_changed",()=>{
+  try{
+   const pos=v621Roadview.getPosition();
+   if(!pos)return;
+   v621RoadviewLastPosition=pos;
+   v621RoadviewMarker.setPosition(pos);
+   v621RoadviewMarker.setMap(f)
+  }catch(e){}
+ });
+ return true
+}
+
+function v621SetRoadviewOverlay(on){
+ if(!f||!window.kakao?.maps?.MapTypeId?.ROADVIEW)return;
+ if(on&&!v621RoadviewOverlayOn){
+  try{f.addOverlayMapTypeId(kakao.maps.MapTypeId.ROADVIEW);v621RoadviewOverlayOn=true}catch(e){}
+ }else if(!on&&v621RoadviewOverlayOn){
+  try{f.removeOverlayMapTypeId(kakao.maps.MapTypeId.ROADVIEW);v621RoadviewOverlayOn=false}catch(e){}
+ }
+}
+
+function v621UpdateRoadviewButton(){
+ const btn=document.getElementById("btnRoadview");
+ if(!btn)return;
+ btn.classList.toggle("active",v621RoadviewPickMode||v621RoadviewOpen);
+ btn.textContent=v621RoadviewPickMode?"📍 위치 선택중":"🛣 로드뷰"
+}
+
+function v621RelayoutAll(){
+ const center=(()=>{try{return f.getCenter()}catch(e){return null}})();
+ setTimeout(()=>{
+  try{f.relayout();if(center)f.setCenter(center)}catch(e){}
+  try{v621Roadview?.relayout?.()}catch(e){}
+ },70)
+}
+
+function v621SetRoadviewView(mode){
+ if(!v621RoadviewOpen&&mode!=="closed")return;
+ const shell=document.getElementById("premiumMapShell");
+ const stage=document.getElementById("mapStage");
+ if(!shell||!stage)return;
+
+ if(mode==="full"){
+  stage.classList.add("rv-split");
+  shell.classList.add("rv-full");
+ }else if(mode==="split"){
+  shell.classList.remove("rv-full");
+  stage.classList.add("rv-split");
+ }else{
+  shell.classList.remove("rv-full");
+  stage.classList.remove("rv-split")
+ }
+ v621RelayoutAll()
+}
+
+function v621EnableRoadviewPick(){
+ if(I)return alert("상권 경계 그리기를 끝낸 뒤 로드뷰를 이용해주세요.");
+ if(userMarkerMode)toggleUserMarkerMode();
+
+ if(!v621EnsureRoadview()){
+  alert("카카오 로드뷰를 불러오지 못했습니다. 새로고침 후 다시 시도해주세요.");
+  return
+ }
+ v621RoadviewPickMode=true;
+ v621SetRoadviewOverlay(true);
+ v621UpdateRoadviewButton();
+ document.getElementById("statusMessage").innerText="🛣️ 로드뷰 모드 · 지도에서 보고 싶은 도로 위치를 클릭하세요."
+}
+
+function toggleRoadviewPicker(){
+ if(v621RoadviewPickMode){
+  v621RoadviewPickMode=false;
+  v621SetRoadviewOverlay(false);
+  v621UpdateRoadviewButton();
+  document.getElementById("statusMessage").innerText=v621RoadviewOpen
+   ?"로드뷰 위치 선택을 종료했습니다. 로드뷰 창은 그대로 유지됩니다."
+   :"로드뷰 모드를 종료했습니다.";
+  return
+ }
+ v621EnableRoadviewPick()
+}
+
+function v621OpenRoadviewAt(latLng){
+ if(!latLng||!v621EnsureRoadview())return;
+ const empty=document.getElementById("roadviewEmpty");
+ if(empty){
+  empty.classList.remove("hidden");
+  empty.innerHTML='<div><div style="font-size:22px;margin-bottom:7px">⌛</div><div>가까운 로드뷰를 찾는 중입니다...</div></div>'
+ }
+
+ v621RoadviewClient.getNearestPanoId(latLng,70,(panoId)=>{
+  if(panoId===null||panoId===undefined){
+   if(empty){
+    empty.classList.remove("hidden");
+    empty.innerHTML='<div><div style="font-size:24px;margin-bottom:7px">⚠️</div><div>이 위치 주변에는 로드뷰가 없습니다.</div><div style="font-size:9px;color:#94a3b8;margin-top:5px">조금 떨어진 도로를 다시 클릭해보세요.</div></div>'
+   }
+   document.getElementById("statusMessage").innerText="이 위치 주변 70m 안에서 로드뷰를 찾지 못했습니다.";
+   return
+  }
+
+  v621RoadviewOpen=true;
+  v621RoadviewLastPosition=latLng;
+  document.getElementById("mapStage")?.classList.add("rv-split");
+  document.getElementById("premiumMapShell")?.classList.remove("rv-full");
+  if(empty)empty.classList.add("hidden");
+
+  setTimeout(()=>{
+   try{
+    v621Roadview.relayout?.();
+    v621Roadview.setPanoId(panoId,latLng);
+    v621RoadviewMarker.setPosition(latLng);
+    v621RoadviewMarker.setMap(f)
+   }catch(err){
+    console.error("로드뷰 표시 실패",err);
+    empty?.classList.remove("hidden")
+   }
+   v621RelayoutAll()
+  },80);
+
+  v621UpdateRoadviewButton();
+  document.getElementById("statusMessage").innerText="🛣️ 로드뷰 분할보기 · 지도에서 다른 위치를 클릭하면 로드뷰가 바로 바뀝니다."
+ })
+}
+
+function v621CloseRoadview(){
+ v621RoadviewOpen=false;
+ v621RoadviewPickMode=false;
+ v621SetRoadviewOverlay(false);
+
+ try{v621RoadviewMarker?.setMap(null)}catch(e){}
+ document.getElementById("premiumMapShell")?.classList.remove("rv-full");
+ document.getElementById("mapStage")?.classList.remove("rv-split");
+
+ const empty=document.getElementById("roadviewEmpty");
+ if(empty){
+  empty.classList.remove("hidden");
+  empty.innerHTML='<div><div style="font-size:28px;margin-bottom:8px">🛣️</div><div>지도에서 로드뷰로 볼 위치를 클릭하세요.</div><div style="font-size:9px;color:#94a3b8;margin-top:5px">가장 가까운 카카오 로드뷰 촬영 지점을 찾습니다.</div></div>'
+ }
+
+ v621UpdateRoadviewButton();
+ v621RelayoutAll();
+ document.getElementById("statusMessage").innerText="로드뷰를 닫았습니다. 지도를 계속 이용할 수 있습니다."
+}
+
 const V610_USER_MARKER_KEY="lensmeUserMarkersV61_0";
 let userMarkers=v610LoadUserMarkers(),userMarkerObjects=new Map(),userMarkerMode=false,userMarkerOpenId=null,userMarkerAddGuardAt=0,userMarkerCaptureEl=null;
 
-/* V61.13: 서울 상권단위 유동인구 패널 제거.
+/* V61.14: 서울 상권단위 유동인구 패널 제거.
    기존 호출부 호환을 위해 no-op 함수만 유지한다. */
 function v616HideSeoulPanel(){}
 function v616UpdateSeoulPanel(){return Promise.resolve(null)}
@@ -1825,7 +2104,7 @@ async function v573RenderDongLabels(){
  if(meta)meta.textContent=`${gu||si} · 읍·면·동 ${groups.length}곳 · 동을 누르면 그 동의 저장상권만 표시`;
 }
 function v572CloseAnalysisForNavigation(){
- /* V61.13:
+ /* V61.14:
     저장하지 않은 임시 조사상권은 지역 탐색/시군구/동 이동 때문에 닫지 않는다.
     사용자가 '해제' 또는 '새 펜스 그리기'를 했을 때만 삭제한다. */
  if(v613TempAnalysisIsActive()){
@@ -2266,7 +2545,7 @@ if(e===d&&!T&&n===kakao.maps.services.Status.OK&&t.length){
  f.setCenter(g);
  f.setLevel(3);
 
- /* V61.13: 검색은 지도만 이동한다. 임시 펜스·TOP3·유동인구는 삭제하지 않는다. */
+ /* V61.14: 검색은 지도만 이동한다. 임시 펜스·TOP3·유동인구는 삭제하지 않는다. */
  setTimeout(()=>{
   if(!T&&!I){
    Ht().catch?.(()=>{});
@@ -2852,7 +3131,7 @@ function v566RenderFlowLinesFromSegments(segments,fencePath){
    new kakao.maps.LatLng(seg.b.lat,seg.b.lng)
   ];
 
-  /* V61.13:
+  /* V61.14:
      도로 위에 얇은 녹색→노랑→주황→빨강 흐름선을 표시.
      파란색은 유입 화살표 전용으로 분리해 지도 판독성을 높인다. */
   v620AddPolylinePair(path,color,coreWeight,coreOpacity,72,false,"flow")
@@ -3259,12 +3538,17 @@ setTimeout((()=>{T||ce(w)}),60)}));
 
 kakao.maps.event.addListener(f,"zoom_changed",(()=>{applyMapDisplayFilters();v571ScheduleRegionLabels()}));
 kakao.maps.event.addListener(f,"click",(mouseEvent=>{if(!userMarkerMode||I||userMarkerCaptureEl)return;const p=mouseEvent.latLng;v610AddUserMarkerAt(p.getLat(),p.getLng(),expandedSavedAreaId)}));
+kakao.maps.event.addListener(f,"click",(mouseEvent=>{
+ if(!v621RoadviewPickMode||I||userMarkerMode||userMarkerCaptureEl)return;
+ const p=mouseEvent.latLng;
+ v621OpenRoadviewAt(p)
+}));
 kakao.maps.event.addListener(f,"idle",(async function(){
  if(!I&&!w&&!T){
   if(f.getLevel()<=5){await Ht();await v601LoadVisibleAnchors()}
   else if(f.getLevel()<=7)await v601LoadVisibleAnchors()
  }
- /* V61.13: 지도 이동/검색/행정탐색 뒤 임시 분석 오버레이가 빠졌다면 자동 복구 */
+ /* V61.14: 지도 이동/검색/행정탐색 뒤 임시 분석 오버레이가 빠졌다면 자동 복구 */
  if(!I&&!T&&expandedSavedAreaId==null&&selectedSavedAreaIds.size===0)v613EnsureTempAnalysisVisible(false);
  v571ScheduleRegionLabels()
 }));
@@ -3281,7 +3565,7 @@ v572GoNational();
 setTimeout(()=>{
  if(!selectedSavedAreaIds.size&&!expandedSavedAreaId&&!I&&!T){v612RestoreTempDraft();setTimeout(()=>v613EnsureTempAnalysisVisible(false),120)}
 },220);
-document.getElementById("statusMessage").innerText="🗺️ 임시 조사상권은 검색·행정구역 이동으로 지워지지 않으며 F5 후에도 마지막 1개를 자동 복원합니다. 저장상권 말풍선은 여러 개 선택할 수 있고 같은 말풍선을 다시 누르면 그 상권만 해제됩니다. 표시 메뉴에서 끈 레이어는 지도 확대·축소 후에도 그대로 유지됩니다. 저장상권의 TOP3·유동인구는 상권 본체에도 함께 저장됩니다. 내 후보는 별도 목록 없이 현재 열린 저장상권 안에 바로 저장되며, 상권을 다시 열면 작은 점 + 상단 이름표로 지도에 표시됩니다. 현재 분석 상권은 인디고 실선, 다른 저장상권은 연한 회색 점선으로 구분합니다. 유동인구는 녹색→노랑→주황→빨강, 유입경로는 파란 화살표로 표시하며 TOP3는 지하철역 중심 좌표를 피합니다. 해당 상권 말풍선을 누르면 함께 복원되고 백업에도 보존됩니다.";
+document.getElementById("statusMessage").innerText="🗺️ 임시 조사상권은 검색·행정구역 이동으로 지워지지 않으며 F5 후에도 마지막 1개를 자동 복원합니다. 로드뷰는 펜스와 무관하게 지도 어디서나 사용할 수 있습니다. 저장상권 말풍선은 여러 개 선택할 수 있고 같은 말풍선을 다시 누르면 그 상권만 해제됩니다. 표시 메뉴에서 끈 레이어는 지도 확대·축소 후에도 그대로 유지됩니다. 저장상권의 TOP3·유동인구는 상권 본체에도 함께 저장됩니다. 내 후보는 별도 목록 없이 현재 열린 저장상권 안에 바로 저장되며, 상권을 다시 열면 작은 점 + 상단 이름표로 지도에 표시됩니다. 현재 분석 상권은 인디고 실선, 다른 저장상권은 연한 회색 점선으로 구분합니다. 유동인구는 녹색→노랑→주황→빨강, 유입경로는 파란 화살표로 표시하며 TOP3는 지하철역 중심 좌표를 피합니다. 해당 상권 말풍선을 누르면 함께 복원되고 백업에도 보존됩니다.";
 Ft();
 setTimeout(()=>{v569NormalizeSavedRegions().catch(err=>console.warn("saved region normalize failed",err))},350);
 /* 전국 수량은 저장상권/TOP3 복원보다 뒤에, 한 브랜드씩 순차 실행한다. */
